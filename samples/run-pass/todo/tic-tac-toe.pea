@@ -1,0 +1,18 @@
+//! This program plays the game Tic-Tac-Toe interactively.
+
+enum Piece {
+    X,
+    O,
+}
+
+enum Winner {
+    NoWinner,
+    Winner(Piece),
+}
+
+const BOARD_SIZE: uint = 3;
+
+struct TicTacToe {
+    pieces: [[Piece; BOARD_SIZE]; BOARD_SIZE],
+    winner: Winner,
+}
