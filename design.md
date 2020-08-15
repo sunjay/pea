@@ -18,7 +18,7 @@ Desired Features:
 ## Type System
 
 * unit type `()`
-* never type `!` - subtypes of all types
+* never type `!` - subtypes all types
 * arbitrary-precision integers `int`, `uint`
 * decimal arithmetic numbers `real`
 * structs and enums with fields (including recursive types)
