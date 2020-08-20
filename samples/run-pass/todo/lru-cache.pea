@@ -1,0 +1,158 @@
+fn main() {
+    let cache = LRUCache::new(2);
+
+    assert!(cache.insert(1, 0).is_none());
+    assert_eq!(cache.insert(1, 1), Some(0));
+    assert!(cache.insert(2, 2).is_none());
+    assert_eq!(cache.get(1), Some(1));
+    assert!(cache.insert(3, 3).is_none());
+    assert_eq!(cache.get(2), None);
+    assert!(cache.insert(4, 4).is_none());
+    assert_eq!(cache.get(1), None);
+    assert_eq!(cache.get(3), Some(3));
+    assert_eq!(cache.get(4), Some(4));
+}
+
+/// A doubly-linked list node
+struct Node<K, V> {
+    key: K,
+    value: V,
+    next: Option<Node<K, V>>,
+    prev: Option<Node<K, V>>,
+}
+
+impl<K, V> Node<K, V> {
+    fn new(key: K, value: V) -> Self {
+        Self {
+            key,
+            value,
+            next: None,
+            prev: None,
+        }
+    }
+
+    /// Removes this node from the linked list
+    fn remove_self(self) {
+        if let Some(next) = self.next {
+            next.prev = self.prev;
+        }
+        if let Some(prev) = self.prev {
+            prev.next = self.next;
+        }
+
+        self.next = None;
+        self.prev = None;
+    }
+}
+
+/// A least-recently used cache
+struct LRUCache<K, V> {
+    /// The number of items currently cached
+    len: uint,
+    /// The capacity of the cache, greater than 0
+    capacity: uint,
+
+    /// The cache of keys to nodes, for constant time key lookup
+    cache: Map<K, Node<K, V>>,
+
+    /// A doubly linked list of nodes, ordered with the least-recently used
+    /// node at the head and the most recently used node at the tail
+    head: Option<Node<K, V>>,
+    tail: Option<Node<K, V>>,
+}
+
+impl<K, V> LRUCache<K, V> {
+    /// Capacity must be greater than 0
+    fn new(capacity: uint) -> Self {
+        assert!(capacity > 0, "LRUCache capacity must be greater than 0");
+
+        Self {
+            len: 0,
+            capacity,
+            cache: Map::new(),
+            head: None,
+            tail: None,
+        }
+    }
+
+    /// Retrieves a value from the cache
+    ///
+    /// Time complexity: O(1)
+    fn get(self, key: K) -> Option<V> {
+        match self.cache.get(key) {
+            Some(node) => {
+                self.move_to_end(node);
+                node.value
+            },
+
+            None => None,
+        }
+    }
+
+    /// Inserts a new key and value into the cache, evicting the least-recently
+    /// used item if the cache has reached its capacity.
+    ///
+    /// Returns the previous value for this key, if any.
+    ///
+    /// Time complexity: O(1)
+    fn insert(self, key: K, value: V) -> Option<V> {
+        if let Some(node) = self.cache.get(key) {
+            let old_value = node.value;
+            node.value = value;
+            self.move_to_end(node);
+            return Some(old_value);
+        }
+
+        // Evict if there are too many nodes
+        if self.len == self.capacity {
+            // This unwrap is safe because capacity is guranteed to be above zero
+            let head = self.head.unwrap();
+            let head_key = self.head.key;
+            let next_head = self.head.next;
+            self.head.remove_self();
+
+            if let Some(next_head) = next_head {
+                next_head.prev = None;
+            }
+            if self.head == self.tail {
+                self.tail = next_head;
+            }
+            self.head = next_head;
+            self.cache.remove(head_key);
+            self.len -= 1;
+        }
+
+        let node = Node::new(key, value);
+        self.cache[key] = node;
+        self.len += 1;
+        self.move_to_end(node);
+
+        None
+    }
+
+    /// Moves a node to the end of the linked list
+    fn move_to_end(self, node: Node<K, V>) {
+        if self.tail == node {
+            // Already at the end
+            return
+        }
+
+        // If the node was currently at the start of the list, move the start of
+        // the list to the next node in the list
+        if self.head == node {
+            self.head = node.next;
+        }
+
+        node.remove_self();
+
+        if self.head.is_none() {
+            self.head = Some(node);
+        }
+
+        if let Some(tail) = self.tail {
+            tail.next = Some(node);
+            node.prev = Some(tail);
+        }
+        self.tail = Some(node);
+    }
+}
