@@ -107,16 +107,16 @@ fn parse_term(tokens: [Token]) -> (Ast, [Token]) {
 
 fn parse_add_sub(tokens: [Token]) -> FoundOp {
     match tokens {
-        [Token::Op(Op::Add), ...rest] |
-        [Token::Op(Op::Sub), ...rest] => FoundOp::Op(op, rest),
+        [Token::Op(Op::Add), rest @ ...] |
+        [Token::Op(Op::Sub), rest @ ...] => FoundOp::Op(op, rest),
         _ => FoundOp::None,
     }
 }
 
 fn parse_mul_div(tokens: [Token]) -> FoundOp {
     match tokens {
-        [Token::Op(Op::Mul), ...rest] |
-        [Token::Op(Op::Div), ...rest] => FoundOp::Op(op, rest),
+        [Token::Op(Op::Mul), rest @ ...] |
+        [Token::Op(Op::Div), rest @ ...] => FoundOp::Op(op, rest),
         _ => FoundOp::None,
     }
 }
