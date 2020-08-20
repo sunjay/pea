@@ -1,6 +1,6 @@
 # Pea Programming Language
 
-Goal: A general purpose, bytecode-interpreted programming language.
+Goal: A typed, general purpose, bytecode-interpreted programming language.
 
 Desired Features:
 
