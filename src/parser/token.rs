@@ -18,17 +18,17 @@ impl Keyword {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Literal {
-    Integer(i128),
+    Integer,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum TokenKind {
     /// A keyword reserved by the language
     Keyword(Keyword),
     /// An identifier
-    Ident(Arc<str>),
+    Ident,
     /// A literal, e.g. `122`, `"abc"`, etc.
     Literal(Literal),
 
@@ -51,7 +51,44 @@ pub enum TokenKind {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum TokenValue {
+    Ident(Arc<str>),
+    Integer(i128),
+}
+
+impl From<i128> for TokenValue {
+    fn from(value: i128) -> Self {
+        TokenValue::Integer(value)
+    }
+}
+
+impl From<Arc<str>> for TokenValue {
+    fn from(value: Arc<str>) -> Self {
+        TokenValue::Ident(value)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct Token {
     pub kind: TokenKind,
     pub span: Span,
+    pub value: Option<TokenValue>,
+}
+
+impl Token {
+    /// Returns the data as an identifier or panics
+    pub fn unwrap_ident(&self) -> &Arc<str> {
+        match &self.value {
+            Some(TokenValue::Ident(ident)) => ident,
+            _ => panic!("bug: expected an identifier"),
+        }
+    }
+
+    /// Returns the data as an integer and its suffix or panics
+    pub fn unwrap_integer(&self) -> i128 {
+        match &self.value {
+            &Some(TokenValue::Integer(value)) => value,
+            _ => panic!("bug: expected an integer"),
+        }
+    }
 }

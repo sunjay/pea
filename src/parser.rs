@@ -36,15 +36,9 @@ pub fn parse_program(input: &[Token], diag: &Diagnostics) -> ast::Program {
 }
 
 #[derive(Debug, Clone)]
-enum Expected {
-    TokenKind(TokenKind),
-    Message(&'static str),
-}
-
-#[derive(Debug, Clone)]
 enum ParseError {
-    Unexpected {
-        expected: Expected,
+    UnexpectedToken {
+        expected: TokenKind,
         found: Vec<TokenKind>,
     },
 }
@@ -114,30 +108,23 @@ impl<'a> Parser<'a> {
     }
 
     fn integer_literal(&mut self) -> ParseResult<ast::IntegerLiteral> {
-        let token = self.advance();
-        match token.kind {
-            TokenKind::Literal(Literal::Integer(value)) => Ok(ast::IntegerLiteral {
-                value,
-                span: token.span,
-            }),
-            _ => Err(ParseError::Unexpected {
-                expected: Expected::Message("an integer literal"),
-                found: vec![token.kind.clone()],
-            }),
-        }
+        self.match_kind(TokenKind::Literal(Literal::Integer)).map(|token| ast::IntegerLiteral {
+            value: token.unwrap_integer(),
+            span: token.span,
+        })
     }
 
     fn match_keyword(&mut self, keyword: Keyword) -> ParseResult<&Token> {
         self.match_kind(TokenKind::Keyword(keyword))
     }
 
-    fn match_kind(&mut self, kind: TokenKind) -> ParseResult<&Token> {
+    fn match_kind(&mut self, expected: TokenKind) -> ParseResult<&Token> {
         let token = self.advance();
-        if token.kind == kind {
+        if token.kind == expected {
             Ok(token)
         } else {
-            Err(ParseError::Unexpected {
-                expected: Expected::TokenKind(kind),
+            Err(ParseError::UnexpectedToken {
+                expected,
                 found: vec![token.kind.clone()],
             })
         }

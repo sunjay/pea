@@ -5,7 +5,7 @@ use crate::diagnostics::Diagnostics;
 
 use super::{
     scanner::Scanner,
-    token::{self, Token, TokenKind},
+    token::{self, Token, TokenKind, TokenValue},
 };
 
 use TokenKind::*;
@@ -152,7 +152,7 @@ impl<'a> Lexer<'a> {
         };
 
         if value < i64::MIN as i128 || value > u64::MAX as i128 {
-            let token = self.token_to_current(start, Error);
+            let token = self.token_to_current(start, Error, None);
             self.diag.span_error(token.span, "integer literal out of 64-bit range").emit();
             return token;
         }
@@ -173,12 +173,12 @@ impl<'a> Lexer<'a> {
                 _ => {},
             }
 
-            let token = self.token_to_current(start, Error);
+            let token = self.token_to_current(start, Error, None);
             self.diag.span_error(token.span, "invalid integer literal").emit();
             return token;
         }
 
-        self.token_to_current(start, Literal(token::Literal::Integer(value)))
+        self.token_to_current(start, Literal(token::Literal::Integer), TokenValue::Integer(value))
     }
 
     fn hex_lit_value(&mut self, start: usize) -> Result<i128, Token> {
@@ -188,7 +188,7 @@ impl<'a> Lexer<'a> {
         let mut digits_buf = String::new();
         let digits = self.digits(true, Some(&mut digits_buf));
         if digits == 0 {
-            let token = self.token_to_current(start, Error);
+            let token = self.token_to_current(start, Error, None);
             self.diag.span_error(token.span, "invalid hexadecimal number literal").emit();
             return Err(token);
         }
@@ -196,7 +196,7 @@ impl<'a> Lexer<'a> {
         match i128::from_str_radix(&digits_buf, 16) {
             Ok(value) => Ok(value),
             Err(_) => {
-                let token = self.token_to_current(start, Error);
+                let token = self.token_to_current(start, Error, None);
                 self.diag.span_error(token.span, "invalid hexadecimal number literal").emit();
                 Err(token)
             },
@@ -210,7 +210,7 @@ impl<'a> Lexer<'a> {
         let mut digits_buf = String::new();
         let digits = self.digits(false, Some(&mut digits_buf));
         if digits == 0 {
-            let token = self.token_to_current(start, Error);
+            let token = self.token_to_current(start, Error, None);
             self.diag.span_error(token.span, "invalid binary number literal").emit();
             return Err(token);
         }
@@ -218,7 +218,7 @@ impl<'a> Lexer<'a> {
         match i128::from_str_radix(&digits_buf, 2) {
             Ok(value) => Ok(value),
             Err(_) => {
-                let token = self.token_to_current(start, Error);
+                let token = self.token_to_current(start, Error, None);
                 self.diag.span_error(token.span, "invalid binary number literal").emit();
                 Err(token)
             },
@@ -235,7 +235,7 @@ impl<'a> Lexer<'a> {
 
         let digits = self.digits(false, Some(&mut digits_buf));
         if digits == 0 && !start_byte.is_ascii_digit() {
-            let token = self.token_to_current(start, Error);
+            let token = self.token_to_current(start, Error, None);
             self.diag.span_error(token.span, "invalid decimal number literal").emit();
             return Err(token);
         }
@@ -243,7 +243,7 @@ impl<'a> Lexer<'a> {
         match i128::from_str_radix(&digits_buf, 10) {
             Ok(value) => Ok(value),
             Err(_) => {
-                let token = self.token_to_current(start, Error);
+                let token = self.token_to_current(start, Error, None);
                 self.diag.span_error(token.span, "invalid decimal number literal").emit();
                 Err(token)
             },
@@ -291,27 +291,28 @@ impl<'a> Lexer<'a> {
 
         let value = self.scanner.slice(start, self.scanner.current_pos());
         match token::Keyword::from_str(value) {
-            Some(kw) => self.token_to_current(start, Keyword(kw)),
+            Some(kw) => self.token_to_current(start, Keyword(kw), None),
             None => {
                 let value = self.intern_str(value);
-                self.token_to_current(start, TokenKind::Ident(value))
+                self.token_to_current(start, TokenKind::Ident, TokenValue::Ident(value))
             },
         }
     }
 
     fn empty_token(&self, start: usize, kind: TokenKind) -> Token {
         let span = self.scanner.empty_span(start);
-        Token {kind, span}
+        Token {kind, span, value: None}
     }
 
     fn byte_token(&self, start: usize, kind: TokenKind) -> Token {
         let span = self.scanner.byte_span(start);
-        Token {kind, span}
+        Token {kind, span, value: None}
     }
 
-    fn token_to_current(&self, start: usize, kind: TokenKind) -> Token {
+    fn token_to_current(&self, start: usize, kind: TokenKind, value: impl Into<Option<TokenValue>>) -> Token {
+        let value = value.into();
         let span = self.scanner.span(start, self.scanner.current_pos());
-        Token {kind, span}
+        Token {kind, span, value}
     }
 
     fn intern_str(&mut self, value: &str) -> Arc<str> {
@@ -339,13 +340,21 @@ mod tests {
             Token {
                 kind: $kind,
                 span: Span {start: 0, end: 0},
+                value: None,
+            }
+        );
+        ($kind:expr, $value:expr) => (
+            Token {
+                kind: $kind,
+                span: Span {start: 0, end: 0},
+                value: Some($value),
             }
         );
     }
 
     macro_rules! ident {
         ($value:expr) => (
-            t!(Ident($value.into()))
+            t!(Ident, TokenValue::Ident($value.into()))
         );
     }
 
@@ -357,7 +366,7 @@ mod tests {
 
     macro_rules! int {
         ($value:expr) => (
-            t!(Literal(token::Literal::Integer($value)))
+            t!(Literal(token::Literal::Integer), TokenValue::Integer($value))
         );
     }
 
