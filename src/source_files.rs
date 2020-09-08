@@ -3,12 +3,12 @@ mod file_source;
 mod line_numbers;
 
 pub use span::*;
+pub use file_source::*;
 
 use std::fs;
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 
-use file_source::FileSource;
 use line_numbers::LineNumbers;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

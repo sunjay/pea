@@ -2,3 +2,4 @@
 
 pub mod diagnostics;
 pub mod source_files;
+pub mod parser;
