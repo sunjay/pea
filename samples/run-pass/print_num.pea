@@ -1,1 +1,2 @@
+// Prints the number 3
 println!(3);

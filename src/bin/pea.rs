@@ -1,33 +1,59 @@
 #![deny(unused_must_use)]
 
+use std::process;
 use std::path::Path;
 use std::sync::Arc;
 
-use anyhow::Context;
 use parking_lot::RwLock;
 use termcolor::ColorChoice;
 
 use pea::{
     diagnostics::Diagnostics,
     source_files::SourceFiles,
+    parser,
 };
 
-fn main() -> anyhow::Result<()> {
-    let source_path = Path::new("samples/run-pass/print_num.pea");
+macro_rules! quit {
+    ($diag:expr, $($args:tt)*) => {
+        {
+            $diag.error(format!($($args)*)).emit();
+            process::exit(1);
+        }
+    };
+}
+
+macro_rules! check_errors {
+    ($diag:expr) => {
+        let diag = $diag;
+        match diag.emitted_errors() {
+            0 => {},
+            1 => quit!(diag, "aborting due to 1 previous error"),
+            errors => quit!(diag, "aborting due to {} previous errors", errors),
+        }
+    };
+}
+
+fn main() {
+    let program_path = Path::new("samples/run-pass/print_num.pea");
     let color_choice = ColorChoice::Always;
 
     let source_files = Arc::new(RwLock::new(SourceFiles::default()));
+    let diag = Diagnostics::new(source_files.clone(), color_choice);
 
-    source_files.write().add_file(source_path)
-        .with_context(|| format!("Failed to read `{}`", source_path.display()))?;
+    // Need this separate statement so we don't hold the write() lock in the
+    // error case and end up with a deadlock
+    let root_file = source_files.write().add_file(&program_path);
+    let root_file = root_file.unwrap_or_else(|err| {
+        quit!(&diag, "Could not read source file `{}`: {}", program_path.display(), err)
+    });
 
-    let diag = Diagnostics::new(source_files, color_choice);
-
-    diag.error("test").emit();
-    diag.warning("test").emit();
-    diag.info("test").emit();
-    diag.note("test").emit();
-    diag.help("test").emit();
-
-    Ok(())
+    let program = {
+        // New scope because we want to drop this lock guard as soon as possible
+        let files = source_files.read();
+        let tokens = parser::collect_tokens(files.source(root_file), &diag);
+        check_errors!(&diag);
+        dbg!(tokens);
+        // parser::parse_program(&tokens, &diag)
+    };
+    check_errors!(&diag);
 }

@@ -28,9 +28,23 @@ impl<'a> Scanner<'a> {
         Some(ch)
     }
 
+    /// Advances the scanner twice
+    ///
+    /// Usually used after a call to `peek2`.
+    pub fn next2(&mut self) {
+        self.next();
+        self.next();
+    }
+
     /// Returns the next character in the source text, but does not advance the scanner
     pub fn peek(&self) -> Option<u8> {
         self.source.get(self.current)
+    }
+
+    /// Returns the next character after the next character in the source text, but does not
+    /// advance the scanner
+    pub fn peek2(&self) -> Option<u8> {
+        self.source.get(self.current+1)
     }
 
     /// Creates a new span that is empty (from `index` to `index`)
