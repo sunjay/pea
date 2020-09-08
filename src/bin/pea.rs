@@ -52,8 +52,8 @@ fn main() {
         let files = source_files.read();
         let tokens = parser::collect_tokens(files.source(root_file), &diag);
         check_errors!(&diag);
-        dbg!(tokens);
-        // parser::parse_program(&tokens, &diag)
+        parser::parse_program(&tokens, &diag)
     };
     check_errors!(&diag);
+    dbg!(program);
 }
