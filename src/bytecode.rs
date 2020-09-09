@@ -1,7 +1,7 @@
 use crate::value::Value;
 
 /// A compiled chunk of bytecode and any other information needed to run it, including metadata
-#[derive(Debug, Default, Clone, PartialEq)]
+#[derive(Debug, Default, Clone)]
 pub struct Code {
     /// The complete bytecode including opcodes and operands
     pub bytes: Vec<u8>,
