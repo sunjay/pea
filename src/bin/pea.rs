@@ -11,6 +11,8 @@ use pea::{
     diagnostics::Diagnostics,
     source_files::SourceFiles,
     parser,
+    bytecode::Code,
+    codegen::ToBytecode,
 };
 
 macro_rules! quit {
@@ -55,5 +57,8 @@ fn main() {
         parser::parse_program(&tokens, &diag)
     };
     check_errors!(&diag);
-    dbg!(program);
+
+    let mut code = Code::default();
+    program.write_bytecode(&mut code);
+    println!("{:?}", code);
 }
