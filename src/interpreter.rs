@@ -26,7 +26,9 @@ impl Interpreter {
             code,
             // Start from the first byte
             next_instr: 0,
-            stack: Vec::new(),
+            // Start with an initial capacity so programs can avoid allocating too often and so that
+            // many small programs don't allocate more than once
+            stack: Vec::with_capacity(256),
         }
     }
 
