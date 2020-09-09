@@ -32,6 +32,15 @@ impl Code {
 
         index as u16
     }
+
+    /// Retrieves a constant from the table of constants
+    ///
+    /// # Safety
+    ///
+    /// No bounds checking takes place so the index must be valid.
+    pub unsafe fn constant(&self, index: u16) -> &Value {
+        self.constants.get_unchecked(index as usize)
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

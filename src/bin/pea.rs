@@ -13,6 +13,7 @@ use pea::{
     parser,
     bytecode::Code,
     codegen::ToBytecode,
+    interpreter::{Status, Interpreter},
 };
 
 macro_rules! quit {
@@ -60,5 +61,7 @@ fn main() {
 
     let mut code = Code::default();
     program.write_bytecode(&mut code);
-    println!("{:?}", code);
+
+    let mut interpreter = Interpreter::new(code);
+    while interpreter.step() == Status::Running {}
 }

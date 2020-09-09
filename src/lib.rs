@@ -8,3 +8,4 @@ pub mod parser;
 pub mod value;
 pub mod bytecode;
 pub mod codegen;
+pub mod interpreter;
