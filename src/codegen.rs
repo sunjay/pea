@@ -1,90 +1,49 @@
-use std::convert::TryInto;
+mod function;
 
 use crate::{
     ast,
-    bytecode::{Code, OpCode},
-    value::Value,
+    bytecode,
+    interpreter::Interpreter,
+    diagnostics::Diagnostics,
 };
 
-pub trait ToBytecode {
-    fn write_bytecode(&self, code: &mut Code);
+use function::FunctionCompiler;
+
+pub struct Compiler<'a> {
+    diag: &'a Diagnostics,
+
+    consts: bytecode::Constants,
 }
 
-impl ToBytecode for ast::Program {
-    fn write_bytecode(&self, code: &mut Code) {
-        let Self {decls} = self;
+impl<'a> Compiler<'a> {
+    pub fn compile(program: &ast::Program, diag: &'a Diagnostics) -> Interpreter {
+        let mut compiler = Compiler {
+            diag,
+
+            consts: Default::default(),
+        };
+
+        compiler.walk_program(program);
+
+        //TODO: Should generate a call to `main` function here or compiler error if no such function
+        // exists. `main` must be declared in the top scope, take zero arguments, and return nothing
+        todo!()
+    }
+
+    fn walk_program(&mut self, program: &ast::Program) {
+        let ast::Program {decls} = program;
 
         for decl in decls {
-            decl.write_bytecode(code);
+            self.walk_decl(decl);
         }
-
-        // Exit the program at the end
-        code.write_instr(OpCode::Return);
     }
-}
 
-impl ToBytecode for ast::Decl {
-    fn write_bytecode(&self, code: &mut Code) {
+    fn walk_decl(&mut self, decl: &ast::Decl) {
         use ast::Decl::*;
-        match self {
-            Func(decl) => decl.write_bytecode(code),
+        match decl {
+            Func(func) => {
+                let func = FunctionCompiler::compile(func, &mut self.consts);
+            },
         }
-    }
-}
-
-impl ToBytecode for ast::FuncDecl {
-    fn write_bytecode(&self, code: &mut Code) {
-        let Self {fn_token, name, params, body} = self;
-
-        //TODO: Implement this properly
-        for stmt in &body.stmts {
-            stmt.write_bytecode(code);
-        }
-    }
-}
-
-impl ToBytecode for ast::Stmt {
-    fn write_bytecode(&self, code: &mut Code) {
-        use ast::Stmt::*;
-        match self {
-            Println(stmt) => stmt.write_bytecode(code),
-        }
-    }
-}
-
-impl ToBytecode for ast::PrintlnStmt {
-    fn write_bytecode(&self, code: &mut Code) {
-        let Self {expr, ..} = self;
-
-        expr.write_bytecode(code);
-
-        code.write_instr(OpCode::Print);
-    }
-}
-
-impl<T: ToBytecode> ToBytecode for ast::Parens<T> {
-    fn write_bytecode(&self, code: &mut Code) {
-        self.value.write_bytecode(code);
-    }
-}
-
-impl ToBytecode for ast::Expr {
-    fn write_bytecode(&self, code: &mut Code) {
-        use ast::Expr::*;
-        match self {
-            Integer(value) => value.write_bytecode(code),
-        }
-    }
-}
-
-impl ToBytecode for ast::IntegerLiteral {
-    fn write_bytecode(&self, code: &mut Code) {
-        let &Self {value, ..} = self;
-
-        //TODO: Handle this based on the type of the value being produced
-        let value = value.try_into()
-            .expect("bug: values out of the 64-bit range are not currently supported");
-        let index = code.push_constant(Value::I64(value));
-        code.write_instr_u16(OpCode::Constant, index);
     }
 }

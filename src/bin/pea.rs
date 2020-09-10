@@ -11,8 +11,7 @@ use pea::{
     diagnostics::Diagnostics,
     source_files::SourceFiles,
     parser,
-    bytecode::Code,
-    codegen::ToBytecode,
+    codegen,
     interpreter::{Status, Interpreter},
 };
 
@@ -59,9 +58,8 @@ fn main() {
     };
     check_errors!(&diag);
 
-    let mut code = Code::default();
-    program.write_bytecode(&mut code);
+    let mut interpreter = codegen::Compiler::compile(&program, &diag);
+    check_errors!(&diag);
 
-    let mut interpreter = Interpreter::new(code);
     while interpreter.step() == Status::Running {}
 }
