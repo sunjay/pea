@@ -1,5 +1,7 @@
+mod func_obj;
 mod obj;
 
+pub use func_obj::*;
 pub use obj::*;
 
 use std::{fmt, mem};
@@ -24,6 +26,16 @@ impl fmt::Display for Value {
         match self {
             I64(value) => write!(f, "{}", value),
             Obj(obj) => write!(f, "{}", *obj.lock()),
+        }
+    }
+}
+
+impl Value {
+    pub fn unwrap_obj(&self) -> &Gc<Obj> {
+        use Value::*;
+        match self {
+            Obj(obj) => obj,
+            _ => panic!("expected an obj"),
         }
     }
 }

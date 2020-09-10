@@ -1,8 +1,11 @@
 use std::fmt;
 
+use super::FuncObj;
+
 #[derive(Debug, Clone)]
 pub enum Obj {
     Bytes(Vec<u8>),
+    Func(FuncObj),
 }
 
 impl fmt::Display for Obj {
@@ -16,6 +19,18 @@ impl fmt::Display for Obj {
                 }
                 Ok(())
             },
+
+            Func(func) => write!(f, "{}", func),
+        }
+    }
+}
+
+impl Obj {
+    pub fn unwrap_func_mut(&mut self) -> &mut FuncObj {
+        use Obj::*;
+        match self {
+            Func(func) => func,
+            _ => panic!("expected a func"),
         }
     }
 }

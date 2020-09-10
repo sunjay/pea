@@ -12,7 +12,7 @@ use pea::{
     source_files::SourceFiles,
     parser,
     codegen,
-    interpreter::{Status, Interpreter},
+    interpreter::Status,
 };
 
 macro_rules! quit {
