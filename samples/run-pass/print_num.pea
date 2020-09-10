@@ -1,2 +1,4 @@
-// Prints the number 3
-println!(3);
+fn main() {
+    // Prints the number 3
+    println!(3);
+}

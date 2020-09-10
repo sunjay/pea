@@ -12,14 +12,34 @@ pub trait ToBytecode {
 
 impl ToBytecode for ast::Program {
     fn write_bytecode(&self, code: &mut Code) {
-        let Self {stmts} = self;
+        let Self {decls} = self;
 
-        for stmt in stmts {
-            stmt.write_bytecode(code);
+        for decl in decls {
+            decl.write_bytecode(code);
         }
 
         // Exit the program at the end
         code.write_instr(OpCode::Return);
+    }
+}
+
+impl ToBytecode for ast::Decl {
+    fn write_bytecode(&self, code: &mut Code) {
+        use ast::Decl::*;
+        match self {
+            Func(decl) => decl.write_bytecode(code),
+        }
+    }
+}
+
+impl ToBytecode for ast::FuncDecl {
+    fn write_bytecode(&self, code: &mut Code) {
+        let Self {fn_token, name, params, body} = self;
+
+        //TODO: Implement this properly
+        for stmt in &body.stmts {
+            stmt.write_bytecode(code);
+        }
     }
 }
 

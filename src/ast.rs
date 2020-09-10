@@ -1,8 +1,30 @@
+use std::sync::Arc;
+
 use crate::{source_files::Span, parser::Token};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Program {
+    pub decls: Vec<Decl>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Decl {
+    Func(FuncDecl),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct FuncDecl {
+    pub fn_token: Token,
+    pub name: Ident,
+    pub params: Parens<(/* TODO */)>,
+    pub body: Block,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Block {
+    pub brace_open_token: Token,
     pub stmts: Vec<Stmt>,
+    pub brace_close_token: Token,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -30,6 +52,12 @@ pub struct Parens<T> {
     pub paren_open_token: Token,
     pub value: T,
     pub paren_close_token: Token,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Ident {
+    pub value: Arc<str>,
+    pub span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]

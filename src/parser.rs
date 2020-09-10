@@ -59,8 +59,40 @@ struct Parser<'a> {
 
 impl<'a> Parser<'a> {
     fn parse_program(&mut self) -> ast::Program {
-        let mut stmts = Vec::new();
+        let mut decls = Vec::new();
+
         while !self.check(TokenKind::Eof) {
+            match self.decl() {
+                Ok(decl) => decls.push(decl),
+                Err(err) => {
+                    err.emit(self.diag);
+                    break;
+                },
+            }
+        }
+
+        ast::Program {decls}
+    }
+
+    fn decl(&mut self) -> ParseResult<ast::Decl> {
+        self.func_decl().map(ast::Decl::Func)
+    }
+
+    fn func_decl(&mut self) -> ParseResult<ast::FuncDecl> {
+        let fn_token = self.match_kind(TokenKind::Keyword(Keyword::Fn))?.clone();
+        let name = self.ident()?;
+
+        let params = self.parens(|_| Ok(()))?;
+        let body = self.block()?;
+
+        Ok(ast::FuncDecl {fn_token, name, params, body})
+    }
+
+    fn block(&mut self) -> ParseResult<ast::Block> {
+        let brace_open_token = self.match_kind(TokenKind::BraceOpen)?.clone();
+
+        let mut stmts = Vec::new();
+        while !self.check(TokenKind::BraceClose) {
             match self.stmt() {
                 Ok(stmt) => stmts.push(stmt),
                 Err(err) => {
@@ -71,7 +103,9 @@ impl<'a> Parser<'a> {
             }
         }
 
-        ast::Program {stmts}
+        let brace_close_token = self.match_kind(TokenKind::BraceClose)?.clone();
+
+        Ok(ast::Block {brace_open_token, stmts, brace_close_token})
     }
 
     fn stmt(&mut self) -> ParseResult<ast::Stmt> {
@@ -79,7 +113,7 @@ impl<'a> Parser<'a> {
     }
 
     fn println_stmt(&mut self) -> ParseResult<ast::PrintlnStmt> {
-        let println_token = self.match_keyword(Keyword::Println)?.clone();
+        let println_token = self.keyword(Keyword::Println)?.clone();
         let not_token = self.match_kind(TokenKind::Not)?.clone();
 
         let expr = self.parens(|this| this.expr())?;
@@ -114,7 +148,14 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn match_keyword(&mut self, keyword: Keyword) -> ParseResult<&Token> {
+    fn ident(&mut self) -> ParseResult<ast::Ident> {
+        self.match_kind(TokenKind::Ident).map(|token| ast::Ident {
+            value: token.unwrap_ident().clone(),
+            span: token.span,
+        })
+    }
+
+    fn keyword(&mut self, keyword: Keyword) -> ParseResult<&Token> {
         self.match_kind(TokenKind::Keyword(keyword))
     }
 

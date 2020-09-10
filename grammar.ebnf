@@ -1,7 +1,12 @@
-program ::= stmt*
+program ::= decl*
+
+decl ::= func_decl
+
+func_decl ::= "fn" ident "(" ")" block
+
+block ::= "{" stmt* "}"
 
 stmt ::= println_stmt
-
 println_stmt ::= "println" "!" "(" expr ")" ";"
 
 expr ::= integer_literal

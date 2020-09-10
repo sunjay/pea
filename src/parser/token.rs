@@ -1,22 +1,8 @@
+use std::fmt;
 use std::sync::Arc;
+use std::cmp::Ordering;
 
 use crate::source_files::Span;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum Keyword {
-    //TODO: This should be removed when println stops being used as a keyword
-    Println,
-}
-
-impl Keyword {
-    pub fn from_str(s: &str) -> Option<Self> {
-        use Keyword::*;
-        Some(match s {
-            "println" => Println,
-            _ => return None,
-        })
-    }
-}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Literal {
@@ -36,6 +22,11 @@ pub enum TokenKind {
     ParenOpen,
     /// The `)` symbol
     ParenClose,
+
+    /// The `{` symbol
+    BraceOpen,
+    /// The `}` symbol
+    BraceClose,
 
     /// The `!` symbol
     Not,
@@ -91,4 +82,46 @@ impl Token {
             _ => panic!("bug: expected an integer"),
         }
     }
+}
+
+macro_rules! keywords {
+    ($($variant:ident : $kw:literal)*) => {
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, Ord, Hash)]
+        pub enum Keyword {
+            $($variant),*
+        }
+
+        impl PartialOrd for Keyword {
+            fn partial_cmp(&self, _: &Self) -> Option<Ordering> {
+                // No inherent ordering between keywords
+                Some(Ordering::Equal)
+            }
+        }
+
+        impl Keyword {
+            pub fn from_str(ident: &str) -> Option<Keyword> {
+                use Keyword::*;
+                match ident {
+                    $($kw => Some($variant),)*
+                    _ => None,
+                }
+            }
+        }
+
+        impl fmt::Display for Keyword {
+            fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                use Keyword::*;
+                write!(f, "{}", match self {
+                    $($variant => concat!("`", $kw, "`"),)*
+                })
+            }
+        }
+    };
+}
+
+keywords! {
+    Fn : "fn"
+
+    //TODO: This should be removed when println stops being used as a keyword
+    Println : "println"
 }
