@@ -6,6 +6,7 @@ pub mod ast;
 pub mod parser;
 
 pub mod gc;
+pub mod prim;
 pub mod value;
 pub mod bytecode;
 pub mod codegen;

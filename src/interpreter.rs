@@ -1,10 +1,11 @@
-mod func_obj_ptr;
-
 use std::mem;
 
-use crate::{bytecode::{Constants, ConstId, OpCode}, value::{Value, FuncObj}};
-
-use func_obj_ptr::FuncObjPtr;
+use crate::{
+    prim,
+    bytecode::{Constants, ConstId, OpCode},
+    value::Value,
+    gc::Gc,
+};
 
 /// The current status of the interpreter
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -16,7 +17,7 @@ pub enum Status {
 #[derive(Debug)]
 pub struct CallFrame {
     /// A pointer to a function owned by the interpreter
-    func: FuncObjPtr,
+    func: Gc<prim::Func>,
     /// The index of the first slot in the value stack that belongs to this frame (frame pointer)
     frame_index: usize,
     /// The address in func.code of the next bytecode instruction to execute
@@ -24,7 +25,7 @@ pub struct CallFrame {
 }
 
 impl CallFrame {
-    pub fn new(func: &mut FuncObj, frame_index: usize) -> Self {
+    pub fn new(func: Gc<prim::Func>, frame_index: usize) -> Self {
         Self {
             func: func.into(),
             frame_index,
@@ -59,10 +60,7 @@ impl Interpreter {
         assert!(self.call_stack.is_empty(),
             "bug: main can only be initialized before the interpreter has begun");
 
-        // Safety: compiler should generate a valid constant index
-        let func = self.consts.get(const_index).unwrap_obj();
-        let mut func = func.lock();
-        let func = func.unwrap_func_mut().into();
+        let func = self.consts.get(const_index).unwrap_func().clone();
 
         // main starts at the first item in the stack
         let frame_index = self.value_stack.len();
@@ -129,8 +127,7 @@ impl Interpreter {
         let addr = frame.next_instr;
         frame.next_instr += mem::size_of::<u8>();
 
-        let func = frame.func.get_unchecked();
-        func.code.get_unchecked(addr)
+        frame.func.code.get_unchecked(addr)
     }
 
     /// Retrieves the top call frame
@@ -140,6 +137,7 @@ impl Interpreter {
     /// Assumes that there is at least one stack frame
     #[inline]
     unsafe fn top_call_frame_unchecked_mut(&mut self) -> &mut CallFrame {
+        //TODO: If we cache a pointer to the top frame we can avoid this calculation + index
         let index = self.call_stack.len().saturating_sub(1);
         self.call_stack.get_unchecked_mut(index)
     }

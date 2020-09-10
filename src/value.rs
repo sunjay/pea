@@ -1,20 +1,16 @@
-mod func_obj;
-mod obj;
-
-pub use func_obj::*;
-pub use obj::*;
-
 use std::{fmt, mem};
 
 use static_assertions::const_assert_eq;
+use parking_lot::Mutex;
 
-use crate::gc::Gc;
+use crate::{prim, gc::Gc};
 
 /// The representation of a value in bytecode
 #[derive(Debug, Clone)]
 pub enum Value {
     I64(i64),
-    Obj(Gc<Obj>),
+    Bytes(Gc<Mutex<prim::Bytes>>),
+    Func(Gc<prim::Func>),
 }
 
 // Make sure value doesn't grow beyond what we expect it to be
@@ -25,17 +21,18 @@ impl fmt::Display for Value {
         use Value::*;
         match self {
             I64(value) => write!(f, "{}", value),
-            Obj(obj) => write!(f, "{}", *obj.lock()),
+            Bytes(value) => write!(f, "{}", *value.lock()),
+            Func(value) => write!(f, "{}", **value),
         }
     }
 }
 
 impl Value {
-    pub fn unwrap_obj(&self) -> &Gc<Obj> {
+    pub fn unwrap_func(&self) -> &Gc<prim::Func> {
         use Value::*;
         match self {
-            Obj(obj) => obj,
-            _ => panic!("expected an obj"),
+            Func(value) => value,
+            _ => panic!("expected a function"),
         }
     }
 }

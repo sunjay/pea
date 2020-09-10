@@ -73,6 +73,14 @@ impl Constants {
         ConstId(index as u16)
     }
 
+    /// Replaces the given constant with the given value
+    pub fn replace(&mut self, id: ConstId, value: Value) {
+        let ConstId(index) = id;
+        // Safety: All ConstIds are guaranteed to be valid indexes
+        let slot = unsafe { self.0.get_unchecked_mut(index as usize) };
+        *slot = value;
+    }
+
     /// Retrieves a constant using its ID
     pub fn get(&self, id: ConstId) -> &Value {
         let ConstId(index) = id;

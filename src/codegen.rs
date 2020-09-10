@@ -6,9 +6,10 @@ use std::collections::HashMap;
 use crate::{
     ast,
     bytecode,
+    prim,
     interpreter::Interpreter,
     diagnostics::Diagnostics,
-    value::{Value, Obj, FuncObj},
+    value::Value,
     gc::Gc,
 };
 
@@ -65,8 +66,8 @@ impl<'a> Compiler<'a> {
             Func(func) => {
                 let name = &func.name;
 
-                let func_value = Gc::new(Obj::Func(FuncObj::new(name.value.clone())));
-                let func_const = self.consts.push(Value::Obj(func_value.clone()));
+                let func_value = Gc::new(prim::Func::new(name.value.clone()));
+                let func_const = self.consts.push(Value::Func(func_value.clone()));
 
                 if self.func_consts.contains_key(&name.value) {
                     self.diag.span_error(name.span, format!("the name `{}` is defined multiple times", name.value))
@@ -76,11 +77,8 @@ impl<'a> Compiler<'a> {
 
                 let func_code = FunctionCompiler::compile(func, &mut self.consts);
 
-                let mut obj = func_value.lock();
-                match &mut *obj {
-                    Obj::Func(func_obj) => func_obj.code = func_code,
-                    _ => unreachable!("bug: function constant should remain a function"),
-                }
+                let func_value = Gc::new(prim::Func::with_code(name.value.clone(), func_code));
+                self.consts.replace(func_const, Value::Func(func_value));
             },
         }
     }
