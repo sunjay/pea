@@ -32,6 +32,9 @@ impl<'a> FunctionCompiler<'a> {
             self.walk_stmt(stmt);
         }
 
+        // The default return value is unit
+        self.code.write_instr(OpCode::ConstUnit);
+
         // Return from the function
         self.code.write_instr(OpCode::Return);
     }

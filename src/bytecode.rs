@@ -96,6 +96,9 @@ pub enum OpCode {
     /// call stack
     Return,
 
+    /// Push the unit value onto the stack
+    ConstUnit,
+
     /// Load a constant value from the constants array and push it onto the stack
     ///
     /// The next two bytes in the bytecode represent the constant index. They will be interpreted as

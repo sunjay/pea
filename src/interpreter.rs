@@ -77,8 +77,7 @@ impl Interpreter {
         use OpCode::*;
         match next_op {
             Return => {
-                //TODO: Return a value
-                //let result = self.pop();
+                let result = self.pop();
 
                 // Remove the top call frame
                 self.call_stack.pop();
@@ -89,9 +88,12 @@ impl Interpreter {
                 //TODO: Pop off any local variables from the value stack
                 //self.value_stack.set_len(self.value_stack.len() - num_locals)
 
-                //TODO:
                 // push the returned value
-                //self.value_stack.push(result);
+                self.value_stack.push(result);
+            },
+
+            ConstUnit => {
+                self.value_stack.push(Value::Unit);
             },
 
             Constant => {
