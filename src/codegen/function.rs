@@ -62,6 +62,6 @@ impl<'a> FunctionCompiler<'a> {
         let value = value.try_into()
             .expect("bug: values out of the 64-bit range are not currently supported");
         let index = self.consts.push(Value::I64(value));
-        self.code.write_instr_u16(OpCode::Constant, index);
+        self.code.write_instr_u16(OpCode::Constant, index.into_u16());
     }
 }

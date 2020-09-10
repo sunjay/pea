@@ -36,13 +36,33 @@ impl Bytecode {
     }
 }
 
-/// A table of constants, referenced by index
+/// An ID guaranteed to refer to a valid constant in the constant pool
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct ConstId(u16);
+
+impl ConstId {
+    /// Creates a new constant ID from the given value
+    ///
+    /// # Safety
+    ///
+    /// You must guarantee that the given value is a valid index intot he constant pool.
+    pub unsafe fn new_unchecked(value: u16) -> Self {
+        ConstId(value)
+    }
+
+    /// Returns the primitive value of this ID
+    pub fn into_u16(self) -> u16 {
+        self.0
+    }
+}
+
+/// A pool of all constants in the program, referenced by index
 #[derive(Debug, Default, Clone)]
 pub struct Constants(Vec<Value>);
 
 impl Constants {
     /// Pushes a constant value into the table of constants and returns its 16-bit index
-    pub fn push(&mut self, value: Value) -> u16 {
+    pub fn push(&mut self, value: Value) -> ConstId {
         let index = self.0.len();
         if index >= u16::MAX as usize {
             panic!("bug: compiler does not support more than {} constant values in a single chunk of bytecode", u16::MAX);
@@ -50,16 +70,14 @@ impl Constants {
 
         self.0.push(value);
 
-        index as u16
+        ConstId(index as u16)
     }
 
-    /// Retrieves a constant from the table of constants
-    ///
-    /// # Safety
-    ///
-    /// No bounds checking takes place so the index must be valid.
-    pub unsafe fn get_unchecked(&self, index: u16) -> &Value {
-        self.0.get_unchecked(index as usize)
+    /// Retrieves a constant using its ID
+    pub fn get(&self, id: ConstId) -> &Value {
+        let ConstId(index) = id;
+        // Safety: All ConstIds are guaranteed to be valid indexes
+        unsafe { self.0.get_unchecked(index as usize) }
     }
 }
 

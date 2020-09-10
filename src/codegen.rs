@@ -19,7 +19,7 @@ pub struct Compiler<'a> {
 
     consts: bytecode::Constants,
     /// Map of function name to constant index
-    func_consts: HashMap<Arc<str>, u16>,
+    func_consts: HashMap<Arc<str>, bytecode::ConstId>,
 }
 
 impl<'a> Compiler<'a> {

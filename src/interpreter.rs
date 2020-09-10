@@ -2,7 +2,7 @@ mod func_obj_ptr;
 
 use std::mem;
 
-use crate::{bytecode::{Constants, OpCode}, value::{Value, FuncObj}};
+use crate::{bytecode::{Constants, ConstId, OpCode}, value::{Value, FuncObj}};
 
 use func_obj_ptr::FuncObjPtr;
 
@@ -55,12 +55,12 @@ impl Interpreter {
     /// Pushes the first call frame onto the call stack
     ///
     /// The given constant index should point to a function that takes zero arguments
-    pub fn call_main(&mut self, const_index: u16) {
+    pub fn call_main(&mut self, const_index: ConstId) {
         assert!(self.call_stack.is_empty(),
             "bug: main can only be initialized before the interpreter has begun");
 
         // Safety: compiler should generate a valid constant index
-        let func = unsafe { self.consts.get_unchecked(const_index) }.unwrap_obj();
+        let func = self.consts.get(const_index).unwrap_obj();
         let mut func = func.lock();
         let func = func.unwrap_func_mut().into();
 
@@ -98,7 +98,10 @@ impl Interpreter {
 
             Constant => {
                 let index = self.read_u16();
-                self.value_stack.push(unsafe { self.consts.get_unchecked(index).clone() });
+                // Safety: If the bytecode is compiled correctly, this will always be a valid
+                // constant ID
+                let id = unsafe { ConstId::new_unchecked(index) };
+                self.value_stack.push(self.consts.get(id).clone());
             },
 
             Pop => {
