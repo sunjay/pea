@@ -31,6 +31,9 @@ impl<'a> FunctionCompiler<'a> {
         for stmt in &body.stmts {
             self.walk_stmt(stmt);
         }
+
+        // Return from the function
+        self.code.write_instr(OpCode::Return);
     }
 
     fn walk_stmt(&mut self, stmt: &ast::Stmt) {
