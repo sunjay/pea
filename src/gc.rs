@@ -1,3 +1,7 @@
+mod alloc;
+
+pub use alloc::*;
+
 use std::fmt;
 use std::ptr::NonNull;
 use std::ops::Deref;
@@ -41,8 +45,7 @@ impl<T: fmt::Debug> fmt::Debug for Gc<T> {
 impl<T> Gc<T> {
     pub fn new(value: T) -> Self {
         Self {
-            //TODO: Use garbage collector
-            ptr: Box::leak(Box::new(value)).into(),
+            ptr: alloc(value),
         }
     }
 }

@@ -10,6 +10,7 @@ use termcolor::ColorChoice;
 use structopt::StructOpt;
 
 use pea::{
+    gc,
     diagnostics::Diagnostics,
     source_files::SourceFiles,
     parser,
@@ -111,4 +112,7 @@ fn main() {
     check_errors!(&diag);
 
     while interpreter.step() == Status::Running {}
+
+    // Clean up any remaining memory allocated by the GC
+    gc::sweep();
 }
