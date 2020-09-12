@@ -1,13 +1,14 @@
-use std::mem;
 use std::ptr::{self, NonNull};
 use std::sync::atomic::{AtomicPtr, Ordering};
+
+use crate::prim::Prim;
 
 /// A linked list of allocations managed by the GC
 static ALLOC_LIST: AtomicPtr<GcHeader> = AtomicPtr::new(ptr::null_mut());
 
 /// A single heap allocated entry managed by the GC
 #[repr(C)]
-struct GcEntry<T> {
+struct GcEntry {
     /// A header containing extra metadata needed by the GC
     ///
     /// Due to the `repr(C)` attribute, the address of this header is the same as the address
@@ -15,7 +16,7 @@ struct GcEntry<T> {
     /// the type T.
     header: GcHeader,
     /// The actual allocated value
-    value: T,
+    value: Prim,
 }
 
 #[derive(Debug)]
@@ -39,7 +40,7 @@ impl Default for GcHeader {
 /// Allocate memory managed by the GC and initialize it to the given value
 ///
 /// Returns a non-null pointer to the value
-pub fn alloc<T>(value: T) -> NonNull<T> {
+pub(in super) fn alloc(value: Prim) -> NonNull<Prim> {
     // To avoid the ABA problem, create the header with a null pointer first, then swap the next
     // ALLOC_LIST pointer with the pointer to this entry in a single operation.
     let mut entry = Box::new(GcEntry {
@@ -64,13 +65,14 @@ pub fn alloc<T>(value: T) -> NonNull<T> {
 /// # Safety
 ///
 /// This function may only be used with pointers returned from `alloc`.
-pub unsafe fn mark<T>(ptr: NonNull<T>) {
-    // Safety: Not actually sure if this offset will work. Probably a safer way would be to
-    // construct a GcEntry and then find out the actual offset between the `header` and `value`
-    // fields.
-    let header_ptr = ptr.as_ptr().sub(mem::size_of::<GcHeader>()) as *mut GcHeader;
-    // Safety: This is only safe because #[repr(C)] guarantees that the header will be placed before
-    // the value in the allocated GcEntry.
+pub(in super) unsafe fn mark(ptr: NonNull<Prim>) {
+    // Safety: Since `GcEntry` is #[repr(C)], the fields are laid out with `GcHeader` before `Prim`.
+    // That means that we *should* be able to just subtract the size of `GcHeader` to get to that
+    // field. Note: sub(1) == -(sizeof(Prim)*1).
+    //
+    //TODO: Not actually sure if this offset will work. Probably a safer way would be to construct a
+    // `GcEntry` and then find out the actual offset between the `header` and `value` fields.
+    let header_ptr = (ptr.as_ptr() as *mut GcHeader).sub(1);
     let mut header = &mut *header_ptr;
     header.is_reachable = true;
 }
@@ -83,16 +85,20 @@ pub unsafe fn mark<T>(ptr: NonNull<T>) {
 /// `alloc`.
 unsafe fn free(ptr: NonNull<GcHeader>, prev: Option<NonNull<GcHeader>>) {
     // Reconstruct the box that this pointer came from and free the value at the end of this scope
-    let header = Box::from_raw(ptr.as_ptr());
+    //
+    // Safety: This cast only works because #[repr(C)] guarantees that GcHeader is the first field
+    // of the struct and therefore a pointer to that field is the same the pointer to the entire
+    // struct.
+    let entry = Box::from_raw(ptr.as_ptr() as *mut GcEntry);
     if let Some(mut prev) = prev {
-        prev.as_mut().next = header.next;
+        prev.as_mut().next = entry.header.next;
 
     // No previous, must be the head of the list
     } else {
         // Set a new head for the list
         //
         // NOTE: This line is not robust and will not work if run concurrently with `alloc`.
-        ALLOC_LIST.compare_and_swap(ptr.as_ptr(), header.next, Ordering::SeqCst);
+        ALLOC_LIST.compare_and_swap(ptr.as_ptr(), entry.header.next, Ordering::SeqCst);
     }
 }
 
@@ -156,25 +162,38 @@ pub fn sweep() {
 mod tests {
     use super::*;
 
+    use crate::prim;
+
     // unsafe test helper for getting the value from a pointer
-    fn get<T>(ptr: &NonNull<T>) -> &T {
-        unsafe { ptr.as_ref() }
+    macro_rules! assert_value_eq {
+        ($ptr:expr, $expected:expr) => {
+            match unsafe { $ptr.as_ref() } {
+                Prim::Bytes(bytes) => {
+                    assert_eq!(&*bytes.lock().0, $expected);
+                },
+                _ => unsafe { std::hint::unreachable_unchecked() },
+            }
+        };
+    }
+
+    fn bytes(value: &[u8]) -> Prim {
+        Prim::Bytes(prim::Bytes(value.to_vec()).into())
     }
 
     #[test]
     fn gc_alloc() {
-        let ptr1 = alloc(2i8);
-        let ptr2 = alloc(42i16);
-        let ptr3 = alloc(-33i32);
-        let ptr4 = alloc(54i64);
-        let ptr5 = alloc(-12931i128);
+        let ptr1 = alloc(bytes(b"a"));
+        let ptr2 = alloc(bytes(b"b"));
+        let ptr3 = alloc(bytes(b"c"));
+        let ptr4 = alloc(bytes(b"123901"));
+        let ptr5 = alloc(bytes(b"sdfaioh2109"));
 
         // Check that all the values are as we expect
-        assert_eq!(*get(&ptr1), 2);
-        assert_eq!(*get(&ptr2), 42);
-        assert_eq!(*get(&ptr3), -33);
-        assert_eq!(*get(&ptr4), 54);
-        assert_eq!(*get(&ptr5), -12931);
+        assert_value_eq!(ptr1, b"a");
+        assert_value_eq!(ptr2, b"b");
+        assert_value_eq!(ptr3, b"c");
+        assert_value_eq!(ptr4, b"123901");
+        assert_value_eq!(ptr5, b"sdfaioh2109");
 
         // Make sure we don't free marked pointers
         unsafe { mark(ptr2) };
@@ -182,8 +201,9 @@ mod tests {
 
         sweep();
 
-        assert_eq!(*get(&ptr2), 42);
-        assert_eq!(*get(&ptr3), -33);
+        // Unsweeped pointers should keep their values
+        assert_value_eq!(ptr2, b"b");
+        assert_value_eq!(ptr3, b"c");
 
         // Should clean up all memory at the end
         sweep();

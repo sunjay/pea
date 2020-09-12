@@ -2,7 +2,7 @@ use std::fmt;
 
 /// A growable ASCII byte string
 #[derive(Debug)]
-pub struct Bytes(Vec<u8>);
+pub struct Bytes(pub Vec<u8>);
 
 impl fmt::Display for Bytes {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

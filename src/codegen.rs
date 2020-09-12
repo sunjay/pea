@@ -6,11 +6,11 @@ use std::collections::HashMap;
 use crate::{
     ast,
     bytecode,
-    prim,
+    prim::{self, Prim},
     interpreter::Interpreter,
     diagnostics::Diagnostics,
     value::Value,
-    gc::Gc,
+    gc::GcPrim,
 };
 
 use function::FunctionCompiler;
@@ -66,8 +66,8 @@ impl<'a> Compiler<'a> {
             Func(func) => {
                 let name = &func.name;
 
-                let func_value = Gc::new(prim::Func::new(name.value.clone()));
-                let func_const = self.consts.push(Value::Func(func_value.clone()));
+                let prim = GcPrim::new(Prim::Func(prim::Func::new(name.value.clone())));
+                let func_const = self.consts.push(Value::Prim(prim.clone()));
 
                 if self.func_consts.contains_key(&name.value) {
                     self.diag.span_error(name.span, format!("the name `{}` is defined multiple times", name.value))
@@ -77,8 +77,8 @@ impl<'a> Compiler<'a> {
 
                 let func_code = FunctionCompiler::compile(func, &mut self.consts);
 
-                let func_value = Gc::new(prim::Func::with_code(name.value.clone(), func_code));
-                self.consts.replace(func_const, Value::Func(func_value));
+                let prim = GcPrim::new(Prim::Func(prim::Func::with_code(name.value.clone(), func_code)));
+                self.consts.replace(func_const, Value::Prim(prim));
             },
         }
     }

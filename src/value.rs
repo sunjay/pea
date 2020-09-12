@@ -1,9 +1,8 @@
 use std::{fmt, mem};
 
 use static_assertions::const_assert_eq;
-use parking_lot::Mutex;
 
-use crate::{prim, gc::Gc};
+use crate::{prim, gc::GcPrim};
 
 /// The representation of a value in bytecode
 #[derive(Debug, Clone)]
@@ -11,8 +10,7 @@ pub enum Value {
     /// The `()` value
     Unit,
     I64(i64),
-    Bytes(Gc<Mutex<prim::Bytes>>),
-    Func(Gc<prim::Func>),
+    Prim(GcPrim),
 }
 
 // Make sure value doesn't grow beyond what we expect it to be
@@ -24,17 +22,20 @@ impl fmt::Display for Value {
         match self {
             Unit => write!(f, "()"),
             I64(value) => write!(f, "{}", value),
-            Bytes(value) => write!(f, "{}", *value.lock()),
-            Func(value) => write!(f, "{}", **value),
+            Prim(value) => write!(f, "{}", **value),
         }
     }
 }
 
 impl Value {
-    pub fn unwrap_func(&self) -> &Gc<prim::Func> {
+    pub fn unwrap_func(&self) -> &prim::Func {
         use Value::*;
+        use prim::Prim::*;
         match self {
-            Func(value) => value,
+            Prim(value) => match &**value {
+                Func(func) => func,
+                _ => panic!("expected a function"),
+            },
             _ => panic!("expected a function"),
         }
     }
