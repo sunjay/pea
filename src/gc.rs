@@ -6,6 +6,20 @@ use std::fmt;
 use std::ptr::NonNull;
 use std::ops::Deref;
 
+/// Every type that can be allocated on the GC must implement this trait
+pub trait Trace {
+    /// Called to trace any inner GC values within this type
+    ///
+    /// Call `gc::mark` with each field that is a GC type and then `trace` any fields that implement
+    /// the `Trace` trait.
+    fn trace(&self);
+}
+
+impl<T: Copy> Trace for T {
+    // Copy types can't contain `Gc` types
+    fn trace(&self) {}
+}
+
 /// Mark the given GC allocated value as still reachable. This will result in the allocation NOT
 /// being collected during the next sweep. Any allocation that is not marked will be freed.
 pub fn mark<T>(value: &Gc<T>) {
@@ -26,10 +40,8 @@ pub struct Gc<T> {
     ptr: NonNull<T>,
 }
 
-impl<T> Gc<T> {
-    /// Create a new `Gc<T>` value from any of the supported types
-    ///
-    /// This method is equivalent to calling `Gc::from` with the given value.
+impl<T: Trace> Gc<T> {
+    /// Allocates memory managed by the GC and initializes it with the given value
     pub fn new(value: T) -> Self {
         Self {
             ptr: alloc::allocate(value),

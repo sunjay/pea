@@ -2,13 +2,30 @@
 //!
 //! The garbage collector does not currently implement its own heap. We use the default allocator
 //! provided by the standard library.
+//!
+//! NOTE: This implementation is crazy unsafe. It relies on the unstable layout of trait objects and
+//! assumes that the data pointer of a trait object is the same as the pointer that would have been
+//! returned from `Box::new`. This may completely break and explode in the future if those details
+//! change.
 
+use std::mem;
 use std::ptr::{self, NonNull};
 use std::sync::atomic::{AtomicPtr, Ordering};
-use std::alloc::{alloc, dealloc, handle_alloc_error, Layout};
+
+use super::Trace;
 
 /// A linked list of allocations managed by the GC
 static ALLOC_LIST: AtomicPtr<GcHeader> = AtomicPtr::new(ptr::null_mut());
+
+/// Copied from: https://doc.rust-lang.org/std/raw/struct.TraitObject.html
+//TODO: Will need to be updated in the future when the representation changes.
+//  See: https://github.com/rust-lang/rust/issues/27751
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct TraitObject {
+    pub data: *mut (),
+    pub vtable: *mut (),
+}
 
 /// A single heap allocated entry managed by the GC
 #[repr(C)]
@@ -23,21 +40,25 @@ pub(in super) struct GcEntry<T> {
     value: T,
 }
 
+impl<T: Trace> Trace for GcEntry<T> {
+    // GcEntry types are not traced, but they need to implement Trace so we can create a trait object
+    fn trace(&self) {}
+}
+
 #[derive(Debug)]
 struct GcHeader {
-    /// The layout used to allocate this memory (used to be able to free the memory even when the
-    /// type info has been erased)
-    layout: Layout,
+    /// The pointer to the vtable for the trait object that generated this type
+    vtable: *mut (),
     /// if true, the allocation is still reachable from a root
     is_reachable: bool,
     /// The address of the previous allocation (makes this an intrusive list node)
     next: *mut GcHeader,
 }
 
-impl GcHeader {
-    fn new(layout: Layout) -> Self {
+impl Default for GcHeader {
+    fn default() -> Self {
         Self {
-            layout,
+            vtable: ptr::null_mut(),
             // Presume not reachable until proven otherwise
             is_reachable: false,
             next: ptr::null_mut(),
@@ -48,26 +69,23 @@ impl GcHeader {
 /// Allocate memory managed by the GC and initialize it to the given value
 ///
 /// Returns a non-null pointer to the value
-pub(in super) fn allocate<T>(value: T) -> NonNull<T> {
-    // Allocate memory for an entry holding a value of the given type
-    let layout = Layout::new::<GcEntry<T>>();
+pub(in super) fn allocate<T: Trace>(value: T) -> NonNull<T> {
+    // Allocate a trait object so we can erase the type info and just keep the stored value
+    // The vtable will be used later to reconstruct the value in a way that can be dropped using the
+    // dynamic type info stored in the vtable.
+    let entry: Box<dyn Trace> = Box::new(GcEntry {
+        header: GcHeader::default(),
+        value,
+    });
 
-    // Safety: alloc requires non-zero sized types. None of our GC'd types are zero-sized.
-    // Using debug assert because this is performance critical code and this check is just in case.
-    debug_assert_ne!(layout.size(), 0, "bug: GC does not support zero-sized types");
-    let entry_ptr = unsafe { alloc(layout) } as *mut GcEntry<T>;
-
-    // Check for allocation failure
-    if entry_ptr.is_null() {
-        handle_alloc_error(layout);
-    }
-
-    // Initialize entry memory without dereferencing uninitialized value
-    let header = GcHeader::new(layout);
-    unsafe { entry_ptr.write(GcEntry {header, value}); }
+    // Safety: This will continue to work as long as the unstable trait object layout does not change
+    let TraitObject {data, vtable} = unsafe { mem::transmute(entry) };
+    let entry_ptr = data as *mut GcEntry<T>;
 
     // Safety: We just initialized this pointer, so it should be valid
     let mut entry = unsafe { &mut *entry_ptr };
+    entry.header.vtable = vtable;
+
     let header_ptr = &mut entry.header as *mut GcHeader;
     let value_ptr = (&entry.value).into();
 
@@ -106,28 +124,27 @@ pub(in super) unsafe fn mark<T>(ptr: NonNull<T>) {
 /// This function may only be used with pointers in `ALLOC_LIST`. Do not call this concurrently with
 /// `alloc`.
 unsafe fn free(ptr: NonNull<GcHeader>, prev: Option<NonNull<GcHeader>>) {
-    // Safety: We know that *mut GcHeader is the same as the address returned by the allocator
-    // because #[repr(C)] on GcEntry guarantees that that field is at the start of the struct.
-    let entry_ptr = ptr.as_ptr() as *mut u8;
-
-    // Use the layout stored in the header to free using the correct size and alignment (avoids UB).
-    let header = ptr.as_ref();
-    let layout = header.layout;
-
     // Remove this entry from the ALLOC_LIST linked list
     if let Some(mut prev) = prev {
-        prev.as_mut().next = header.next;
+        prev.as_mut().next = ptr.as_ref().next;
 
     // No previous, must be the head of the list
     } else {
         // Set a new head for the list
         //
         // NOTE: This line is not robust and will not work if run concurrently with `alloc`.
-        ALLOC_LIST.compare_and_swap(ptr.as_ptr(), header.next, Ordering::SeqCst);
+        ALLOC_LIST.compare_and_swap(ptr.as_ptr(), ptr.as_ref().next, Ordering::SeqCst);
     }
 
-    // Free the memory
-    dealloc(entry_ptr, layout);
+    // Reconstruct the box that this pointer came from and free the value at the end of this scope
+    //
+    // Safety: This cast only works because #[repr(C)] guarantees that `GcHeader` is the first field
+    // of the struct and therefore a pointer to that field is the same the pointer to the entire
+    // struct.
+    let data = ptr.as_ptr() as *mut ();
+    let vtable = ptr.as_ref().vtable;
+
+    let _entry: Box<dyn Trace> = mem::transmute(TraitObject {data, vtable});
 }
 
 struct Traverse {

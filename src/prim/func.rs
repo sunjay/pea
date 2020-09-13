@@ -3,6 +3,8 @@ use std::sync::Arc;
 
 use crate::bytecode::Bytecode;
 
+use crate::gc;
+
 #[derive(Debug, Clone)]
 pub struct Func {
     pub name: Arc<str>,
@@ -22,5 +24,11 @@ impl Func {
 
     pub fn with_code(name: Arc<str>, code: Bytecode) -> Self {
         Self {name, code}
+    }
+}
+
+impl gc::Trace for Func {
+    fn trace(&self) {
+        let Self {name: _, code: _} = self;
     }
 }

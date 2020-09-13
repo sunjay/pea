@@ -1,5 +1,7 @@
 use std::fmt;
 
+use crate::gc;
+
 /// A growable ASCII byte string
 #[derive(Debug)]
 pub struct Bytes(pub Vec<u8>);
@@ -11,5 +13,11 @@ impl fmt::Display for Bytes {
             write!(f, "{}", byte as char)?;
         }
         Ok(())
+    }
+}
+
+impl gc::Trace for Bytes {
+    fn trace(&self) {
+        let Bytes(_bytes) = self;
     }
 }
