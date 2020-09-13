@@ -1,101 +1,90 @@
 use std::io::{self, Write};
 
-use termcolor::{StandardStream, StandardStreamLock, ColorSpec, Color, WriteColor};
+use termcolor::{StandardStream, ColorSpec, Color, WriteColor};
 
 use crate::source_files::FilePos;
 
-pub trait DiagnosticsWriter {
-    fn write_error(&mut self, pos: Option<FilePos>, message: &str) -> io::Result<()>;
-    fn write_warning(&mut self, pos: Option<FilePos>, message: &str) -> io::Result<()>;
-    fn write_info(&mut self, pos: Option<FilePos>, message: &str) -> io::Result<()>;
-    fn write_note(&mut self, pos: Option<FilePos>, message: &str) -> io::Result<()>;
-    fn write_help(&mut self, pos: Option<FilePos>, message: &str) -> io::Result<()>;
-    fn write_newline(&mut self) -> io::Result<()>;
-}
+use super::Level;
 
-impl DiagnosticsWriter for StandardStream {
-    fn write_error(&mut self, pos: Option<FilePos>, message: &str) -> io::Result<()> {
-        write_message(self.lock(), pos, "error:", Color::Red, message)
-    }
+pub trait DiagnosticsWriter: Write + WriteColor {
+    fn write_diag(&mut self, level: Level, pos: Option<FilePos>, message: &str) -> io::Result<()> {
+        if let Some(FilePos {path, start_line, start_offset, end_line, end_offset}) = pos {
+            if start_line == end_line && start_offset == end_offset {
+                write!(self, "[{}:{}:{}] ", path.display(), start_line, start_offset)?;
+            } else {
+                // end offset is always one past the end
+                write!(self, "[{}:{}:{}-{}:{}] ", path.display(), start_line, start_offset, end_line, end_offset)?;
+            }
+        }
 
-    fn write_warning(&mut self, pos: Option<FilePos>, message: &str) -> io::Result<()> {
-        write_message(self.lock(), pos, "warning:", Color::Yellow, message)
-    }
+        let (prefix, prefix_color) = level_prefix(level);
+        self.set_color(ColorSpec::new().set_fg(Some(prefix_color)).set_bold(true))?;
+        write!(self, "{}: ", prefix)?;
+        self.reset()?;
 
-    fn write_info(&mut self, pos: Option<FilePos>, message: &str) -> io::Result<()> {
-        write_message(self.lock(), pos, "info:", Color::White, message)
-    }
-
-    fn write_note(&mut self, pos: Option<FilePos>, message: &str) -> io::Result<()> {
-        write_message(self.lock(), pos, "note:", Color::Green, message)
-    }
-
-    fn write_help(&mut self, pos: Option<FilePos>, message: &str) -> io::Result<()> {
-        write_message(self.lock(), pos, "help:", Color::Blue, message)
-    }
-
-    fn write_newline(&mut self) -> io::Result<()> {
-        writeln!(self.lock())
+        writeln!(self, "{}", message)
     }
 }
 
-fn write_message(
-    mut out: StandardStreamLock,
-    pos: Option<FilePos>,
-    prefix: &str,
-    prefix_color: Color,
-    message: &str,
-) -> io::Result<()> {
-    if let Some(FilePos {path, start_line, start_offset, end_line, end_offset}) = pos {
-        if start_line == end_line && start_offset == end_offset {
-            write!(out, "[{}:{}:{}] ", path.display(), start_line, start_offset)?;
-        } else {
-            // end offset is always one past the end
-            write!(out, "[{}:{}:{}-{}:{}] ", path.display(), start_line, start_offset, end_line, end_offset)?;
+impl DiagnosticsWriter for StandardStream {}
+
+fn level_prefix(level: Level) -> (&'static str, Color) {
+    use Level::*;
+    match level {
+        Error => ("error", Color::Red),
+        Warning => ("warning", Color::Yellow),
+        Info => ("info", Color::White),
+        Note => ("note", Color::Green),
+        Help => ("help", Color::Blue),
+    }
+}
+
+#[cfg(test)]
+pub struct BytesWriter {
+    value: Vec<u8>,
+}
+
+#[cfg(test)]
+impl BytesWriter {
+    pub fn new(_color_choice: termcolor::ColorChoice) -> Self {
+        BytesWriter {
+            value: Vec::new(),
         }
     }
 
-    out.set_color(ColorSpec::new().set_fg(Some(prefix_color)).set_bold(true))?;
-    write!(out, "{} ", prefix)?;
-    out.reset()?;
+    /// Returns the entire value currently stored in the writer and resets it to an empty buffer
+    pub fn drain(&mut self) -> Vec<u8> {
+        use std::mem;
 
-    writeln!(out, "{}", message)
-}
-
-#[cfg(test)]
-pub struct NullWriter;
-
-#[cfg(test)]
-impl NullWriter {
-    pub fn new(_color_choice: termcolor::ColorChoice) -> Self {
-        // This impl exists to silence an unused parameter warning
-        NullWriter
+        mem::replace(&mut self.value, Vec::new())
     }
 }
 
 #[cfg(test)]
-impl DiagnosticsWriter for NullWriter {
-    fn write_error(&mut self, _pos: Option<FilePos>, _message: &str) -> io::Result<()> {
+impl Write for BytesWriter {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.value.write(buf)
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        self.value.flush()
+    }
+}
+
+#[cfg(test)]
+impl WriteColor for BytesWriter {
+    fn supports_color(&self) -> bool {
+        false
+    }
+
+    fn set_color(&mut self, _: &ColorSpec) -> io::Result<()> {
         Ok(())
     }
 
-    fn write_warning(&mut self, _pos: Option<FilePos>, _message: &str) -> io::Result<()> {
-        Ok(())
-    }
-
-    fn write_info(&mut self, _pos: Option<FilePos>, _message: &str) -> io::Result<()> {
-        Ok(())
-    }
-
-    fn write_note(&mut self, _pos: Option<FilePos>, _message: &str) -> io::Result<()> {
-        Ok(())
-    }
-
-    fn write_help(&mut self, _pos: Option<FilePos>, _message: &str) -> io::Result<()> {
-        Ok(())
-    }
-
-    fn write_newline(&mut self) -> io::Result<()> {
+    fn reset(&mut self) -> io::Result<()> {
         Ok(())
     }
 }
+
+#[cfg(test)]
+impl DiagnosticsWriter for BytesWriter {}

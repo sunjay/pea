@@ -1,5 +1,6 @@
 #![deny(unused_must_use)]
 
+use std::io;
 use std::process;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -13,8 +14,6 @@ use pea::{
     gc,
     diagnostics::Diagnostics,
     source_files::SourceFiles,
-    parser,
-    codegen,
     interpreter::Status,
 };
 
@@ -75,43 +74,17 @@ macro_rules! quit {
     };
 }
 
-macro_rules! check_errors {
-    ($diag:expr) => {
-        let diag = $diag;
-        match diag.emitted_errors() {
-            0 => {},
-            1 => quit!(diag, "aborting due to 1 previous error"),
-            errors => quit!(diag, "aborting due to {} previous errors", errors),
-        }
-    };
-}
-
 fn main() {
     let Options {program_path, color} = Options::from_args();
 
     let source_files = Arc::new(RwLock::new(SourceFiles::default()));
     let diag = Diagnostics::new(source_files.clone(), color.into());
 
-    // Need this separate statement so we don't hold the write() lock in the
-    // error case and end up with a deadlock
-    let root_file = source_files.write().add_file(&program_path);
-    let root_file = root_file.unwrap_or_else(|err| {
-        quit!(&diag, "Could not read source file `{}`: {}", program_path.display(), err)
-    });
+    let mut interpreter = pea::compile_path(program_path, source_files, &diag)
+        .unwrap_or_else(|err| quit!(&diag, "{}", err));
 
-    let program = {
-        // New scope because we want to drop this lock guard as soon as possible
-        let files = source_files.read();
-        let tokens = parser::collect_tokens(files.source(root_file), &diag);
-        check_errors!(&diag);
-        parser::parse_program(&tokens, &diag)
-    };
-    check_errors!(&diag);
-
-    let mut interpreter = codegen::Compiler::compile(&program, &diag);
-    check_errors!(&diag);
-
-    while interpreter.step() == Status::Running {}
+    let mut stdout = io::stdout();
+    while interpreter.step(&mut stdout) == Status::Running {}
 
     // Clean up any remaining memory allocated by the GC
     gc::sweep();

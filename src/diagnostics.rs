@@ -7,7 +7,7 @@ use std::borrow::Cow;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use parking_lot::{Mutex, RwLock};
+use parking_lot::{Mutex, RwLock, MutexGuard};
 use termcolor::ColorChoice;
 
 use crate::source_files::{Span, SourceFiles};
@@ -15,7 +15,7 @@ use crate::source_files::{Span, SourceFiles};
 #[cfg(not(test))]
 type OutputStream = termcolor::StandardStream;
 #[cfg(test)]
-type OutputStream = writer::NullWriter;
+type OutputStream = writer::BytesWriter;
 
 pub struct Diagnostics {
     source_files: Arc<RwLock<SourceFiles>>,
@@ -32,7 +32,7 @@ impl Diagnostics {
             #[cfg(not(test))]
             out: Mutex::new(termcolor::StandardStream::stderr(color_choice)),
             #[cfg(test)]
-            out: Mutex::new(writer::NullWriter::new(color_choice)),
+            out: Mutex::new(writer::BytesWriter::new(color_choice)),
             errors: AtomicUsize::default(),
         }
     }
@@ -40,6 +40,11 @@ impl Diagnostics {
     /// Returns the number of errors that have been emitted
     pub fn emitted_errors(&self) -> usize {
         self.errors.load(Ordering::SeqCst)
+    }
+
+    /// Returns a mutable handle to the output stream
+    pub fn output_stream(&self) -> MutexGuard<OutputStream> {
+        self.out.lock()
     }
 
     pub fn error<'a>(&'a self, message: impl Into<Cow<'a, str>>) -> DiagnosticWriter<'a> {

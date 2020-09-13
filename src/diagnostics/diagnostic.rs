@@ -1,3 +1,4 @@
+use std::io::Write;
 use std::borrow::Cow;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -100,7 +101,8 @@ impl<'a> DiagnosticWriter<'a> {
             let &Fragment {span, ref message} = frag;
             emit_message(&source_files, &mut out, Some(span), message);
         }
-        out.write_newline().expect("IO error");
+
+        writeln!(out).expect("IO error");
     }
 }
 
@@ -113,12 +115,5 @@ fn emit_message(
     let Message {level, label} = message;
     let pos = span.map(|span| source_files.pos(span));
 
-    use Level::*;
-    match level {
-        Error => out.write_error(pos, &label).expect("IO error"),
-        Warning => out.write_warning(pos, &label).expect("IO error"),
-        Info => out.write_info(pos, &label).expect("IO error"),
-        Note => out.write_note(pos, &label).expect("IO error"),
-        Help => out.write_help(pos, &label).expect("IO error"),
-    }
+    out.write_diag(*level, pos, &label).expect("IO error");
 }

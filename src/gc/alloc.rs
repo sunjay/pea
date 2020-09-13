@@ -188,6 +188,11 @@ fn traverse() -> impl Iterator<Item=NonNull<GcHeader>> {
 }
 
 /// Sweeps/collects all allocations that have been not been marked as reachable
+///
+/// # Safety
+///
+/// This function currently assumes that the program is frozen while collection is running. That is,
+/// no other calls to any GC APIs may take place while this function is running.
 pub fn sweep() {
     let mut prev = None;
     for mut header in traverse() {
