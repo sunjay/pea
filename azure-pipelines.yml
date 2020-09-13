@@ -75,6 +75,7 @@ steps:
     rustup set profile minimal
     rustup default "$MIRI_NIGHTLY"
     rustup component add miri
+    echo "Successfully installed miri on $MIRI_NIGHTLY"
 
     cargo miri test --verbose --all -- -Zmiri-disable-isolation
   displayName: miri
