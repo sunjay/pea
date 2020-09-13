@@ -1,14 +1,11 @@
-mod func_ptr;
-
 use std::mem;
 
 use crate::{
     prim,
     bytecode::{Constants, ConstId, OpCode},
     value::Value,
+    gc::Gc,
 };
-
-use func_ptr::FuncPtr;
 
 /// The current status of the interpreter
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -20,7 +17,7 @@ pub enum Status {
 #[derive(Debug)]
 pub struct CallFrame {
     /// A pointer to the function being run (owned by the interpreter)
-    func: FuncPtr,
+    func: Gc<prim::Func>,
     /// The index of the first slot in the value stack that belongs to this frame (frame pointer)
     frame_index: usize,
     /// The address in func.code of the next bytecode instruction to execute
@@ -28,9 +25,9 @@ pub struct CallFrame {
 }
 
 impl CallFrame {
-    pub fn new(func: &prim::Func, frame_index: usize) -> Self {
+    pub fn new(func: Gc<prim::Func>, frame_index: usize) -> Self {
         Self {
-            func: func.into(),
+            func,
             frame_index,
             // Start from the first byte
             next_instr: 0,
@@ -67,7 +64,7 @@ impl Interpreter {
 
         // main starts at the first item in the stack
         let frame_index = self.value_stack.len();
-        self.call_stack.push(CallFrame::new(func, frame_index));
+        self.call_stack.push(CallFrame::new(func.clone(), frame_index));
     }
 
     pub fn step(&mut self) -> Status {
@@ -132,10 +129,7 @@ impl Interpreter {
         let addr = frame.next_instr;
         frame.next_instr += mem::size_of::<u8>();
 
-        // Safety: Assuming the garbage collector won't collect any functions since they are all
-        // constants
-        let func = frame.func.get_unchecked();
-        func.code.get_unchecked(addr)
+        frame.func.code.get_unchecked(addr)
     }
 
     /// Retrieves the top call frame

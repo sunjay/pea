@@ -1,22 +1,78 @@
+//! Allocation, deallocation, and heap traversal functions.
+//!
+//! The garbage collector does not currently implement its own heap. We use the `Box` type and the
+//! system allocator.
+//!
+//! ## Implementation Notes
+//!
+//! The ideal interface for this garbage collector would be a `Gc<T>` type similar to `Arc<T>` that
+//! frees its data after it is done being used. That interface is possible and actually very easy to
+//! implement with C semantics. In C, there is no `Drop`, so you can just put a header at the start
+//! of every allocation and operate as if the type `T` doesn't even exist. The C allocator only
+//! needs you to return back the same pointer value it returned from `malloc`. In Rust, it isn't
+//! that easy because you can't just free an arbitrary pointer, you need to provide a pointer with
+//! the same size and alignment as the value you allocated. You also need to run any `Drop` impl
+//! that the type `T` might have. With no runtime type info, this is very hard to implement.
+//!
+//! This GC implementation provides the exact `Gc<T>` interface you would want with only one small
+//! caveat: `T` cannot be any type. Instead, you have to list all the types you support in the
+//! `gc_types` macro. That macro will then generate a constructor for your type via the `From`
+//! trait. The way this works is that we have an enum, `GcValue`, that has a variant for each
+//! supported type listed in `gc_types`. When we allocate, we allocate a value of `GcValue` instead
+//! of a value of type `T`. That makes all of allocations the same size and gives us a consistent
+//! type `GcValue` to tell Rust to free when we are done with the memory. Since `GcValue` is just a
+//! regular enum, Rust knows how to run its `Drop` implementation as well.
+//!
+//! The tricky thing about this method is that enum layouts are largely unspecified, so if we have a
+//! pointer to a type `T`, it's difficult to derive the pointer to `GcValue`. We work around this by
+//! storing a footer with the value of type `T` that points back to the `GcEntry` we originally
+//! allocated. (`GcEntry` is just `GcValue` with an extra header.)
+//!
+//! So for each value of type `T`, we actually end up allocating an additional overhead of both the
+//! enum variant for `GcValue` and the extra `*mut GcEntry` footer. Every variant of an enum
+//! allocates the same amount of memory, so if the variants of `GcValue` vary wildly in size, we may
+//! end up wasting a lot of space.
+//!
+//! Hopefully this is all worth it to have a simple `Gc<T>` interface that is almost exactly the
+//! same as the equivalent C code that this was based on.
+
 use std::ptr::{self, NonNull};
 use std::sync::atomic::{AtomicPtr, Ordering};
 
-use crate::prim::Prim;
+use super::GcValue;
 
 /// A linked list of allocations managed by the GC
 static ALLOC_LIST: AtomicPtr<GcHeader> = AtomicPtr::new(ptr::null_mut());
 
+/// Due to the `repr(C)` attribute, the address of the `value` field is the same as the address of
+/// the `GcEntryPtr` struct itself. This allows the `entry` field to be accessed from a pointer to
+/// the type T.
+///
+/// This is essentially the same as appending a pointer onto the tail of whatever value is being
+/// allocated. We need this because the layout of enums is unspecified so we can't get to the
+/// address just from the value of an enum variant itself.
+#[repr(C)]
+pub(in super) struct GcEntryPtr<T> {
+    pub value: T,
+    pub entry: NonNull<GcEntry>,
+}
+
+impl<T> From<T> for GcEntryPtr<T> {
+    fn from(value: T) -> Self {
+        Self {
+            value,
+            entry: NonNull::dangling(),
+        }
+    }
+}
+
 /// A single heap allocated entry managed by the GC
 #[repr(C)]
-struct GcEntry {
+pub(in super) struct GcEntry {
     /// A header containing extra metadata needed by the GC
-    ///
-    /// Due to the `repr(C)` attribute, the address of this header is the same as the address
-    /// returned by the heap allocation. This allows headers to be operated on independently from
-    /// the type T.
     header: GcHeader,
     /// The actual allocated value
-    value: Prim,
+    value: GcValue,
 }
 
 #[derive(Debug)]
@@ -40,7 +96,7 @@ impl Default for GcHeader {
 /// Allocate memory managed by the GC and initialize it to the given value
 ///
 /// Returns a non-null pointer to the value
-pub(in super) fn alloc(value: Prim) -> NonNull<Prim> {
+pub(in super) fn allocate(value: GcValue) -> (NonNull<GcEntry>, NonNull<GcValue>) {
     // To avoid the ABA problem, create the header with a null pointer first, then swap the next
     // ALLOC_LIST pointer with the pointer to this entry in a single operation.
     let mut entry = Box::new(GcEntry {
@@ -55,9 +111,9 @@ pub(in super) fn alloc(value: Prim) -> NonNull<Prim> {
     entry.header.next = next;
 
     // Make sure the entry is not dropped at the end of this function
-    Box::leak(entry);
+    let entry_ptr = Box::leak(entry).into();
 
-    value_ptr
+    (entry_ptr, value_ptr)
 }
 
 /// Marks a value managed by the GC as reachable
@@ -65,16 +121,17 @@ pub(in super) fn alloc(value: Prim) -> NonNull<Prim> {
 /// # Safety
 ///
 /// This function may only be used with pointers returned from `alloc`.
-pub(in super) unsafe fn mark(ptr: NonNull<Prim>) {
-    // Safety: Since `GcEntry` is #[repr(C)], the fields are laid out with `GcHeader` before `Prim`.
-    // That means that we *should* be able to just subtract the size of `GcHeader` to get to that
-    // field. Note: sub(1) == -(sizeof(Prim)*1).
-    //
-    //TODO: Not actually sure if this offset will work. Probably a safer way would be to construct a
-    // `GcEntry` and then find out the actual offset between the `header` and `value` fields.
-    let header_ptr = (ptr.as_ptr() as *mut GcHeader).sub(1);
-    let mut header = &mut *header_ptr;
-    header.is_reachable = true;
+pub(in super) unsafe fn mark<T>(ptr: NonNull<T>) {
+    // Safety: This cast is safe because each `T` allocated by the GC is guaranteed to be the
+    // `value` field of `GcEntryPtr`. Since `GcEntryPtr` is #[repr(C)] and `value` is the first
+    // field, a pointer to `value` is guaranteed to be a pointer to `GcEntryPtr`.
+    let ptr: NonNull<GcEntryPtr<T>> = ptr.cast();
+    mark_inner(ptr.as_ref().entry)
+}
+
+unsafe fn mark_inner(mut ptr: NonNull<GcEntry>) {
+    let entry = ptr.as_mut();
+    entry.header.is_reachable = true;
 }
 
 /// Frees the memory associated with the given allocation
@@ -155,59 +212,5 @@ pub fn sweep() {
 
         // Safety: pointers generated by `traverse` are guaranteed to be from ALLOC_LIST
         unsafe { free(header, prev); }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    use crate::prim;
-
-    // unsafe test helper for getting the value from a pointer
-    macro_rules! assert_value_eq {
-        ($ptr:expr, $expected:expr) => {
-            match unsafe { $ptr.as_ref() } {
-                Prim::Bytes(bytes) => {
-                    assert_eq!(&*bytes.lock().0, $expected);
-                },
-                _ => unsafe { std::hint::unreachable_unchecked() },
-            }
-        };
-    }
-
-    fn bytes(value: &[u8]) -> Prim {
-        Prim::Bytes(prim::Bytes(value.to_vec()).into())
-    }
-
-    #[test]
-    fn gc_alloc() {
-        let ptr1 = alloc(bytes(b"a"));
-        let ptr2 = alloc(bytes(b"b"));
-        let ptr3 = alloc(bytes(b"c"));
-        let ptr4 = alloc(bytes(b"123901"));
-        let ptr5 = alloc(bytes(b"sdfaioh2109"));
-
-        // Check that all the values are as we expect
-        assert_value_eq!(ptr1, b"a");
-        assert_value_eq!(ptr2, b"b");
-        assert_value_eq!(ptr3, b"c");
-        assert_value_eq!(ptr4, b"123901");
-        assert_value_eq!(ptr5, b"sdfaioh2109");
-
-        // Make sure we don't free marked pointers
-        unsafe { mark(ptr2) };
-        unsafe { mark(ptr3) };
-
-        sweep();
-
-        // Unsweeped pointers should keep their values
-        assert_value_eq!(ptr2, b"b");
-        assert_value_eq!(ptr3, b"c");
-
-        // Should clean up all memory at the end
-        sweep();
-
-        assert_eq!(ALLOC_LIST.load(Ordering::SeqCst), ptr::null_mut());
     }
 }
