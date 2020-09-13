@@ -6,6 +6,17 @@ use crate::source_files::FilePos;
 
 use super::Level;
 
+fn level_prefix(level: Level) -> (&'static str, Color) {
+    use Level::*;
+    match level {
+        Error => ("error", Color::Red),
+        Warning => ("warning", Color::Yellow),
+        Info => ("info", Color::White),
+        Note => ("note", Color::Green),
+        Help => ("help", Color::Blue),
+    }
+}
+
 pub trait DiagnosticsWriter: Write + WriteColor {
     fn write_diag(&mut self, level: Level, pos: Option<FilePos>, message: &str) -> io::Result<()> {
         if let Some(FilePos {path, start_line, start_offset, end_line, end_offset}) = pos {
@@ -28,51 +39,30 @@ pub trait DiagnosticsWriter: Write + WriteColor {
 
 impl DiagnosticsWriter for StandardStream {}
 
-fn level_prefix(level: Level) -> (&'static str, Color) {
-    use Level::*;
-    match level {
-        Error => ("error", Color::Red),
-        Warning => ("warning", Color::Yellow),
-        Info => ("info", Color::White),
-        Note => ("note", Color::Green),
-        Help => ("help", Color::Blue),
-    }
-}
+#[cfg(test)]
+pub struct NullWriter;
 
 #[cfg(test)]
-pub struct BytesWriter {
-    value: Vec<u8>,
-}
-
-#[cfg(test)]
-impl BytesWriter {
+impl NullWriter {
     pub fn new(_color_choice: termcolor::ColorChoice) -> Self {
-        BytesWriter {
-            value: Vec::new(),
-        }
-    }
-
-    /// Returns the entire value currently stored in the writer and resets it to an empty buffer
-    pub fn drain(&mut self) -> Vec<u8> {
-        use std::mem;
-
-        mem::replace(&mut self.value, Vec::new())
+        // This impl exists to silence an unused parameter warning
+        Self
     }
 }
 
 #[cfg(test)]
-impl Write for BytesWriter {
+impl Write for NullWriter {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        self.value.write(buf)
+        Ok(buf.len())
     }
 
     fn flush(&mut self) -> io::Result<()> {
-        self.value.flush()
+        Ok(())
     }
 }
 
 #[cfg(test)]
-impl WriteColor for BytesWriter {
+impl WriteColor for NullWriter {
     fn supports_color(&self) -> bool {
         false
     }
@@ -87,4 +77,4 @@ impl WriteColor for BytesWriter {
 }
 
 #[cfg(test)]
-impl DiagnosticsWriter for BytesWriter {}
+impl DiagnosticsWriter for NullWriter {}

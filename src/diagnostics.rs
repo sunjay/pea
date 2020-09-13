@@ -15,7 +15,7 @@ use crate::source_files::{Span, SourceFiles};
 #[cfg(not(test))]
 type OutputStream = termcolor::StandardStream;
 #[cfg(test)]
-type OutputStream = writer::BytesWriter;
+type OutputStream = writer::NullWriter;
 
 pub struct Diagnostics {
     source_files: Arc<RwLock<SourceFiles>>,
@@ -32,7 +32,7 @@ impl Diagnostics {
             #[cfg(not(test))]
             out: Mutex::new(termcolor::StandardStream::stderr(color_choice)),
             #[cfg(test)]
-            out: Mutex::new(writer::BytesWriter::new(color_choice)),
+            out: Mutex::new(writer::NullWriter::new(color_choice)),
             errors: AtomicUsize::default(),
         }
     }

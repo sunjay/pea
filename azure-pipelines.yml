@@ -68,7 +68,7 @@ steps:
 
 - script: |
     rustup +nightly component add miri
-    cargo +nightly miri test --verbose --all
+    cargo +nightly miri test --verbose --all -- -Zmiri-disable-isolation
   displayName: miri
   condition: eq( variables['rustup_toolchain'], 'nightly' )
 

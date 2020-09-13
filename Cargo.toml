@@ -12,3 +12,6 @@ termcolor = "1.1"
 parking_lot = "0.11"
 static_assertions = "1.1"
 structopt = "0.3"
+
+[dev-dependencies]
+rayon = "1.4"

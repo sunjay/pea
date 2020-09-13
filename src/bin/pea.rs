@@ -1,6 +1,5 @@
 #![deny(unused_must_use)]
 
-use std::io;
 use std::process;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -83,8 +82,7 @@ fn main() {
     let mut interpreter = pea::compile_path(program_path, source_files, &diag)
         .unwrap_or_else(|err| quit!(&diag, "{}", err));
 
-    let mut stdout = io::stdout();
-    while interpreter.step(&mut stdout) == Status::Running {}
+    while interpreter.step() == Status::Running {}
 
     // Clean up any remaining memory allocated by the GC
     gc::sweep();

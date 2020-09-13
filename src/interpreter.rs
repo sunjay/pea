@@ -1,5 +1,4 @@
 use std::mem;
-use std::io::{self, Write};
 
 use crate::{
     prim,
@@ -68,7 +67,7 @@ impl Interpreter {
         self.call_stack.push(CallFrame::new(func.clone(), frame_index));
     }
 
-    pub fn step<W: Write>(&mut self, mut stdout: W) -> Status {
+    pub fn step(&mut self) -> Status {
         // Safety: `next_instr` will be in bounds and the transmute is safe assuming that the
         // bytecode is compiled correctly and assuming there is at least one instruction. If the
         // compiler accidentally creates a jump to some arbitrary value, this can cause UB.
@@ -110,7 +109,7 @@ impl Interpreter {
             },
 
             Print => {
-                write!(stdout, "{}", self.pop()).expect("IO Error");
+                println!("{}", self.pop());
             },
         }
 
