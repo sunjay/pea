@@ -1,91 +1,43 @@
 //! Allocation, deallocation, and heap traversal functions.
 //!
-//! The garbage collector does not currently implement its own heap. We use the `Box` type and the
-//! system allocator.
-//!
-//! ## Implementation Notes
-//!
-//! The ideal interface for this garbage collector would be a `Gc<T>` type similar to `Arc<T>` that
-//! frees its data after it is done being used. That interface is possible and actually very easy to
-//! implement with C semantics. In C, there is no `Drop`, so you can just put a header at the start
-//! of every allocation and operate as if the type `T` doesn't even exist. The C allocator only
-//! needs you to return back the same pointer value it returned from `malloc`. In Rust, it isn't
-//! that easy because you can't just free an arbitrary pointer, you need to provide a pointer with
-//! the same size and alignment as the value you allocated. You also need to run any `Drop` impl
-//! that the type `T` might have. With no runtime type info, this is very hard to implement.
-//!
-//! This GC implementation provides the exact `Gc<T>` interface you would want with only one small
-//! caveat: `T` cannot be any type. Instead, you have to list all the types you support in the
-//! `gc_types` macro. That macro will then generate a constructor for your type via the `From`
-//! trait. The way this works is that we have an enum, `GcValue`, that has a variant for each
-//! supported type listed in `gc_types`. When we allocate, we allocate a value of `GcValue` instead
-//! of a value of type `T`. That makes all of allocations the same size and gives us a consistent
-//! type `GcValue` to tell Rust to free when we are done with the memory. Since `GcValue` is just a
-//! regular enum, Rust knows how to run its `Drop` implementation as well.
-//!
-//! The tricky thing about this method is that enum layouts are largely unspecified, so if we have a
-//! pointer to a type `T`, it's difficult to derive the pointer to `GcValue`. We work around this by
-//! storing a footer with the value of type `T` that points back to the `GcEntry` we originally
-//! allocated. (`GcEntry` is just `GcValue` with an extra header.)
-//!
-//! So for each value of type `T`, we actually end up allocating an additional overhead of both the
-//! enum variant for `GcValue` and the extra `*mut GcEntry` footer. Every variant of an enum
-//! allocates the same amount of memory, so if the variants of `GcValue` vary wildly in size, we may
-//! end up wasting a lot of space.
-//!
-//! Hopefully this is all worth it to have a simple `Gc<T>` interface that is almost exactly the
-//! same as the equivalent C code that this was based on.
+//! The garbage collector does not currently implement its own heap. We use the default allocator
+//! provided by the standard library.
 
 use std::ptr::{self, NonNull};
 use std::sync::atomic::{AtomicPtr, Ordering};
-
-use super::GcValue;
+use std::alloc::{alloc, dealloc, handle_alloc_error, Layout};
 
 /// A linked list of allocations managed by the GC
 static ALLOC_LIST: AtomicPtr<GcHeader> = AtomicPtr::new(ptr::null_mut());
 
-/// Due to the `repr(C)` attribute, the address of the `value` field is the same as the address of
-/// the `GcEntryPtr` struct itself. This allows the `entry` field to be accessed from a pointer to
-/// the type T.
-///
-/// This is essentially the same as appending a pointer onto the tail of whatever value is being
-/// allocated. We need this because the layout of enums is unspecified so we can't get to the
-/// address just from the value of an enum variant itself.
-#[repr(C)]
-pub(in super) struct GcEntryPtr<T> {
-    pub value: T,
-    pub entry: NonNull<GcEntry>,
-}
-
-impl<T> From<T> for GcEntryPtr<T> {
-    fn from(value: T) -> Self {
-        Self {
-            value,
-            entry: NonNull::dangling(),
-        }
-    }
-}
-
 /// A single heap allocated entry managed by the GC
 #[repr(C)]
-pub(in super) struct GcEntry {
+pub(in super) struct GcEntry<T> {
     /// A header containing extra metadata needed by the GC
+    ///
+    /// Due to the `repr(C)` attribute, the address of this header is the same as the address
+    /// returned by the heap allocation. This allows headers to be operated on independently from
+    /// the type T.
     header: GcHeader,
     /// The actual allocated value
-    value: GcValue,
+    value: T,
 }
 
 #[derive(Debug)]
 struct GcHeader {
+    /// The layout used to allocate this memory (used to be able to free the memory even when the
+    /// type info has been erased)
+    layout: Layout,
     /// if true, the allocation is still reachable from a root
     is_reachable: bool,
     /// The address of the previous allocation (makes this an intrusive list node)
     next: *mut GcHeader,
 }
 
-impl Default for GcHeader {
-    fn default() -> Self {
+impl GcHeader {
+    fn new(layout: Layout) -> Self {
         Self {
+            layout,
             // Presume not reachable until proven otherwise
             is_reachable: false,
             next: ptr::null_mut(),
@@ -96,42 +48,55 @@ impl Default for GcHeader {
 /// Allocate memory managed by the GC and initialize it to the given value
 ///
 /// Returns a non-null pointer to the value
-pub(in super) fn allocate(value: GcValue) -> (NonNull<GcEntry>, NonNull<GcValue>) {
-    // To avoid the ABA problem, create the header with a null pointer first, then swap the next
-    // ALLOC_LIST pointer with the pointer to this entry in a single operation.
-    let mut entry = Box::new(GcEntry {
-        header: GcHeader::default(),
-        value,
-    });
+pub(in super) fn allocate<T>(value: T) -> NonNull<T> {
+    // Allocate memory for an entry holding a value of the given type
+    let layout = Layout::new::<GcEntry<T>>();
+
+    // Safety: alloc requires non-zero sized types. None of our GC'd types are zero-sized.
+    // Using debug assert because this is performance critical code and this check is just in case.
+    debug_assert_ne!(layout.size(), 0, "bug: GC does not support zero-sized types");
+    let entry_ptr = unsafe { alloc(layout) } as *mut GcEntry<T>;
+
+    // Check for allocation failure
+    if entry_ptr.is_null() {
+        handle_alloc_error(layout);
+    }
+
+    // Initialize entry memory without dereferencing uninitialized value
+    let header = GcHeader::new(layout);
+    unsafe { entry_ptr.write(GcEntry {header, value}); }
+
+    // Safety: We just initialized this pointer, so it should be valid
+    let mut entry = unsafe { &mut *entry_ptr };
     let header_ptr = &mut entry.header as *mut GcHeader;
     let value_ptr = (&entry.value).into();
 
     // Append onto the list of all allocations
+    //
+    // To avoid the ABA problem, we initially create the header with a null pointer for `next`, then
+    // we swap the current ALLOC_LIST pointer with the pointer to this entry in a single operation.
     let next = ALLOC_LIST.swap(header_ptr, Ordering::SeqCst);
     entry.header.next = next;
 
-    // Make sure the entry is not dropped at the end of this function
-    let entry_ptr = Box::leak(entry).into();
-
-    (entry_ptr, value_ptr)
+    value_ptr
 }
 
 /// Marks a value managed by the GC as reachable
 ///
 /// # Safety
 ///
-/// This function may only be used with pointers returned from `alloc`.
+/// This function may only be used with pointers returned from `allocate`.
 pub(in super) unsafe fn mark<T>(ptr: NonNull<T>) {
-    // Safety: This cast is safe because each `T` allocated by the GC is guaranteed to be the
-    // `value` field of `GcEntryPtr`. Since `GcEntryPtr` is #[repr(C)] and `value` is the first
-    // field, a pointer to `value` is guaranteed to be a pointer to `GcEntryPtr`.
-    let ptr: NonNull<GcEntryPtr<T>> = ptr.cast();
-    mark_inner(ptr.as_ref().entry)
-}
-
-unsafe fn mark_inner(mut ptr: NonNull<GcEntry>) {
-    let entry = ptr.as_mut();
-    entry.header.is_reachable = true;
+    // Safety: Since `GcEntry` is #[repr(C)], the fields are laid out with `GcHeader` before `T`.
+    // That means that we *should* be able to just subtract the size of `GcHeader` to get to the
+    // `header` field from the `value` field. Note: sub(1) == -(sizeof(GcHeader)*1).
+    //
+    //TODO: Not actually sure if this offset will work. A more implementation independent way would
+    // be to construct a fake `GcEntry` and then find out the actual offset between the `header` and
+    // `value` fields.
+    let header_ptr = (ptr.as_ptr() as *mut GcHeader).sub(1);
+    let mut header = &mut *header_ptr;
+    header.is_reachable = true;
 }
 
 /// Frees the memory associated with the given allocation
@@ -141,22 +106,28 @@ unsafe fn mark_inner(mut ptr: NonNull<GcEntry>) {
 /// This function may only be used with pointers in `ALLOC_LIST`. Do not call this concurrently with
 /// `alloc`.
 unsafe fn free(ptr: NonNull<GcHeader>, prev: Option<NonNull<GcHeader>>) {
-    // Reconstruct the box that this pointer came from and free the value at the end of this scope
-    //
-    // Safety: This cast only works because #[repr(C)] guarantees that GcHeader is the first field
-    // of the struct and therefore a pointer to that field is the same the pointer to the entire
-    // struct.
-    let entry = Box::from_raw(ptr.as_ptr() as *mut GcEntry);
+    // Safety: We know that *mut GcHeader is the same as the address returned by the allocator
+    // because #[repr(C)] on GcEntry guarantees that that field is at the start of the struct.
+    let entry_ptr = ptr.as_ptr() as *mut u8;
+
+    // Use the layout stored in the header to free using the correct size and alignment (avoids UB).
+    let header = ptr.as_ref();
+    let layout = header.layout;
+
+    // Remove this entry from the ALLOC_LIST linked list
     if let Some(mut prev) = prev {
-        prev.as_mut().next = entry.header.next;
+        prev.as_mut().next = header.next;
 
     // No previous, must be the head of the list
     } else {
         // Set a new head for the list
         //
         // NOTE: This line is not robust and will not work if run concurrently with `alloc`.
-        ALLOC_LIST.compare_and_swap(ptr.as_ptr(), entry.header.next, Ordering::SeqCst);
+        ALLOC_LIST.compare_and_swap(ptr.as_ptr(), header.next, Ordering::SeqCst);
     }
+
+    // Free the memory
+    dealloc(entry_ptr, layout);
 }
 
 struct Traverse {
@@ -217,5 +188,45 @@ pub fn sweep() {
 
         // Safety: pointers generated by `traverse` are guaranteed to be from ALLOC_LIST
         unsafe { free(header, prev); }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // unsafe test helper for getting the value from a pointer
+    fn get<T>(ptr: &NonNull<T>) -> &T {
+        unsafe { ptr.as_ref() }
+    }
+
+    #[test]
+    fn gc_alloc() {
+        let ptr1 = allocate(2i8);
+        let ptr2 = allocate(42i16);
+        let ptr3 = allocate(-33i32);
+        let ptr4 = allocate(54i64);
+        let ptr5 = allocate(-12931i128);
+
+        // Check that all the values are as we expect
+        assert_eq!(*get(&ptr1), 2);
+        assert_eq!(*get(&ptr2), 42);
+        assert_eq!(*get(&ptr3), -33);
+        assert_eq!(*get(&ptr4), 54);
+        assert_eq!(*get(&ptr5), -12931);
+
+        // Make sure we don't free marked pointers
+        unsafe { mark(ptr2) };
+        unsafe { mark(ptr3) };
+
+        sweep();
+
+        assert_eq!(*get(&ptr2), 42);
+        assert_eq!(*get(&ptr3), -33);
+
+        // Should clean up all memory at the end
+        sweep();
+
+        assert_eq!(ALLOC_LIST.load(Ordering::SeqCst), ptr::null_mut());
     }
 }
