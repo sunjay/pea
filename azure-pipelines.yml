@@ -66,9 +66,15 @@ steps:
     cargo test --verbose --all
   displayName: test
 
+# See: https://github.com/rust-lang/miri#running-miri-on-ci
 - script: |
-    rustup +nightly component add miri
-    cargo +nightly miri test --verbose --all -- -Zmiri-disable-isolation
+    MIRI_NIGHTLY=nightly-$(curl -s https://rust-lang.github.io/rustup-components-history/x86_64-unknown-linux-gnu/miri)
+    echo "Installing latest nightly with Miri: $MIRI_NIGHTLY"
+    rustup set profile minimal
+    rustup default "$MIRI_NIGHTLY"
+    rustup component add miri
+
+    cargo miri test --verbose --all -- -Zmiri-disable-isolation
   displayName: miri
   condition: eq( variables['rustup_toolchain'], 'nightly' )
 
