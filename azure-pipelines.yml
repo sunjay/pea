@@ -77,6 +77,8 @@ steps:
     rustup component add miri
     echo "Successfully installed miri on $MIRI_NIGHTLY"
 
+    cargo miri setup
+
     cargo miri test --verbose --all -- -Zmiri-disable-isolation
   displayName: miri
   condition: eq( variables['rustup_toolchain'], 'nightly' )
