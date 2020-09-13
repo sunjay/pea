@@ -11,6 +11,7 @@
 use std::mem;
 use std::ptr::{self, NonNull};
 use std::sync::atomic::{AtomicPtr, Ordering};
+use std::alloc::{alloc, Layout, handle_alloc_error};
 
 use super::Trace;
 
@@ -29,7 +30,7 @@ pub struct TraitObject {
 
 /// A single heap allocated entry managed by the GC
 #[repr(C)]
-pub(in super) struct GcEntry<T> {
+pub(in super) struct GcEntry<T: ?Sized> {
     /// A header containing extra metadata needed by the GC
     ///
     /// Due to the `repr(C)` attribute, the address of this header is the same as the address
@@ -40,7 +41,7 @@ pub(in super) struct GcEntry<T> {
     value: T,
 }
 
-impl<T: Trace> Trace for GcEntry<T> {
+impl<T: ?Sized + Trace> Trace for GcEntry<T> {
     // GcEntry types are not traced, but they need to implement Trace so we can create a trait object
     fn trace(&self) {}
 }
@@ -69,6 +70,57 @@ impl Default for GcHeader {
 /// Allocate memory managed by the GC and initialize it to the given value
 ///
 /// Returns a non-null pointer to the value
+pub(in super) fn allocate_array<T, I>(values: I) -> NonNull<[T]>
+    where I: ExactSizeIterator<Item=T>,
+{
+    // Start by generating the layout for the array, essentially `GcEntry<[T]>`
+    let size = values.len();
+
+    // Safety: The layout being generated here must match the layout of `GcEntry`
+    let header_layout = Layout::new::<GcHeader>();
+    let array_layout = Layout::array::<T>(size).expect("bug: failed to create array layout");
+    let (layout, array_start_bytes) = header_layout.extend(array_layout).expect("bug: failed to create `GcEntry` layout");
+    // Always need to finish a layout with `pad_to_align`
+    let layout = layout.pad_to_align();
+
+    // Allocate the `GcEntry<[T]>`
+    // Safety: Due to the header, the layout passed to `alloc` cannot be zero-sized
+    let entry_ptr = unsafe { alloc(layout) };
+    // Check for allocation failure
+    if entry_ptr.is_null() {
+        handle_alloc_error(layout);
+    }
+
+    // Initialize the header (`header` field of `GcEntry<[T]>`)
+    // Safety: #[repr(C)] guarantees that a pointer to `GcEntry` is the same as a pointer to
+    // `GcHeader` (since `header` is the first field)
+    unsafe { (entry_ptr as *mut GcHeader).write(GcHeader::default()); }
+
+    // Initialize the array (`value` field of `GcEntry<[T]>`)
+    // Safety: Any offsets we take here must match the layouts used to allocate above
+    let array = unsafe { entry_ptr.add(array_start_bytes) } as *mut T;
+    for (i, value) in values.enumerate() {
+        unsafe { array.add(i).write(value); }
+    }
+
+    // `GcEntry<[T]>` is now fully initialized so it is safe to use it
+    //let entry: &mut dyn Trace = unsafe { &mut *(entry_ptr as *mut GcEntry<[T]>) };
+    // Safety: This will continue to work as long as the unstable trait object layout does not change
+    //let TraitObject {data, vtable} = unsafe { mem::transmute(entry) };
+
+    // Safety: Due to #[repr(C)], a pointer to `GcEntry` is the same as a pointer to `GcHeader`
+    //let header_ptr = data as *mut GcHeader;
+    // Safety: We initialized the `array` pointer earlier so it should still allow us to make a
+    // valid slice with the given length. We already checked if the original `entry_ptr` was null.
+    //let value_ptr = unsafe { NonNull::new_unchecked(ptr::slice_from_raw_parts_mut(array, size)) };
+
+    //unsafe { finish_header_setup(header_ptr, value_ptr, vtable) }
+    todo!()
+}
+
+/// Allocate memory managed by the GC and initialize it to the given value
+///
+/// Returns a non-null pointer to the value
 pub(in super) fn allocate<T: Trace>(value: T) -> NonNull<T> {
     // Allocate a trait object so we can erase the type info and just keep the stored value
     // The vtable will be used later to reconstruct the value in a way that can be dropped using the
@@ -83,18 +135,32 @@ pub(in super) fn allocate<T: Trace>(value: T) -> NonNull<T> {
     let entry_ptr = data as *mut GcEntry<T>;
 
     // Safety: We just initialized this pointer, so it should be valid
-    let mut entry = unsafe { &mut *entry_ptr };
-    entry.header.vtable = vtable;
+    let entry = unsafe { &mut *entry_ptr };
 
     let header_ptr = &mut entry.header as *mut GcHeader;
     let value_ptr = (&entry.value).into();
+
+    unsafe { finish_header_setup(header_ptr, value_ptr, vtable) }
+}
+
+/// Finishes setting up the `GcHeader` of an allocated value and appends it onto `ALLOC_LIST`.
+///
+/// # Safety
+///
+/// All provided pointers must be non-null, fully-initialized, and safe to dereference.
+unsafe fn finish_header_setup<T: ?Sized>(
+    header_ptr: *mut GcHeader,
+    value_ptr: NonNull<T>,
+    vtable: *mut (),
+) -> NonNull<T> {
+    (*header_ptr).vtable = vtable;
 
     // Append onto the list of all allocations
     //
     // To avoid the ABA problem, we initially create the header with a null pointer for `next`, then
     // we swap the current ALLOC_LIST pointer with the pointer to this entry in a single operation.
     let next = ALLOC_LIST.swap(header_ptr, Ordering::SeqCst);
-    entry.header.next = next;
+    (*header_ptr).next = next;
 
     value_ptr
 }
@@ -104,7 +170,7 @@ pub(in super) fn allocate<T: Trace>(value: T) -> NonNull<T> {
 /// # Safety
 ///
 /// This function may only be used with pointers returned from `allocate`.
-pub(in super) unsafe fn mark<T>(ptr: NonNull<T>) {
+pub(in super) unsafe fn mark<T: ?Sized>(ptr: NonNull<T>) {
     // Safety: Since `GcEntry` is #[repr(C)], the fields are laid out with `GcHeader` before `T`.
     // That means that we *should* be able to just subtract the size of `GcHeader` to get to the
     // `header` field from the `value` field. Note: sub(1) == -(sizeof(GcHeader)*1).

@@ -3,6 +3,7 @@ mod alloc;
 pub use alloc::sweep;
 
 use std::fmt;
+use std::iter;
 use std::ptr::NonNull;
 use std::ops::Deref;
 
@@ -10,8 +11,8 @@ use std::ops::Deref;
 pub trait Trace {
     /// Called to trace any inner GC values within this type
     ///
-    /// Call `gc::mark` with each field that is a GC type and then `trace` any fields that implement
-    /// the `Trace` trait.
+    /// Call `trace` any fields that implement the `Trace` trait. Calling `trace` on a `Gc<T>` type
+    /// will call `gc::mark` on that value.
     fn trace(&self);
 }
 
@@ -20,9 +21,17 @@ impl<T: Copy> Trace for T {
     fn trace(&self) {}
 }
 
+impl<T: Trace> Trace for [T] {
+    fn trace(&self) {
+        for item in self {
+            item.trace();
+        }
+    }
+}
+
 /// Mark the given GC allocated value as still reachable. This will result in the allocation NOT
 /// being collected during the next sweep. Any allocation that is not marked will be freed.
-pub fn mark<T>(value: &Gc<T>) {
+pub fn mark<T: ?Sized>(value: &Gc<T>) {
     // Safety: All Gc<T> values are allocated by `alloc` so this pointer should be valid
     unsafe { alloc::mark(value.ptr); }
 }
@@ -36,7 +45,7 @@ pub fn mark<T>(value: &Gc<T>) {
 /// Note that this value is only safe to use as long as the GC has not collected it. It is
 /// unfortunately not possible to statically guarantee that this has not occurred. The user of this
 /// type needs to ensure that the GC is always aware that this value is still being used.
-pub struct Gc<T> {
+pub struct Gc<T: ?Sized> {
     ptr: NonNull<T>,
 }
 
@@ -49,7 +58,29 @@ impl<T: Trace> Gc<T> {
     }
 }
 
-impl<T> Deref for Gc<T> {
+impl<T: Trace> iter::FromIterator<T> for Gc<[T]> {
+    fn from_iter<I: iter::IntoIterator<Item = T>>(_iter: I) -> Self {
+        todo!() //TODO: Collect into GcVec<T> and then use From<GcVec<T>> impl
+    }
+}
+
+impl<'a, T: Trace + Clone> From<&'a [T]> for Gc<[T]> {
+    fn from(slice: &'a [T]) -> Self {
+        Self {
+            ptr: alloc::allocate_array(slice.iter().cloned()),
+        }
+    }
+}
+
+impl<T: ?Sized + Trace> Trace for Gc<T> {
+    fn trace(&self) {
+        mark(self);
+
+        (**self).trace();
+    }
+}
+
+impl<T: ?Sized> Deref for Gc<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -58,7 +89,7 @@ impl<T> Deref for Gc<T> {
     }
 }
 
-impl<T> Clone for Gc<T> {
+impl<T: ?Sized> Clone for Gc<T> {
     fn clone(&self) -> Self {
         Self {
             ptr: self.ptr,
@@ -66,14 +97,64 @@ impl<T> Clone for Gc<T> {
     }
 }
 
-impl<T: fmt::Debug> fmt::Debug for Gc<T> {
+impl<T: ?Sized + fmt::Debug> fmt::Debug for Gc<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Debug::fmt(&**self, f)
     }
 }
 
-impl<T: fmt::Display> fmt::Display for Gc<T> {
+impl<T: ?Sized + fmt::Display> fmt::Display for Gc<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Display::fmt(&**self, f)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[ignore] //TODO: GC can't run in parallel so we need to synchronize GC tests
+    fn gc_array() {
+        let values1: &[Gc<u16>] = &[
+            Gc::new(2),
+            Gc::new(3),
+            Gc::new(123),
+            Gc::new(70),
+            Gc::new(42),
+        ];
+
+        let values2: &[u16] = &[
+            2,
+            3,
+            123,
+            70,
+            42,
+        ];
+
+        // These type annotations are unnecessary, but good for testing
+        let array1: Gc<[Gc<u16>]> = Gc::from(values1);
+        let array2: Gc<[u16]> = Gc::from(values2);
+
+        // Check all values are as we expect
+        assert_eq!(array1.len(), array2.len());
+        for (a, b) in array1.iter().zip(array2.iter()) {
+            assert_eq!(**a, *b);
+        }
+
+        array1.trace();
+        array2.trace();
+
+        // Should not clean up anything
+        sweep();
+
+        // Check all values are still as we expect
+        assert_eq!(array1.len(), array2.len());
+        for (a, b) in array1.iter().zip(array2.iter()) {
+            assert_eq!(**a, *b);
+        }
+
+        // Should clean up all memory at the end
+        sweep();
     }
 }
