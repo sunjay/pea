@@ -1,10 +1,9 @@
 mod function;
 
-use std::sync::Arc;
 use std::collections::HashMap;
 
 use crate::{
-    ast,
+    nir,
     bytecode,
     prim,
     interpreter::Interpreter,
@@ -16,17 +15,21 @@ use crate::{
 use function::FunctionCompiler;
 
 pub struct Compiler<'a> {
-    diag: &'a Diagnostics,
+    def_table: &'a nir::DefTable,
 
     consts: bytecode::Constants,
     /// Map of function name to constant index
-    func_consts: HashMap<Arc<str>, bytecode::ConstId>,
+    func_consts: HashMap<nir::DefId, bytecode::ConstId>,
 }
 
 impl<'a> Compiler<'a> {
-    pub fn compile(program: &ast::Program, diag: &'a Diagnostics) -> Interpreter {
+    pub fn compile(
+        program: &nir::Program,
+        def_table: &'a nir::DefTable,
+        diag: &'a Diagnostics,
+    ) -> Interpreter {
         let mut compiler = Compiler {
-            diag,
+            def_table,
 
             consts: Default::default(),
             func_consts: Default::default(),
@@ -34,12 +37,17 @@ impl<'a> Compiler<'a> {
 
         compiler.walk_program(program);
 
-        let mut interpreter = Interpreter::new(compiler.consts);
+        let Compiler {consts, func_consts, ..} = compiler;
+
+        let mut interpreter = Interpreter::new(consts);
 
         // Call main function
         //
-        // Note: `main` must be declared in the top scope, take zero arguments, and return nothing.
-        match compiler.func_consts.get("main") {
+        // Note: `main` must be declared in the root scope, take zero arguments, and return nothing.
+        let main_const_id = program.scope.functions.get("main")
+            .and_then(|def_id| func_consts.get(def_id));
+
+        match main_const_id {
             Some(&index) => {
                 interpreter.call_main(index);
             },
@@ -52,28 +60,26 @@ impl<'a> Compiler<'a> {
         interpreter
     }
 
-    fn walk_program(&mut self, program: &ast::Program) {
-        let ast::Program {decls} = program;
+    fn walk_program(&mut self, program: &nir::Program) {
+        let nir::Program {decls, scope: _} = program;
 
         for decl in decls {
             self.walk_decl(decl);
         }
     }
 
-    fn walk_decl(&mut self, decl: &ast::Decl) {
-        use ast::Decl::*;
+    fn walk_decl(&mut self, decl: &nir::Decl) {
+        use nir::Decl::*;
         match decl {
             Func(func) => {
-                let name = &func.name;
+                let def_id = func.name.id;
+                let name = self.def_table.get(def_id);
 
                 let prim = Gc::new(prim::Func::new(name.value.clone()));
                 let func_const = self.consts.push(Value::Func(prim.clone()));
 
-                if self.func_consts.contains_key(&name.value) {
-                    self.diag.span_error(name.span, format!("the name `{}` is defined multiple times", name.value))
-                        .emit();
-                }
-                self.func_consts.insert(name.value.clone(), func_const);
+                debug_assert!(!self.func_consts.contains_key(&def_id), "bug: walked the same function more than once");
+                self.func_consts.insert(def_id, func_const);
 
                 let func_code = FunctionCompiler::compile(func, &mut self.consts);
 

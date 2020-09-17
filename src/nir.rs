@@ -17,6 +17,7 @@ use crate::{ast, parser::Token, source_files::Span};
 #[derive(Debug, Clone, PartialEq)]
 pub struct Program {
     pub decls: Vec<Decl>,
+    /// The root scope of the program
     pub scope: Scope,
 }
 

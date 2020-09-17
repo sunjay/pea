@@ -17,14 +17,15 @@ pub struct NameResolver<'a> {
 }
 
 impl<'a> NameResolver<'a> {
-    pub fn resolve(prog: &ast::Program, diag: &'a Diagnostics) -> nir::Program {
+    pub fn resolve(prog: &ast::Program, diag: &'a Diagnostics) -> (nir::Program, nir::DefTable) {
         let mut resolver = Self {
             diag,
             def_table: nir::DefTable::default(),
             scope_stack: ScopeStack::default(),
         };
 
-        resolver.resolve_program(prog)
+        let prog = resolver.resolve_program(prog);
+        (prog, resolver.def_table)
     }
 
     fn resolve_program(&mut self, prog: &ast::Program) -> nir::Program {

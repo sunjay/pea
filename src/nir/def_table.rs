@@ -21,7 +21,7 @@ impl DefTable {
         id
     }
 
-    pub fn get(&mut self, id: DefId) -> &ast::Ident {
+    pub fn get(&self, id: DefId) -> &ast::Ident {
         let DefId(index) = id;
 
         // Safety: DefId indexes are valid by construction

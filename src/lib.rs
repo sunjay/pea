@@ -88,10 +88,10 @@ pub fn compile(
     };
     check_errors!(diag);
 
-    let resolved = resolve::NameResolver::resolve(&program, diag);
+    let (program, def_table) = resolve::NameResolver::resolve(&program, diag);
     check_errors!(diag);
 
-    let interpreter = codegen::Compiler::compile(&program, diag);
+    let interpreter = codegen::Compiler::compile(&program, &def_table, diag);
     check_errors!(diag);
 
     Ok(interpreter)
