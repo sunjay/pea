@@ -9,9 +9,10 @@
 //! change.
 
 use std::mem;
+use std::iter;
 use std::ptr::{self, NonNull};
 use std::sync::atomic::{AtomicPtr, Ordering};
-use std::alloc::{alloc, Layout, handle_alloc_error};
+use std::alloc::{alloc, dealloc, Layout, handle_alloc_error};
 
 use super::Trace;
 
@@ -26,6 +27,16 @@ static ALLOC_LIST: AtomicPtr<GcHeader> = AtomicPtr::new(ptr::null_mut());
 pub struct TraitObject {
     pub data: *mut (),
     pub vtable: *mut (),
+}
+
+fn extract_vtable<T: Trace>(value: &T) -> *mut () {
+    // Source: https://github.com/withoutboats/shifgrethor/blob/ab1873fc3e76e6b9fd9a96b11746617e14bd7c1c/src/lib/gc/alloc.rs#L110-L115
+    unsafe {
+        let obj = value as &dyn Trace;
+        // Safety: This will continue to work as long as the unstable trait object layout does not change
+        let TraitObject {vtable, ..} = mem::transmute(obj);
+        vtable
+    }
 }
 
 /// A single heap allocated entry managed by the GC
@@ -48,21 +59,32 @@ impl<T: ?Sized + Trace> Trace for GcEntry<T> {
 
 #[derive(Debug)]
 struct GcHeader {
-    /// The pointer to the vtable for the trait object that generated this type
+    /// The number of values allocated
+    len: usize,
+    /// The size of each allocated value
+    size: usize,
+    /// The pointer to the vtable for the type T stored in this allocation
+    ///
+    /// Optimization: Set to null if `T` does not need to be dropped
     vtable: *mut (),
-    /// if true, the allocation is still reachable from a root
-    is_reachable: bool,
+    /// The layout used to allocate the entire `GcEntry<T>`
+    layout: Layout,
     /// The address of the previous allocation (makes this an intrusive list node)
     next: *mut GcHeader,
+    /// if true, the allocation is still reachable from a root
+    is_reachable: bool,
 }
 
-impl Default for GcHeader {
-    fn default() -> Self {
+impl GcHeader {
+    fn array<T>(len: usize, vtable: *mut (), layout: Layout) -> Self {
         Self {
-            vtable: ptr::null_mut(),
+            len,
+            size: mem::size_of::<T>(),
+            vtable,
+            layout,
+            next: ptr::null_mut(),
             // Presume not reachable until proven otherwise
             is_reachable: false,
-            next: ptr::null_mut(),
         }
     }
 }
@@ -71,17 +93,21 @@ impl Default for GcHeader {
 ///
 /// Returns a non-null pointer to the value
 pub(in super) fn allocate_array<T, I>(values: I) -> NonNull<[T]>
-    where I: ExactSizeIterator<Item=T>,
+    where T: Trace,
+          I: ExactSizeIterator<Item=T>,
 {
     // Start by generating the layout for the array, essentially `GcEntry<[T]>`
-    let size = values.len();
+    let len = values.len();
 
     // Safety: The layout being generated here must match the layout of `GcEntry`
     let header_layout = Layout::new::<GcHeader>();
-    let array_layout = Layout::array::<T>(size).expect("bug: failed to create array layout");
+    let array_layout = Layout::array::<T>(len).expect("bug: failed to create array layout");
     let (layout, array_start_bytes) = header_layout.extend(array_layout).expect("bug: failed to create `GcEntry` layout");
     // Always need to finish a layout with `pad_to_align`
     let layout = layout.pad_to_align();
+
+    debug_assert_eq!(array_start_bytes, mem::size_of::<GcHeader>(),
+        "bug: `gc::mark` depends on the allocated value starting right after the header with no padding");
 
     // Allocate the `GcEntry<[T]>`
     // Safety: Due to the header, the layout passed to `alloc` cannot be zero-sized
@@ -91,78 +117,51 @@ pub(in super) fn allocate_array<T, I>(values: I) -> NonNull<[T]>
         handle_alloc_error(layout);
     }
 
+    // Extract the vtable only if we have at least one element and that element needs to be dropped
+    let mut values = values.peekable();
+    let vtable = if len == 0 || !mem::needs_drop::<T>() {
+        ptr::null_mut()
+    } else {
+        // This unwrap is fine because we just checked the length
+        extract_vtable(values.peek().unwrap())
+    };
+
     // Initialize the header (`header` field of `GcEntry<[T]>`)
     // Safety: #[repr(C)] guarantees that a pointer to `GcEntry` is the same as a pointer to
     // `GcHeader` (since `header` is the first field)
-    unsafe { (entry_ptr as *mut GcHeader).write(GcHeader::default()); }
+    let header_ptr = entry_ptr as *mut GcHeader;
+    let header = GcHeader::array::<T>(len, vtable, layout);
+    unsafe { header_ptr.write(header); }
 
     // Initialize the array (`value` field of `GcEntry<[T]>`)
     // Safety: Any offsets we take here must match the layouts used to allocate above
     let array = unsafe { entry_ptr.add(array_start_bytes) } as *mut T;
     for (i, value) in values.enumerate() {
+        // Safety: We just allocated and checked `entry_ptr`, so this should work
         unsafe { array.add(i).write(value); }
     }
 
-    // `GcEntry<[T]>` is now fully initialized so it is safe to use it
-    //let entry: &mut dyn Trace = unsafe { &mut *(entry_ptr as *mut GcEntry<[T]>) };
-    // Safety: This will continue to work as long as the unstable trait object layout does not change
-    //let TraitObject {data, vtable} = unsafe { mem::transmute(entry) };
-
-    // Safety: Due to #[repr(C)], a pointer to `GcEntry` is the same as a pointer to `GcHeader`
-    //let header_ptr = data as *mut GcHeader;
     // Safety: We initialized the `array` pointer earlier so it should still allow us to make a
     // valid slice with the given length. We already checked if the original `entry_ptr` was null.
-    //let value_ptr = unsafe { NonNull::new_unchecked(ptr::slice_from_raw_parts_mut(array, size)) };
-
-    //unsafe { finish_header_setup(header_ptr, value_ptr, vtable) }
-    todo!()
-}
-
-/// Allocate memory managed by the GC and initialize it to the given value
-///
-/// Returns a non-null pointer to the value
-pub(in super) fn allocate<T: Trace>(value: T) -> NonNull<T> {
-    // Allocate a trait object so we can erase the type info and just keep the stored value
-    // The vtable will be used later to reconstruct the value in a way that can be dropped using the
-    // dynamic type info stored in the vtable.
-    let entry: Box<dyn Trace> = Box::new(GcEntry {
-        header: GcHeader::default(),
-        value,
-    });
-
-    // Safety: This will continue to work as long as the unstable trait object layout does not change
-    let TraitObject {data, vtable} = unsafe { mem::transmute(entry) };
-    let entry_ptr = data as *mut GcEntry<T>;
-
-    // Safety: We just initialized this pointer, so it should be valid
-    let entry = unsafe { &mut *entry_ptr };
-
-    let header_ptr = &mut entry.header as *mut GcHeader;
-    let value_ptr = (&entry.value).into();
-
-    unsafe { finish_header_setup(header_ptr, value_ptr, vtable) }
-}
-
-/// Finishes setting up the `GcHeader` of an allocated value and appends it onto `ALLOC_LIST`.
-///
-/// # Safety
-///
-/// All provided pointers must be non-null, fully-initialized, and safe to dereference.
-unsafe fn finish_header_setup<T: ?Sized>(
-    header_ptr: *mut GcHeader,
-    value_ptr: NonNull<T>,
-    vtable: *mut (),
-) -> NonNull<T> {
-    (*header_ptr).vtable = vtable;
+    let value_ptr = unsafe { NonNull::new_unchecked(ptr::slice_from_raw_parts_mut(array, len)) };
 
     // Append onto the list of all allocations
     //
     // To avoid the ABA problem, we initially create the header with a null pointer for `next`, then
     // we swap the current ALLOC_LIST pointer with the pointer to this entry in a single operation.
     let next = ALLOC_LIST.swap(header_ptr, Ordering::SeqCst);
-    (*header_ptr).next = next;
+    // Safety: The header was initialized above, so it should still be valid to assign to
+    unsafe { (*header_ptr).next = next; }
 
     value_ptr
+}
+
+/// Allocate memory managed by the GC and initialize it to the given value
+///
+/// Returns a non-null pointer to the value
+pub(in super) fn allocate<T: Trace>(value: T) -> NonNull<T> {
+    // Allocate the value as an array of one value
+    allocate_array(iter::once(value)).cast()
 }
 
 /// Marks a value managed by the GC as reachable
@@ -175,9 +174,9 @@ pub(in super) unsafe fn mark<T: ?Sized>(ptr: NonNull<T>) {
     // That means that we *should* be able to just subtract the size of `GcHeader` to get to the
     // `header` field from the `value` field. Note: sub(1) == -(sizeof(GcHeader)*1).
     //
-    //TODO: Not actually sure if this offset will work. A more implementation independent way would
-    // be to construct a fake `GcEntry` and then find out the actual offset between the `header` and
-    // `value` fields.
+    //TODO: Not actually sure if this offset will always work. A more implementation independent way
+    //  would be to construct a fake `GcEntry` and then find out the actual offset between the
+    //  `header` and `value` fields.
     let header_ptr = (ptr.as_ptr() as *mut GcHeader).sub(1);
     let mut header = &mut *header_ptr;
     header.is_reachable = true;
@@ -190,27 +189,41 @@ pub(in super) unsafe fn mark<T: ?Sized>(ptr: NonNull<T>) {
 /// This function may only be used with pointers in `ALLOC_LIST`. Do not call this concurrently with
 /// `alloc`.
 unsafe fn free(ptr: NonNull<GcHeader>, prev: Option<NonNull<GcHeader>>) {
+    // Extract info from the header
+    // Safety: The pointer should still be valid if it is currently in `ALLOC_LIST`. Note that in
+    // order to avoid aliasing issues we are careful to copy the values out (avoids references).
+    let GcHeader {len, size, vtable, layout, next, ..} = *ptr.as_ref();
+
     // Remove this entry from the ALLOC_LIST linked list
     if let Some(mut prev) = prev {
-        prev.as_mut().next = ptr.as_ref().next;
+        prev.as_mut().next = next;
 
     // No previous, must be the head of the list
     } else {
         // Set a new head for the list
         //
         // NOTE: This line is not robust and will not work if run concurrently with `alloc`.
-        ALLOC_LIST.compare_and_swap(ptr.as_ptr(), ptr.as_ref().next, Ordering::SeqCst);
+        ALLOC_LIST.compare_and_swap(ptr.as_ptr(), next, Ordering::SeqCst);
     }
 
-    // Reconstruct the box that this pointer came from and free the value at the end of this scope
-    //
-    // Safety: This cast only works because #[repr(C)] guarantees that `GcHeader` is the first field
-    // of the struct and therefore a pointer to that field is the same the pointer to the entire
-    // struct.
-    let data = ptr.as_ptr() as *mut ();
-    let vtable = ptr.as_ref().vtable;
+    // Only drop if a vtable was provided for that
+    if !vtable.is_null() {
+        // Free each item in the array by constructing a trait object for each item and calling
+        // `drop_in_place`
 
-    let _entry: Box<dyn Trace> = mem::transmute(TraitObject {data, vtable});
+        // Safety: Much like `mark`, this assumes that the `value` begins immediately after the
+        // header field with no padding
+        let array = (ptr.as_ptr() as *mut GcHeader).add(1) as *mut u8;
+
+        for i in 0..len {
+            let data = array.add(i*size) as *mut ();
+            let obj: &mut dyn Trace = mem::transmute(TraitObject {data, vtable});
+            ptr::drop_in_place(obj);
+        }
+    }
+
+    // Free the memory
+    dealloc(ptr.as_ptr() as *mut u8, layout);
 }
 
 struct Traverse {
@@ -285,6 +298,8 @@ mod tests {
 
     #[test]
     fn gc_alloc() {
+        let _lock = super::super::GC_TEST_LOCK.lock();
+
         let ptr1 = allocate(2i8);
         let ptr2 = allocate(42i16);
         let ptr3 = allocate(-33i32);

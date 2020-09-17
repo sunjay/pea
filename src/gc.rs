@@ -7,6 +7,9 @@ use std::iter;
 use std::ptr::NonNull;
 use std::ops::Deref;
 
+#[cfg(test)]
+static GC_TEST_LOCK: parking_lot::Mutex<()> = parking_lot::Mutex::const_new(<parking_lot::RawMutex as parking_lot::lock_api::RawMutex>::INIT, ());
+
 /// Every type that can be allocated on the GC must implement this trait
 pub trait Trace {
     /// Called to trace any inner GC values within this type
@@ -113,9 +116,12 @@ impl<T: ?Sized + fmt::Display> fmt::Display for Gc<T> {
 mod tests {
     use super::*;
 
+    use std::sync::{Arc, atomic::{AtomicU8, Ordering}};
+
     #[test]
-    #[ignore] //TODO: GC can't run in parallel so we need to synchronize GC tests
     fn gc_array() {
+        let _lock = GC_TEST_LOCK.lock();
+
         let values1: &[Gc<u16>] = &[
             Gc::new(2),
             Gc::new(3),
@@ -156,5 +162,55 @@ mod tests {
 
         // Should clean up all memory at the end
         sweep();
+    }
+
+    #[derive(Debug, Clone)]
+    struct NeedsDrop {
+        value: u8,
+        counter: Arc<AtomicU8>,
+    }
+
+    impl Trace for NeedsDrop {
+        fn trace(&self) {}
+    }
+
+    impl Drop for NeedsDrop {
+        fn drop(&mut self) {
+            self.counter.fetch_add(1, Ordering::SeqCst);
+        }
+    }
+
+    #[test]
+    fn gc_array_drop() {
+        let _lock = GC_TEST_LOCK.lock();
+
+        let counter = Arc::new(AtomicU8::new(0));
+
+        let values1: &[NeedsDrop] = &[
+            NeedsDrop {value: 1, counter: counter.clone()},
+            NeedsDrop {value: 2, counter: counter.clone()},
+            NeedsDrop {value: 3, counter: counter.clone()},
+            NeedsDrop {value: 4, counter: counter.clone()},
+            NeedsDrop {value: 5, counter: counter.clone()},
+        ];
+
+        let array1: Gc<[NeedsDrop]> = Gc::from(values1);
+
+        assert_eq!(counter.load(Ordering::SeqCst), 0);
+        assert_eq!(array1.len(), 5);
+        for (a, b) in array1.iter().zip(1u8..) {
+            assert_eq!(a.value, b);
+        }
+
+        // Mark the value to prevent it from being collected
+        mark(&array1);
+
+        // Should not clean up anything
+        sweep();
+        assert_eq!(counter.load(Ordering::SeqCst), 0);
+
+        // Should clean up all the memory at the end and call drop
+        sweep();
+        assert_eq!(counter.load(Ordering::SeqCst), values1.len() as u8);
     }
 }
