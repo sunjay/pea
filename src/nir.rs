@@ -1,6 +1,16 @@
-use std::sync::Arc;
+//! Nameless IR - An IR with all names replaced with `DefId`s.
+//!
+//! This is the result of name resolution. Names are still kept around so they can be retrieved
+//! based on the `DefId` when we're generating errors.
+//!
+//! Note that this IR still contains field and method names as `Ident`s since those don't get
+//! resolved until later when we know the types.
 
-use crate::{source_files::Span, parser::Token};
+mod def_table;
+
+pub use def_table::*;
+
+use crate::{ast, parser::Token, source_files::Span};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Program {
@@ -15,7 +25,7 @@ pub enum Decl {
 #[derive(Debug, Clone, PartialEq)]
 pub struct FuncDecl {
     pub fn_token: Token,
-    pub name: Ident,
+    pub name: DefSpan,
     pub params: Parens<(/* TODO */)>,
     pub body: Block,
 }
@@ -57,39 +67,15 @@ pub enum Expr {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct CallExpr {
-    pub name: Ident,
+    pub name: DefSpan,
     pub args: Parens<[(); 0]>, //TODO
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct Parens<T> {
-    pub paren_open_token: Token,
-    pub value: T,
-    pub paren_close_token: Token,
-}
-
-impl<T> Parens<T> {
-    pub fn map<F, U>(&self, f: F) -> Parens<U>
-        where F: FnOnce(&T) -> U,
-    {
-        let Self {paren_open_token, value, paren_close_token} = self;
-
-        Parens {
-            paren_open_token: paren_open_token.clone(),
-            value: f(value),
-            paren_close_token: paren_close_token.clone(),
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct Ident {
-    pub value: Arc<str>,
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DefSpan {
+    pub id: DefId,
     pub span: Span,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct IntegerLiteral {
-    pub value: i128,
-    pub span: Span,
-}
+pub type Parens<T> = ast::Parens<T>;
+pub type IntegerLiteral = ast::IntegerLiteral;
