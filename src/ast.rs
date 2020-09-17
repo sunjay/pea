@@ -30,6 +30,7 @@ pub struct Block {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Stmt {
     Println(PrintlnStmt),
+    Expr(ExprStmt),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -43,8 +44,21 @@ pub struct PrintlnStmt {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct ExprStmt {
+    pub expr: Expr,
+    pub semicolon_token: Token,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
+    Call(CallExpr),
     Integer(IntegerLiteral),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct CallExpr {
+    pub name: Ident,
+    pub args: Parens<[(); 0]>, //TODO
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -109,7 +109,10 @@ impl<'a> Parser<'a> {
     }
 
     fn stmt(&mut self) -> ParseResult<ast::Stmt> {
-        self.println_stmt().map(ast::Stmt::Println)
+        match self.input[0].kind {
+            TokenKind::Keyword(Keyword::Println) => self.println_stmt().map(ast::Stmt::Println),
+            _ => self.expr_stmt().map(ast::Stmt::Expr),
+        }
     }
 
     fn println_stmt(&mut self) -> ParseResult<ast::PrintlnStmt> {
@@ -127,8 +130,25 @@ impl<'a> Parser<'a> {
         })
     }
 
+    fn expr_stmt(&mut self) -> ParseResult<ast::ExprStmt> {
+        let expr = self.expr()?;
+        let semicolon_token = self.match_kind(TokenKind::Semicolon)?.clone();
+
+        Ok(ast::ExprStmt {expr, semicolon_token})
+    }
+
     fn expr(&mut self) -> ParseResult<ast::Expr> {
-        self.integer_literal().map(ast::Expr::Integer)
+        match self.input[0].kind {
+            TokenKind::Ident => self.call().map(ast::Expr::Call),
+            _ => self.integer_literal().map(ast::Expr::Integer),
+        }
+    }
+
+    fn call(&mut self) -> ParseResult<ast::CallExpr> {
+        let name = self.ident()?;
+        let args = self.parens(|_| Ok([]))?;
+
+        Ok(ast::CallExpr {name, args})
     }
 
     fn parens<T>(

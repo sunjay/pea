@@ -2,7 +2,7 @@ use std::convert::TryInto;
 
 use crate::{
     ast,
-    bytecode::{self, OpCode},
+    bytecode::{self, OpCode, ConstId},
     value::Value,
 };
 
@@ -43,6 +43,7 @@ impl<'a> FunctionCompiler<'a> {
         use ast::Stmt::*;
         match stmt {
             Println(stmt) => self.walk_println_stmt(stmt),
+            Expr(stmt) => self.walk_expr_stmt(stmt),
         }
     }
 
@@ -54,11 +55,34 @@ impl<'a> FunctionCompiler<'a> {
         self.code.write_instr(OpCode::Print);
     }
 
+    fn walk_expr_stmt(&mut self, stmt: &ast::ExprStmt) {
+        let ast::ExprStmt {expr, ..} = stmt;
+
+        self.walk_expr(&expr);
+
+        // discard the expression value
+        self.code.write_instr(OpCode::Pop);
+    }
+
     fn walk_expr(&mut self, expr: &ast::Expr) {
         use ast::Expr::*;
         match expr {
+            Call(call) => self.walk_call(call),
             Integer(lit) => self.walk_integer_literal(lit),
         }
+    }
+
+    fn walk_call(&mut self, call: &ast::CallExpr) {
+        let ast::CallExpr {name, args} = call;
+
+        let func_const = self.func_const_id(name);
+        self.code.write_instr_u16(OpCode::Constant, func_const.into_u16());
+
+        //TODO: Walk argument exprs and push their values onto the stack
+
+        let nargs = args.value.len().try_into()
+            .expect("bug: should have validated that no more 255 arguments can be passed to a function");
+        self.code.write_instr_u8(OpCode::Call, nargs);
     }
 
     fn walk_integer_literal(&mut self, lit: &ast::IntegerLiteral) {
@@ -69,5 +93,9 @@ impl<'a> FunctionCompiler<'a> {
             .expect("bug: values out of the 64-bit range are not currently supported");
         let index = self.consts.push(Value::I64(value));
         self.code.write_instr_u16(OpCode::Constant, index.into_u16());
+    }
+
+    fn func_const_id(&self, _name: &ast::Ident) -> ConstId {
+        todo!()
     }
 }

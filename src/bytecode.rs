@@ -10,6 +10,12 @@ impl Bytecode {
         self.0.push(opcode as u8);
     }
 
+    /// Writes an instruction opcode into the bytecode chunk with a single u8 argument
+    pub fn write_instr_u8(&mut self, opcode: OpCode, arg: u8) {
+        self.0.push(opcode as u8);
+        self.0.push(arg);
+    }
+
     /// Writes an instruction opcode into the bytecode chunk with a single u16 argument
     pub fn write_instr_u16(&mut self, opcode: OpCode, arg: u16) {
         self.0.push(opcode as u8);
@@ -92,6 +98,11 @@ impl Constants {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(u8)]
 pub enum OpCode {
+    /// Calls a function with the given number of arguments (up to 255). The arguments should appear
+    /// after the function to call on the stack. This will pop one value (the function) + the number
+    /// of arguments off the stack.
+    Call,
+
     /// Return from the current function or exit the program if we are already at the bottom of the
     /// call stack
     Return,

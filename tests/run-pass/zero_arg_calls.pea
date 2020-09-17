@@ -1,0 +1,12 @@
+fn foo() {
+    println!(34);
+    println!(-921);
+}
+
+fn main() {
+    println!(1);
+    foo();
+    foo();
+    println!(-630);
+    foo();
+}

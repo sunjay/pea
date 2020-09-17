@@ -76,6 +76,19 @@ impl Interpreter {
 
         use OpCode::*;
         match next_op {
+            Call => {
+                let nargs = self.read_u8() as usize;
+
+                //TODO: Pop args off stack (NOTE: they will be in REVERSE order)
+
+                // The compiler should statically verify that called values are callable
+                let func = self.peek(nargs).unwrap_func().clone();
+
+                // Start with the arguments on the start of the stack frame
+                let frame_index = self.value_stack.len() - nargs;
+                self.call_stack.push(CallFrame::new(func, frame_index));
+            },
+
             Return => {
                 let result = self.pop();
 
@@ -144,6 +157,11 @@ impl Interpreter {
         self.call_stack.get_unchecked_mut(index)
     }
 
+    fn read_u8(&mut self) -> u8 {
+        // Safety: This is safe assuming that the bytecode was compiled correctly
+        unsafe { self.read_next_byte() }
+    }
+
     fn read_u16(&mut self) -> u16 {
         let mut bytes = [0; 2];
         // Safety: This is safe assuming that the bytecode was compiled correctly
@@ -156,5 +174,10 @@ impl Interpreter {
         // Stack should always have a value if the bytecode is compiled correctly
         self.value_stack.pop()
             .expect("bug: stack underflow")
+    }
+
+    /// Peek at the value n slots back in the value stack
+    fn peek(&self, n: usize) -> &Value {
+        &self.value_stack[self.value_stack.len() - n - 1]
     }
 }

@@ -6,7 +6,8 @@ func_decl ::= "fn" ident "(" ")" block
 
 block ::= "{" stmt* "}"
 
-stmt ::= println_stmt
+stmt ::= println_stmt | expr ";"
 println_stmt ::= "println" "!" "(" expr ")" ";"
 
-expr ::= integer_literal
+expr ::= call | integer_literal
+call ::= ident "(" ")"
