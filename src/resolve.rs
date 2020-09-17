@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Arc};
+mod scope_stack;
 
 use crate::{
     ast,
@@ -6,17 +6,14 @@ use crate::{
     diagnostics::Diagnostics,
 };
 
-#[derive(Debug, Default)]
-struct Scope {
-    pub functions: HashMap<Arc<str>, nir::DefId>,
-}
+use scope_stack::ScopeStack;
 
 pub struct NameResolver<'a> {
     diag: &'a Diagnostics,
 
     def_table: nir::DefTable,
-    /// The current scope being walked
-    scope: Scope,
+    /// The stack of scopes, declarations are added to the top of the stack (last element)
+    scope_stack: ScopeStack,
 }
 
 impl<'a> NameResolver<'a> {
@@ -24,7 +21,7 @@ impl<'a> NameResolver<'a> {
         let mut resolver = Self {
             diag,
             def_table: nir::DefTable::default(),
-            scope: Scope::default(),
+            scope_stack: ScopeStack::default(),
         };
 
         resolver.resolve_program(prog)
@@ -33,9 +30,11 @@ impl<'a> NameResolver<'a> {
     fn resolve_program(&mut self, prog: &ast::Program) -> nir::Program {
         let ast::Program {decls} = prog;
 
-        nir::Program {
-            decls: decls.iter().map(|decl| self.resolve_decl(decl)).collect(),
-        }
+        let token = self.scope_stack.push();
+        let decls = decls.iter().map(|decl| self.resolve_decl(decl)).collect();
+        let scope = self.scope_stack.pop(token);
+
+        nir::Program {decls, scope}
     }
 
     fn resolve_decl(&mut self, decl: &ast::Decl) -> nir::Decl {
@@ -118,7 +117,7 @@ impl<'a> NameResolver<'a> {
     /// The returned `DefSpan` preserves the `Span` of the given `Ident`
     fn declare_func(&mut self, name: &ast::Ident) -> nir::DefSpan {
         let id = self.def_table.insert(name.clone());
-        self.scope.functions.insert(name.value.clone(), id);
+        self.scope_stack.top_mut().functions.insert(name.value.clone(), id);
 
         nir::DefSpan {
             id,
@@ -132,7 +131,7 @@ impl<'a> NameResolver<'a> {
     ///
     /// The returned `DefSpan` preserves the `Span` of the given `Ident`
     fn lookup_func(&mut self, name: &ast::Ident) -> nir::DefSpan {
-        match self.scope.functions.get(&name.value) {
+        match self.scope_stack.top().functions.get(&name.value) {
             Some(&id) => nir::DefSpan {
                 id,
                 span: name.span,

@@ -88,6 +88,9 @@ pub fn compile(
     };
     check_errors!(diag);
 
+    let resolved = resolve::NameResolver::resolve(&program, diag);
+    check_errors!(diag);
+
     let interpreter = codegen::Compiler::compile(&program, diag);
     check_errors!(diag);
 

@@ -7,14 +7,17 @@
 //! resolved until later when we know the types.
 
 mod def_table;
+mod scope;
 
 pub use def_table::*;
+pub use scope::*;
 
 use crate::{ast, parser::Token, source_files::Span};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Program {
     pub decls: Vec<Decl>,
+    pub scope: Scope,
 }
 
 #[derive(Debug, Clone, PartialEq)]
