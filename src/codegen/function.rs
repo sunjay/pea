@@ -6,8 +6,12 @@ use crate::{
     value::Value,
 };
 
+use super::def_consts::DefConsts;
+
 pub struct FunctionCompiler<'a> {
     consts: &'a mut bytecode::Constants,
+    const_ids: &'a DefConsts,
+
     code: bytecode::Bytecode,
 }
 
@@ -15,9 +19,12 @@ impl<'a> FunctionCompiler<'a> {
     pub fn compile(
         func: &nir::FuncDecl,
         consts: &'a mut bytecode::Constants,
+        const_ids: &'a DefConsts,
     ) -> bytecode::Bytecode {
         let mut compiler = Self {
             consts,
+            const_ids,
+
             code: Default::default(),
         };
 
@@ -95,7 +102,7 @@ impl<'a> FunctionCompiler<'a> {
         self.code.write_instr_u16(OpCode::Constant, index.into_u16());
     }
 
-    fn func_const_id(&self, _name: &nir::DefSpan) -> ConstId {
-        todo!()
+    fn func_const_id(&self, name: &nir::DefSpan) -> ConstId {
+        self.const_ids.get(name.id)
     }
 }
