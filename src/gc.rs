@@ -213,4 +213,32 @@ mod tests {
         sweep();
         assert_eq!(counter.load(Ordering::SeqCst), values1.len() as u8);
     }
+
+    #[test]
+    fn gc_zero_sized_types() {
+        let value1 = Gc::new(());
+        let value2 = Gc::from(&[] as &[i32]);
+
+        // Should be able to access the value as normal
+        assert_eq!(*value1, ());
+        println!("{:?}", *value1);
+        assert_eq!(*value2, []);
+        println!("{:?}", &*value2);
+
+        // Marking the value should work even though it is zero-sized
+        mark(&value1);
+        mark(&value2);
+
+        // Should not clean up anything
+        sweep();
+
+        // Should be able to access the value as normal
+        assert_eq!(*value1, ());
+        println!("{:?}", *value1);
+        assert_eq!(*value2, []);
+        println!("{:?}", &*value2);
+
+        // Should clean up all the memory at the end
+        sweep();
+    }
 }
