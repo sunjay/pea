@@ -1,0 +1,17 @@
+error: the name `main` is defined multiple times
+[tests/ui/duplicate_func_name.pea:1:4-1:7] info: previous definition of the value `main` here
+[tests/ui/duplicate_func_name.pea:9:4-9:7] error: `main` redefined here
+[tests/ui/duplicate_func_name.pea:9:4-9:7] note: `main` must be defined only once in the value namespace of this module
+
+error: the name `bar` is defined multiple times
+[tests/ui/duplicate_func_name.pea:13:4-13:6] info: previous definition of the value `bar` here
+[tests/ui/duplicate_func_name.pea:17:4-17:6] error: `bar` redefined here
+[tests/ui/duplicate_func_name.pea:17:4-17:6] note: `bar` must be defined only once in the value namespace of this module
+
+error: the name `main` is defined multiple times
+[tests/ui/duplicate_func_name.pea:9:4-9:7] info: previous definition of the value `main` here
+[tests/ui/duplicate_func_name.pea:21:4-21:7] error: `main` redefined here
+[tests/ui/duplicate_func_name.pea:21:4-21:7] note: `main` must be defined only once in the value namespace of this module
+
+error: aborting due to 3 previous errors
+

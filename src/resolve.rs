@@ -117,6 +117,17 @@ impl<'a> NameResolver<'a> {
     ///
     /// The returned `DefSpan` preserves the `Span` of the given `Ident`
     fn declare_func(&mut self, name: &ast::Ident) -> nir::DefSpan {
+        if let Some(&orig) = self.scope_stack.top().functions.get(&name.value) {
+            let orig = self.def_table.get(orig);
+            self.diag.error(format!("the name `{}` is defined multiple times", name.value))
+                .span_info(orig.span, format!("previous definition of the value `{}` here", name.value))
+                .span_error(name.span, format!("`{}` redefined here", name.value))
+                .span_note(name.span, format!("`{}` must be defined only once in the value namespace of this module", name.value))
+                .emit();
+
+            // Error Recovery: continue past this point and redefine the name so we can continue
+        }
+
         let id = self.def_table.insert(name.clone());
         self.scope_stack.top_mut().functions.insert(name.value.clone(), id);
 

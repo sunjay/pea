@@ -1,0 +1,23 @@
+fn main() {
+    println!(1);
+}
+
+fn foo() {
+    println!(2);
+}
+
+fn main() {
+    println!(3);
+}
+
+fn bar() {
+    println!(4);
+}
+
+fn bar() {
+    println!(5);
+}
+
+fn main() {
+    println!(6);
+}
