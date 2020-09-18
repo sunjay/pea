@@ -40,6 +40,7 @@ pub struct Gc<T: ?Sized> {
 
 impl<T: Trace> Gc<T> {
     /// Allocates memory managed by the GC and initializes it with the given value
+    #[inline]
     pub fn new(value: T) -> Self {
         Self {
             ptr: alloc::allocate(value),
@@ -48,10 +49,22 @@ impl<T: Trace> Gc<T> {
 }
 
 impl<'a, T: Trace + Clone> From<&'a [T]> for Gc<[T]> {
+    #[inline]
     fn from(slice: &'a [T]) -> Self {
         Self {
             ptr: alloc::allocate_array(slice.iter().cloned()),
         }
+    }
+}
+
+// This code is pretty much the same as the impl for Arc<str>
+impl From<&str> for Gc<str> {
+    #[inline]
+    fn from(value: &str) -> Gc<str> {
+        let Gc {ptr} = Gc::<[u8]>::from(value.as_bytes());
+        let ptr = unsafe { NonNull::new_unchecked(ptr.as_ptr() as *mut str) };
+
+        Self {ptr}
     }
 }
 
@@ -104,6 +117,24 @@ mod tests {
     use super::*;
 
     use std::sync::{Arc, atomic::{AtomicU8, Ordering}};
+
+    #[test]
+    fn gc_str() {
+        let _lock = GC_TEST_LOCK.lock();
+
+        let value = Gc::from("abc123 woooo");
+        assert_eq!(&*value, "abc123 woooo");
+
+        // Should not clean up anything because we've traced
+        value.trace();
+        sweep();
+
+        // Value should still be the same
+        assert_eq!(&*value, "abc123 woooo");
+
+        // Should clean up all memory at the end
+        sweep();
+    }
 
     #[test]
     fn gc_array() {

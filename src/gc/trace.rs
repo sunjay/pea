@@ -53,6 +53,11 @@ impl<T: Trace> Trace for [T] {
     }
 }
 
+impl Trace for str {
+    // The bytes of the string don't need to be traced
+    fn trace(&self) {}
+}
+
 macro_rules! impl_trace_tuples {
     ($first:ident $(, $rest:ident)* $(,)?) => {
         impl_trace_tuples!($($rest),*);
