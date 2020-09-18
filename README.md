@@ -9,7 +9,7 @@ Programming languages / compilers / interpreters experiments
 To build the interpreter and run it on a sample file:
 
 ```bash
-cargo run tests/run-pass/print_num.pea
+cargo run tests/run-pass/hello.pea
 ```
 
 To run tests:
