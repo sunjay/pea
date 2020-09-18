@@ -3,7 +3,6 @@ mod alloc;
 pub use alloc::sweep;
 
 use std::fmt;
-use std::iter;
 use std::ptr::NonNull;
 use std::ops::Deref;
 
