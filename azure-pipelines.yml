@@ -68,6 +68,10 @@ steps:
   #TODO: Tests don't run on Windows because of line ending issues
   condition: ne( variables['Agent.OS'], 'Windows_NT' )
 
+- script: |
+    cargo run --verbose tests/run-pass/hello.pea
+  displayName: smoke_test
+
 # See: https://github.com/rust-lang/miri#running-miri-on-ci
 - script: |
     MIRI_NIGHTLY=nightly-$(curl -s https://rust-lang.github.io/rustup-components-history/x86_64-unknown-linux-gnu/miri)
