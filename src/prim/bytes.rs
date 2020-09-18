@@ -8,7 +8,7 @@ pub struct Bytes(Vec<u8>);
 
 impl From<&[u8]> for Bytes {
     fn from(value: &[u8]) -> Self {
-        Bytes(Vec::from(value))
+        Bytes(value.into())
     }
 }
 

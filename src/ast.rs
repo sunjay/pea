@@ -53,6 +53,7 @@ pub struct ExprStmt {
 pub enum Expr {
     Call(CallExpr),
     Integer(IntegerLiteral),
+    BStr(BStr),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -85,6 +86,12 @@ impl<T> Parens<T> {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Ident {
     pub value: Arc<str>,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct BStr {
+    pub value: Arc<[u8]>,
     pub span: Span,
 }
 

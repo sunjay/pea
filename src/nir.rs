@@ -67,6 +67,7 @@ pub struct ExprStmt {
 pub enum Expr {
     Call(CallExpr),
     Integer(IntegerLiteral),
+    BStr(BStr),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -83,3 +84,4 @@ pub struct DefSpan {
 
 pub type Parens<T> = ast::Parens<T>;
 pub type IntegerLiteral = ast::IntegerLiteral;
+pub type BStr = ast::BStr;

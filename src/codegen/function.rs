@@ -4,6 +4,7 @@ use crate::{
     nir,
     bytecode::{self, OpCode, ConstId},
     value::Value,
+    gc::Gc,
 };
 
 use super::def_consts::DefConsts;
@@ -76,6 +77,7 @@ impl<'a> FunctionCompiler<'a> {
         match expr {
             Call(call) => self.walk_call(call),
             Integer(lit) => self.walk_integer_literal(lit),
+            BStr(lit) => self.walk_bstr_literal(lit),
         }
     }
 
@@ -95,10 +97,17 @@ impl<'a> FunctionCompiler<'a> {
     fn walk_integer_literal(&mut self, lit: &nir::IntegerLiteral) {
         let &nir::IntegerLiteral {value, ..} = lit;
 
-        //TODO: Handle this based on the type of the value being produced
+        //TODO: Check the range on the type of the value being produced
         let value = value.try_into()
             .expect("bug: values out of the 64-bit range are not currently supported");
         let index = self.consts.push(Value::I64(value));
+        self.code.write_instr_u16(OpCode::Constant, index.into_u16());
+    }
+
+    fn walk_bstr_literal(&mut self, lit: &nir::BStr) {
+        let nir::BStr {value, ..} = lit;
+
+        let index = self.consts.push(Value::Bytes(Gc::new((**value).into())));
         self.code.write_instr_u16(OpCode::Constant, index.into_u16());
     }
 

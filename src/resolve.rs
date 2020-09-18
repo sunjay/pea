@@ -101,6 +101,7 @@ impl<'a> NameResolver<'a> {
         match expr {
             Call(call) => nir::Expr::Call(self.resolve_call(call)),
             Integer(value) => nir::Expr::Integer(value.clone()),
+            BStr(value) => nir::Expr::BStr(value.clone()),
         }
     }
 

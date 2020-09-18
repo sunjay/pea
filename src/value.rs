@@ -2,8 +2,6 @@ use std::{fmt, mem};
 
 use static_assertions::const_assert_eq;
 
-use parking_lot::Mutex;
-
 use crate::{prim, gc::Gc};
 
 /// The representation of a value in bytecode
@@ -12,7 +10,7 @@ pub enum Value {
     /// The `()` value
     Unit,
     I64(i64),
-    Bytes(Gc<Mutex<prim::Bytes>>),
+    Bytes(Gc<prim::Bytes>),
     Func(Gc<prim::Func>),
 }
 
@@ -25,7 +23,7 @@ impl fmt::Display for Value {
         match self {
             Unit => write!(f, "()"),
             I64(value) => write!(f, "{}", value),
-            Bytes(value) => write!(f, "{}", *value.lock()),
+            Bytes(value) => write!(f, "{}", *value),
             Func(value) => write!(f, "{}", **value),
         }
     }

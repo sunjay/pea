@@ -1,0 +1,8 @@
+fn main() {
+    // Valid byte strings
+    println!(b"");
+    println!(b"abcdef");
+    println!(b"The quick brown fox ");
+    println!(b"\n\r\t\0\'\"\\\x123 \
+               abc");
+}

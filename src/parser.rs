@@ -140,7 +140,8 @@ impl<'a> Parser<'a> {
     fn expr(&mut self) -> ParseResult<ast::Expr> {
         match self.input[0].kind {
             TokenKind::Ident => self.call().map(ast::Expr::Call),
-            _ => self.integer_literal().map(ast::Expr::Integer),
+            TokenKind::Literal(Literal::Integer) => self.integer_literal().map(ast::Expr::Integer),
+            _ => self.bstr_literal().map(ast::Expr::BStr),
         }
     }
 
@@ -164,6 +165,13 @@ impl<'a> Parser<'a> {
     fn integer_literal(&mut self) -> ParseResult<ast::IntegerLiteral> {
         self.match_kind(TokenKind::Literal(Literal::Integer)).map(|token| ast::IntegerLiteral {
             value: token.unwrap_integer(),
+            span: token.span,
+        })
+    }
+
+    fn bstr_literal(&mut self) -> ParseResult<ast::BStr> {
+        self.match_kind(TokenKind::Literal(Literal::Bytes)).map(|token| ast::BStr {
+            value: token.unwrap_bytes().clone(),
             span: token.span,
         })
     }

@@ -9,5 +9,5 @@ block ::= "{" stmt* "}"
 stmt ::= println_stmt | expr ";"
 println_stmt ::= "println" "!" "(" expr ")" ";"
 
-expr ::= call | integer_literal
+expr ::= call | integer_literal | byte_str
 call ::= ident "(" ")"
