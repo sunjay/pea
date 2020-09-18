@@ -7,6 +7,7 @@ use crate::source_files::Span;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Literal {
     Integer,
+    Bytes,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -45,6 +46,8 @@ pub enum TokenKind {
 pub enum TokenValue {
     Ident(Arc<str>),
     Integer(i128),
+    /// The unescaped characters of the byte string (without the surrounding double quotes)
+    Bytes(Arc<[u8]>),
 }
 
 impl From<i128> for TokenValue {
@@ -56,6 +59,12 @@ impl From<i128> for TokenValue {
 impl From<Arc<str>> for TokenValue {
     fn from(value: Arc<str>) -> Self {
         TokenValue::Ident(value)
+    }
+}
+
+impl From<Arc<[u8]>> for TokenValue {
+    fn from(value: Arc<[u8]>) -> Self {
+        TokenValue::Bytes(value)
     }
 }
 
@@ -80,6 +89,14 @@ impl Token {
         match &self.value {
             &Some(TokenValue::Integer(value)) => value,
             _ => panic!("bug: expected an integer"),
+        }
+    }
+
+    /// Returns the data as a byte string or panics
+    pub fn unwrap_bytes(&self) -> &Arc<[u8]> {
+        match &self.value {
+            Some(TokenValue::Bytes(value)) => value,
+            _ => panic!("bug: expected a byte string"),
         }
     }
 }

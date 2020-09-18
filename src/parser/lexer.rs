@@ -49,6 +49,8 @@ impl<'a> Lexer<'a> {
             (b'0' ..= b'9', _) |
             (b'-', Some(b'0' ..= b'9')) => self.integer_lit(start, current_char),
 
+            (b'b', Some(b'"')) => self.byte_str(start),
+
             (b'a' ..= b'z', _) |
             (b'A' ..= b'Z', _) |
             (b'_', _) => self.ident(start),
@@ -278,6 +280,124 @@ impl<'a> Lexer<'a> {
         digits
     }
 
+    /// Parses a byte str, assuming that the opening 'b' character has already been parsed
+    /// and that the next character is definitely the opening double quote '"'
+    fn byte_str(&mut self, start: usize) -> Token {
+        // Skip the opening quote
+        self.scanner.next();
+
+        let mut value = Vec::new();
+        loop {
+            let pos = self.scanner.current_pos();
+            match self.scanner.next() {
+                // Found closing quote
+                Some(b'"') => break,
+                Some(b'\\') => match self.byte_str_unescape_byte(pos) {
+                    Ok(Some(ch)) => value.push(ch),
+                    Ok(None) => {},
+                    Err(token) => return token,
+                },
+
+                // Found next character
+                Some(ch) => value.push(ch),
+
+                None => {
+                    let token = self.token_to_current(start, Error, None);
+                    self.diag.span_error(token.span, "unterminated double quote string").emit();
+                    return token;
+                },
+            }
+        }
+
+        // Note that the token span contains the quotes but the value does not
+        let value: Arc<[u8]> = value.into();
+        self.token_to_current(start, TokenKind::Literal(token::Literal::Bytes), TokenValue::Bytes(value))
+    }
+
+    /// Parses a byte string escape sequence, assuming that the starting backslash has already been
+    /// parsed
+    fn byte_str_unescape_byte(&mut self, lit_start: usize) -> Result<Option<u8>, Token> {
+        Ok(match self.scanner.next() {
+            Some(b'\\') => Some(b'\\'),
+            Some(b'n') => Some(b'\n'),
+            Some(b'r') => Some(b'\r'),
+            Some(b't') => Some(b'\t'),
+            Some(b'0') => Some(b'\0'),
+            Some(b'\'') => Some(b'\''),
+            Some(b'"') => Some(b'"'),
+
+            // Hex escape
+            Some(b'x') => self.byte_str_byte_escape_hex(lit_start, b'"')?,
+
+            // Found backslash at the end of a line
+            Some(b'\n') => {
+                // Ignore all whitespace characters
+                self.ignore_whitespace();
+
+                None
+            },
+
+            Some(ch) => {
+                let token = self.token_to_current(lit_start, Error, None);
+                self.diag.span_error(token.span, format!("unknown character escape: `{}`", ch as char)).emit();
+                return Err(token);
+            },
+
+            // Instead of emitting an error here for the EOF, we'll send up a value and let the
+            // unterminated double quote string message handle the rest
+            None => None,
+        })
+    }
+
+    /// Parses a hex escape sequence `\x12' assuming that `\x` has been parsed already
+    ///
+    /// `lit_start` is the position of the backslash in the escape sequence. `lit_end_byte` is the
+    /// byte that denotes the end of the literal this is in. `"` for byte strings and `'` for bytes.
+    ///
+    /// Returns None if any errors occur
+    fn byte_str_byte_escape_hex(&mut self, lit_start: usize, lit_end_byte: u8) -> Result<Option<u8>, Token> {
+        let digits_start = self.scanner.current_pos();
+
+        // Get two hex digits
+        for _ in 0..2 {
+            match self.byte_str_escape_hex_digit(lit_start, lit_end_byte)? {
+                Some(_) => {},
+                None => return Ok(None),
+            }
+        }
+
+        let digits = self.scanner.slice(digits_start, self.scanner.current_pos());
+
+        let value = u8::from_str_radix(digits, 16)
+            .expect("bug: should be a valid hex literal in the right range");
+        Ok(Some(value))
+    }
+
+    fn byte_str_escape_hex_digit(&mut self, lit_start: usize, lit_end_byte: u8) -> Result<Option<u8>, Token> {
+        if self.scanner.peek() == Some(lit_end_byte) {
+            let token = self.token_to_current(lit_start, Error, None);
+            self.diag.span_error(token.span, "numeric character escape is too short").emit();
+            return Err(token);
+        }
+
+        Ok(match self.scanner.next() {
+            Some(ch@b'0' ..= b'9') |
+            Some(ch@b'a' ..= b'f') |
+            Some(ch@b'A' ..= b'F') => {
+                Some(ch)
+            },
+
+            Some(ch) => {
+                let token = self.token_to_current(lit_start, Error, None);
+                self.diag.span_error(token.span, format!("invalid character in numeric character escape: `{}`", ch as char)).emit();
+                return Err(token);
+            },
+
+            // Propagate EOF and let the literal handle the error
+            None => None,
+        })
+    }
+
     /// Parses an identifier, assuming that the first character has already been parsed
     ///
     /// Since the first character has already been parsed, this can never fail
@@ -357,6 +477,12 @@ mod tests {
     macro_rules! ident {
         ($value:expr) => (
             t!(Ident, TokenValue::Ident($value.into()))
+        );
+    }
+
+    macro_rules! bstr {
+        ($value:expr) => (
+            t!(Literal(token::Literal::Bytes), TokenValue::Bytes((&$value[..]).into()))
         );
     }
 
@@ -511,6 +637,26 @@ mod tests {
         // decimal or hex digit
         expect_error!(b"0b2");
         expect_tokens!(b"0bF", &[t!(Error), ident!("F")]);
+    }
+
+    #[test]
+    fn byte_str_lits() {
+        expect_token!(b"b\"\"", bstr!(b""));
+        expect_token!(b"b\"abcdef\"", bstr!(b"abcdef"));
+        expect_token!(b"b\"The quick brown fox \"", bstr!(b"The quick brown fox "));
+        expect_token!(b"b\"\\n\\r\\t\\0\\'\\\"\\\\\\x123 \\
+                        abc\"", bstr!(b"\n\r\t\0\'\"\\\x123 abc"));
+    }
+
+    #[test]
+    fn byte_str_lits_invalid() {
+        expect_tokens!(b"b\" \\q\"", &[t!(Error), t!(Error)]);
+        expect_tokens!(b"b\" \\x\"", &[t!(Error), t!(Error)]);
+        expect_tokens!(b"b\" \\xq \"", &[t!(Error), t!(Error)]);
+        expect_tokens!(b"b\" \\x1q \"", &[t!(Error), t!(Error)]);
+
+        expect_error!(b"b\"");
+        expect_error!(b"b\"\\\"");
     }
 
     #[test]
