@@ -61,12 +61,6 @@ impl<T: Trace> Gc<T> {
     }
 }
 
-impl<T: Trace> iter::FromIterator<T> for Gc<[T]> {
-    fn from_iter<I: iter::IntoIterator<Item = T>>(_iter: I) -> Self {
-        todo!() //TODO: Collect into GcVec<T> and then use From<GcVec<T>> impl
-    }
-}
-
 impl<'a, T: Trace + Clone> From<&'a [T]> for Gc<[T]> {
     fn from(slice: &'a [T]) -> Self {
         Self {
