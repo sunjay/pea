@@ -7,7 +7,7 @@ use std::ptr::NonNull;
 use std::ops::Deref;
 
 #[cfg(test)]
-static GC_TEST_LOCK: parking_lot::Mutex<()> = parking_lot::Mutex::const_new(<parking_lot::RawMutex as parking_lot::lock_api::RawMutex>::INIT, ());
+static GC_TEST_LOCK: parking_lot::Mutex<()> = parking_lot::const_mutex(());
 
 /// Every type that can be allocated on the GC must implement this trait
 pub trait Trace {
