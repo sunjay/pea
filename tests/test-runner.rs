@@ -111,17 +111,25 @@ fn check_output(entry_path: &Path, output: Output, overwrite: bool) {
     let stderr_file = entry_path.with_extension("stderr");
 
     if overwrite {
-        fs::write(&stdout_file, &stdout)
-            .unwrap_or_else(|out| panic!("Failed to write expected output to '{}': {}", stdout_file.display(), out));
-        fs::write(&stderr_file, &stderr)
-            .unwrap_or_else(|err| panic!("Failed to write expected output to '{}': {}", stderr_file.display(), err));
+        if !stdout.is_empty() {
+            fs::write(&stdout_file, &stdout)
+                .unwrap_or_else(|out| panic!("Failed to write expected output to '{}': {}", stdout_file.display(), out));
+        }
+        if !stderr.is_empty() {
+            fs::write(&stderr_file, &stderr)
+                .unwrap_or_else(|err| panic!("Failed to write expected output to '{}': {}", stderr_file.display(), err));
+        }
         return;
     }
 
-    let expected_stdout = fs::read_to_string(&stdout_file)
-        .unwrap_or_else(|out| panic!("Failed to open '{}': {}", stdout_file.display(), out));
-    let expected_stderr = fs::read_to_string(&stderr_file)
-        .unwrap_or_else(|err| panic!("Failed to open '{}': {}", stderr_file.display(), err));
+    let expected_stdout = if stdout_file.exists() {
+        fs::read_to_string(&stdout_file)
+            .unwrap_or_else(|out| panic!("Failed to open '{}': {}", stdout_file.display(), out))
+    } else { String::new() };
+    let expected_stderr = if stderr_file.exists() {
+        fs::read_to_string(&stderr_file)
+            .unwrap_or_else(|err| panic!("Failed to open '{}': {}", stderr_file.display(), err))
+    } else { String::new() };
 
     if stdout != expected_stdout {
         panic!("Output for '{}' did not match '{}'", entry_path.display(), stdout_file.display());
