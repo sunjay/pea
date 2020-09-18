@@ -86,7 +86,7 @@ impl Interpreter {
 
     pub fn step(&mut self) -> Status {
         // Trigger garbage collection if that is necessary
-        if gc::needs_collect() {
+        if cfg!(feature = "gc_stress_test") || gc::needs_collect() {
             self.collect_garbage();
         }
 
