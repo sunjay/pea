@@ -215,6 +215,8 @@ mod tests {
 
     #[test]
     fn gc_zero_sized_types() {
+        let _lock = GC_TEST_LOCK.lock();
+
         let value1 = Gc::new(());
         let value2 = Gc::from(&[] as &[i32]);
 
