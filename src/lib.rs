@@ -1,5 +1,7 @@
 #![deny(unused_must_use)]
 
+mod debug_log;
+
 pub mod diagnostics;
 pub mod source_files;
 pub mod ast;

@@ -17,4 +17,7 @@ structopt = "0.3"
 rayon = "1.4"
 
 [features]
+# Causes the GC to print debug messages
+gc_debug = []
+# Causes garbage collection to run on every interpreter step
 gc_stress_test = []

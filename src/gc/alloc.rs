@@ -16,6 +16,8 @@ use std::alloc::{alloc, dealloc, Layout, handle_alloc_error};
 
 use parking_lot::{Mutex, const_mutex};
 
+use crate::gc_debug;
+
 use super::Trace;
 
 #[derive(Debug)]
@@ -196,6 +198,9 @@ pub(in super) fn allocate_array<T, I>(values: I) -> NonNull<[T]>
         NEEDS_COLLECT.store(true, Ordering::SeqCst);
     }
 
+    gc_debug!("{:p} allocate - size: {} bytes, type: {}, len: {}", value_ptr, array_layout.size(),
+        std::any::type_name::<T>(), len);
+
     value_ptr
 }
 
@@ -216,6 +221,8 @@ pub(in super) fn allocate<T: Trace>(value: T) -> NonNull<T> {
 /// This function may only be used with pointers returned from `allocate`. It should not be called
 /// concurrently with `sweep`.
 pub(in super) unsafe fn mark<T: ?Sized>(ptr: NonNull<T>) -> bool {
+    gc_debug!("{:p} mark", ptr);
+
     // Safety: Since `GcEntry` is #[repr(C)], the fields are laid out with `GcHeader` before `T`.
     // That means that we *should* be able to just subtract the size of `GcHeader` to get to the
     // `header` field from the `value` field. Note: sub(1) == -(sizeof(GcHeader)*1).
@@ -244,6 +251,8 @@ unsafe fn free(ptr: NonNull<GcHeader>) -> (usize, *mut GcHeader) {
     // Safety: The pointer should be valid because it is currently in the allocation list. Note that
     // in order to avoid aliasing issues we are careful to copy the values out (avoids references).
     let GcHeader {len, size, vtable, layout, next, ..} = *ptr.as_ref();
+
+    gc_debug!("{:p} free - size: {} bytes, len: {}", ptr.as_ptr().add(1), size, len);
 
     // Only drop if a vtable was provided for that
     if !vtable.is_null() {

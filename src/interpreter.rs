@@ -1,6 +1,7 @@
 use std::mem;
 
 use crate::{
+    gc_debug,
     prim,
     bytecode::{Constants, ConstId, OpCode},
     value::Value,
@@ -206,7 +207,9 @@ impl Interpreter {
     /// Trigger garbage collection by first recursively marking/tracing all roots and then calling
     /// `gc::sweep()`
     fn collect_garbage(&self) {
+        gc_debug!("--- GC BEGIN ---");
         self.trace();
         gc::sweep();
+        gc_debug!("--- GC END ---");
     }
 }
