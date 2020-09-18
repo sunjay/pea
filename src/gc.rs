@@ -1,11 +1,12 @@
 mod alloc;
 
-pub use alloc::sweep;
+pub use alloc::{sweep, needs_collect};
 
 use std::fmt;
 use std::ptr::NonNull;
 use std::ops::Deref;
 
+/// This is used to allow GC tests to pretend they are the only thing using the GC at any given time
 #[cfg(test)]
 static GC_TEST_LOCK: parking_lot::Mutex<()> = parking_lot::const_mutex(());
 
@@ -33,6 +34,10 @@ impl<T: Trace> Trace for [T] {
 
 /// Mark the given GC allocated value as still reachable. This will result in the allocation NOT
 /// being collected during the next sweep. Any allocation that is not marked will be freed.
+///
+/// # Safety
+///
+/// This function should not be called concurrently with `sweep`.
 pub fn mark<T: ?Sized>(value: &Gc<T>) {
     // Safety: All Gc<T> values are allocated by `alloc` so this pointer should be valid
     unsafe { alloc::mark(value.ptr); }

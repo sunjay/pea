@@ -1,4 +1,4 @@
-//! Allocation, deallocation, and heap traversal functions.
+//! Allocation, deallocation, and heap traversal functions for memory managed by the GC.
 //!
 //! The garbage collector does not currently implement its own heap. We use the default allocator
 //! provided by the standard library.
@@ -11,13 +11,47 @@
 use std::mem;
 use std::iter;
 use std::ptr::{self, NonNull};
-use std::sync::atomic::{AtomicPtr, Ordering};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::alloc::{alloc, dealloc, Layout, handle_alloc_error};
+
+use parking_lot::{Mutex, const_mutex};
 
 use super::Trace;
 
-/// A linked list of allocations managed by the GC
-static ALLOC_LIST: AtomicPtr<GcHeader> = AtomicPtr::new(ptr::null_mut());
+#[derive(Debug)]
+struct GcState {
+    /// A linked list of allocations managed by the GC
+    alloc_list: *mut GcHeader,
+    /// The number of bytes needed to trigger a collection
+    threshold: usize,
+    /// The number of bytes currently allocated
+    allocated: usize,
+}
+
+// Safety: This state is explicitly managed behind a Mutex to guarantee thread-safety
+unsafe impl Send for GcState {}
+
+static GC_STATE: Mutex<GcState> = const_mutex(GcState {
+    alloc_list: ptr::null_mut(),
+    // arbitrary -- goal is to not trigger the first few GCs too quickly but also to not wait too
+    // long. Could be tuned with some real-world programs.
+    threshold: 1024 * 1024,
+    // Nothing has been allocated yet
+    allocated: 0,
+});
+
+// arbitrary -- goal is to make it so that as the amount of memory the program uses grows, the
+// threshold moves farther out to limit the total time spent re-traversing the larger live set.
+// Could be tuned with some real-world programs.
+const GC_HEAP_GROW_FACTOR: usize = 2;
+
+/// true if the threshold has been reached for the next collection
+static NEEDS_COLLECT: AtomicBool = AtomicBool::new(false);
+
+/// Returns true if `sweep` should be called as soon as possible
+pub fn needs_collect() -> bool {
+    NEEDS_COLLECT.load(Ordering::SeqCst)
+}
 
 /// Copied from: https://doc.rust-lang.org/std/raw/struct.TraitObject.html
 //TODO: Will need to be updated in the future when the representation changes.
@@ -147,11 +181,20 @@ pub(in super) fn allocate_array<T, I>(values: I) -> NonNull<[T]>
 
     // Append onto the list of all allocations
     //
-    // To avoid the ABA problem, we initially create the header with a null pointer for `next`, then
-    // we swap the current ALLOC_LIST pointer with the pointer to this entry in a single operation.
-    let next = ALLOC_LIST.swap(header_ptr, Ordering::SeqCst);
+    // Note that this critical section is kept as small as possible to allow allocation and
+    // initialiation to occur in parallel as much as possible
+    let mut gc_state = GC_STATE.lock();
+    let next = gc_state.alloc_list;
+    gc_state.alloc_list = header_ptr;
     // Safety: The header was initialized above, so it should still be valid to assign to
     unsafe { (*header_ptr).next = next; }
+
+    // Record the amount of memory that was allocated
+    gc_state.allocated += layout.size();
+    if gc_state.allocated > gc_state.threshold {
+        // Notify that a collection should take place ASAP
+        NEEDS_COLLECT.store(true, Ordering::SeqCst);
+    }
 
     value_ptr
 }
@@ -168,7 +211,8 @@ pub(in super) fn allocate<T: Trace>(value: T) -> NonNull<T> {
 ///
 /// # Safety
 ///
-/// This function may only be used with pointers returned from `allocate`.
+/// This function may only be used with pointers returned from `allocate`. It should not be called
+/// concurrently with `sweep`.
 pub(in super) unsafe fn mark<T: ?Sized>(ptr: NonNull<T>) {
     // Safety: Since `GcEntry` is #[repr(C)], the fields are laid out with `GcHeader` before `T`.
     // That means that we *should* be able to just subtract the size of `GcHeader` to get to the
@@ -184,27 +228,17 @@ pub(in super) unsafe fn mark<T: ?Sized>(ptr: NonNull<T>) {
 
 /// Frees the memory associated with the given allocation
 ///
+/// Returns the number of bytes that were deallocated as well as a pointer to the next allocation in
+/// the allocation list after the one that was freed.
+///
 /// # Safety
 ///
-/// This function may only be used with pointers in `ALLOC_LIST`. Do not call this concurrently with
-/// `alloc`.
-unsafe fn free(ptr: NonNull<GcHeader>, prev: Option<NonNull<GcHeader>>) {
+/// This function may only be used with pointers from the allocation list in `GC_STATE`.
+unsafe fn free(ptr: NonNull<GcHeader>) -> (usize, *mut GcHeader) {
     // Extract info from the header
-    // Safety: The pointer should still be valid if it is currently in `ALLOC_LIST`. Note that in
-    // order to avoid aliasing issues we are careful to copy the values out (avoids references).
+    // Safety: The pointer should be valid because it is currently in the allocation list. Note that
+    // in order to avoid aliasing issues we are careful to copy the values out (avoids references).
     let GcHeader {len, size, vtable, layout, next, ..} = *ptr.as_ref();
-
-    // Remove this entry from the ALLOC_LIST linked list
-    if let Some(mut prev) = prev {
-        prev.as_mut().next = next;
-
-    // No previous, must be the head of the list
-    } else {
-        // Set a new head for the list
-        //
-        // NOTE: This line is not robust and will not work if run concurrently with `alloc`.
-        ALLOC_LIST.compare_and_swap(ptr.as_ptr(), next, Ordering::SeqCst);
-    }
 
     // Only drop if a vtable was provided for that
     if !vtable.is_null() {
@@ -224,52 +258,36 @@ unsafe fn free(ptr: NonNull<GcHeader>, prev: Option<NonNull<GcHeader>>) {
 
     // Free the memory
     dealloc(ptr.as_ptr() as *mut u8, layout);
-}
 
-struct Traverse {
-    next: *mut GcHeader,
-}
-
-impl Iterator for Traverse {
-    type Item = NonNull<GcHeader>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        match NonNull::new(self.next) {
-            Some(ptr) => {
-                // Safety: the pointers in ALLOC_LIST should be valid
-                let header = unsafe { ptr.as_ref() };
-                self.next = header.next;
-
-                Some(ptr)
-            },
-            None => None,
-        }
-    }
-}
-
-/// Traverses all allocations managed by the GC
-fn traverse() -> impl Iterator<Item=NonNull<GcHeader>> {
-    Traverse {
-        next: ALLOC_LIST.load(Ordering::SeqCst),
-    }
+    (layout.size(), next)
 }
 
 /// Sweeps/collects all allocations that have been not been marked as reachable
 ///
 /// # Safety
 ///
-/// This function currently assumes that the program is frozen while collection is running. That is,
-/// no other calls to any GC APIs may take place while this function is running.
+/// This function pauses all other GC functions while it is running. No calls to `mark` should take
+/// place while this is running.
 pub fn sweep() {
+    // Keep the GC state locked so no allocations can be registered while this takes place
+    let mut gc_state = GC_STATE.lock();
+
+    // Register ASAP that we are currently collecting so no other thread starts a `sweep`
+    NEEDS_COLLECT.store(false, Ordering::SeqCst);
+
     let mut prev = None;
-    for mut header in traverse() {
+    let mut current = gc_state.alloc_list;
+    while let Some(mut header) = NonNull::new(current) {
         // We need to be careful to keep the lifetime of &GcHeader short so we don't break the
         // aliasing rules when `free` takes ownership of the data.
         let is_reachable = {
             // Safety: the header should be a valid pointer or it would not be in the list.
             let header = unsafe { header.as_mut() };
-            let is_reachable = header.is_reachable;
+            // Advance the loop
+            current = header.next;
 
+            // Store the reachable status of this allocation
+            let is_reachable = header.is_reachable;
             // Reset `is_reachable` for next collection
             header.is_reachable = false;
 
@@ -282,9 +300,25 @@ pub fn sweep() {
             continue;
         }
 
-        // Safety: pointers generated by `traverse` are guaranteed to be from ALLOC_LIST
-        unsafe { free(header, prev); }
+        // Safety: All the pointers we are going through are from `alloc_list`.
+        let (bytes_freed, next) = unsafe { free(header) };
+        gc_state.allocated -= bytes_freed;
+
+        // Remove the freed allocation from the linked list
+        match prev {
+            // Assign the next pointer of the previous item to the list to the item just after the
+            // item that was just freed
+            Some(mut prev_header) => unsafe {
+                prev_header.as_mut().next = next;
+            },
+
+            // No previous, must be the head of the list
+            None => gc_state.alloc_list = next,
+        }
     }
+
+    // Adjust the threshold based on how much is still allocated
+    gc_state.threshold = gc_state.allocated * GC_HEAP_GROW_FACTOR;
 }
 
 #[cfg(test)]
@@ -325,6 +359,6 @@ mod tests {
         // Should clean up all memory at the end
         sweep();
 
-        assert_eq!(ALLOC_LIST.load(Ordering::SeqCst), ptr::null_mut());
+        assert_eq!(GC_STATE.lock().alloc_list, ptr::null_mut());
     }
 }
