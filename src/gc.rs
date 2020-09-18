@@ -35,12 +35,14 @@ impl<T: Trace> Trace for [T] {
 /// Mark the given GC allocated value as still reachable. This will result in the allocation NOT
 /// being collected during the next sweep. Any allocation that is not marked will be freed.
 ///
+/// Returns true if the value was already marked previously.
+///
 /// # Safety
 ///
 /// This function should not be called concurrently with `sweep`.
-pub fn mark<T: ?Sized>(value: &Gc<T>) {
+pub fn mark<T: ?Sized>(value: &Gc<T>) -> bool {
     // Safety: All Gc<T> values are allocated by `alloc` so this pointer should be valid
-    unsafe { alloc::mark(value.ptr); }
+    unsafe { alloc::mark(value.ptr) }
 }
 
 /// A cloneable pointer into memory managed by the GC
@@ -75,9 +77,10 @@ impl<'a, T: Trace + Clone> From<&'a [T]> for Gc<[T]> {
 
 impl<T: ?Sized + Trace> Trace for Gc<T> {
     fn trace(&self) {
-        mark(self);
-
-        (**self).trace();
+        // Avoid reference cycles by only tracing values that weren't previously marked
+        if !mark(self) {
+            (**self).trace();
+        }
     }
 }
 
@@ -243,6 +246,76 @@ mod tests {
         println!("{:?}", *value1);
         assert_eq!(*value2, []);
         println!("{:?}", &*value2);
+
+        // Should clean up all the memory at the end
+        sweep();
+    }
+
+    #[test]
+    fn gc_cycles() {
+        let _lock = GC_TEST_LOCK.lock();
+
+        // Source: https://doc.rust-lang.org/book/ch15-06-reference-cycles.html
+        use parking_lot::Mutex;
+
+        #[derive(Debug)]
+        enum List {
+            Cons(i32, Mutex<Gc<List>>),
+            Nil,
+        }
+
+        use List::*;
+
+        impl Trace for List {
+            fn trace(&self) {
+                use List::*;
+                match self {
+                    Cons(_, rest) => rest.lock().trace(),
+                    Nil => {},
+                }
+            }
+        }
+
+        impl List {
+            pub fn value(&self) -> Option<i32> {
+                match *self {
+                    Cons(value, _) => Some(value),
+                    Nil => None,
+                }
+            }
+
+            pub fn tail(&self) -> Option<&Mutex<Gc<List>>> {
+                match self {
+                    Cons(_, item) => Some(item),
+                    Nil => None,
+                }
+            }
+        }
+
+        let a = Gc::new(Cons(5, Mutex::new(Gc::new(Nil))));
+        let b = Gc::new(Cons(10, Mutex::new(Gc::clone(&a))));
+        // Create reference cycle
+        if let Some(link) = a.tail() {
+            *link.lock() = Gc::clone(&b);
+        }
+
+        // Values should be as we initialized
+        assert_eq!(a.value(), Some(5));
+        assert_eq!(b.value(), Some(10));
+
+        // Should not loop infinitely
+        a.trace();
+
+        // Values should still be the same
+        assert_eq!(a.value(), Some(5));
+        assert_eq!(b.value(), Some(10));
+
+        // Should not clean up anything (since `trace` marks the values)
+        sweep();
+
+        // Values should still be the same
+        assert_eq!(a.value(), Some(5));
+        assert_eq!(b.value(), Some(10));
 
         // Should clean up all the memory at the end
         sweep();

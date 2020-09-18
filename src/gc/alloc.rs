@@ -209,11 +209,13 @@ pub(in super) fn allocate<T: Trace>(value: T) -> NonNull<T> {
 
 /// Marks a value managed by the GC as reachable
 ///
+/// Returns true if the value was already marked previously.
+///
 /// # Safety
 ///
 /// This function may only be used with pointers returned from `allocate`. It should not be called
 /// concurrently with `sweep`.
-pub(in super) unsafe fn mark<T: ?Sized>(ptr: NonNull<T>) {
+pub(in super) unsafe fn mark<T: ?Sized>(ptr: NonNull<T>) -> bool {
     // Safety: Since `GcEntry` is #[repr(C)], the fields are laid out with `GcHeader` before `T`.
     // That means that we *should* be able to just subtract the size of `GcHeader` to get to the
     // `header` field from the `value` field. Note: sub(1) == -(sizeof(GcHeader)*1).
@@ -223,7 +225,10 @@ pub(in super) unsafe fn mark<T: ?Sized>(ptr: NonNull<T>) {
     //  `header` and `value` fields.
     let header_ptr = (ptr.as_ptr() as *mut GcHeader).sub(1);
     let mut header = &mut *header_ptr;
+
+    let prev_reachable = header.is_reachable;
     header.is_reachable = true;
+    prev_reachable
 }
 
 /// Frees the memory associated with the given allocation
