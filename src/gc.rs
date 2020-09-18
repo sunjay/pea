@@ -19,10 +19,43 @@ pub trait Trace {
     fn trace(&self);
 }
 
-impl<T: Copy> Trace for T {
-    // Copy types can't contain `Gc` types
-    fn trace(&self) {}
+/// Implement `Trace` for `Copy` types
+///
+/// Note: `impl<T: Copy> Trace for T` causes problems because `&T` is `Copy`.
+macro_rules! impl_trace_copy {
+    ($($typ:ty),* $(,)?) => {
+        $(
+            impl Trace for $typ {
+                // Copy types can't contain `Gc` types
+                fn trace(&self) {}
+            }
+        )*
+    };
 }
+
+impl_trace_copy!(
+    (),
+
+    bool,
+    char,
+
+    f32,
+    f64,
+
+    i8,
+    i16,
+    i32,
+    i64,
+    i128,
+    isize,
+
+    u8,
+    u16,
+    u32,
+    u64,
+    u128,
+    usize,
+);
 
 impl<T: Trace> Trace for [T] {
     fn trace(&self) {
