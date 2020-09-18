@@ -1,4 +1,4 @@
-use crate::value::Value;
+use crate::{value::Value, gc::Trace};
 
 /// A compiled chunk of bytecode, including both opcodes and operand bytes
 #[derive(Debug, Default, Clone)]
@@ -65,6 +65,12 @@ impl ConstId {
 /// A pool of all constants in the program, referenced by index
 #[derive(Debug, Default, Clone)]
 pub struct Constants(Vec<Value>);
+
+impl Trace for Constants {
+    fn trace(&self) {
+        self.0.trace();
+    }
+}
 
 impl Constants {
     /// Pushes a constant value into the table of constants and returns its 16-bit index

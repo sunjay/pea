@@ -4,7 +4,7 @@ use crate::{
     prim,
     bytecode::{Constants, ConstId, OpCode},
     value::Value,
-    gc::Gc,
+    gc::{self, Gc, Trace},
 };
 
 /// The current status of the interpreter
@@ -24,6 +24,14 @@ pub struct CallFrame {
     next_instr: usize,
 }
 
+impl Trace for CallFrame {
+    fn trace(&self) {
+        let Self {func, frame_index: _, next_instr: _} = self;
+
+        func.trace();
+    }
+}
+
 impl CallFrame {
     pub fn new(func: Gc<prim::Func>, frame_index: usize) -> Self {
         Self {
@@ -40,6 +48,15 @@ pub struct Interpreter {
     consts: Constants,
     call_stack: Vec<CallFrame>,
     value_stack: Vec<Value>,
+}
+
+impl Trace for Interpreter {
+    fn trace(&self) {
+        let Self {consts, call_stack, value_stack} = self;
+        consts.trace();
+        call_stack.trace();
+        value_stack.trace();
+    }
 }
 
 impl Interpreter {
@@ -68,6 +85,11 @@ impl Interpreter {
     }
 
     pub fn step(&mut self) -> Status {
+        // Trigger garbage collection if that is necessary
+        if gc::needs_collect() {
+            self.collect_garbage();
+        }
+
         // Safety: `next_instr` will be in bounds and the transmute is safe assuming that the
         // bytecode is compiled correctly and assuming there is at least one instruction. If the
         // compiler accidentally creates a jump to some arbitrary value, this can cause UB.
@@ -179,5 +201,12 @@ impl Interpreter {
     /// Peek at the value n slots back in the value stack
     fn peek(&self, n: usize) -> &Value {
         &self.value_stack[self.value_stack.len() - n - 1]
+    }
+
+    /// Trigger garbage collection by first recursively marking/tracing all roots and then calling
+    /// `gc::sweep()`
+    fn collect_garbage(&self) {
+        self.trace();
+        gc::sweep();
     }
 }

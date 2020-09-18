@@ -2,7 +2,7 @@ use std::{fmt, mem};
 
 use static_assertions::const_assert_eq;
 
-use crate::{prim, gc::Gc};
+use crate::{prim, gc::{Gc, Trace}};
 
 /// The representation of a value in bytecode
 #[derive(Debug, Clone)]
@@ -16,6 +16,18 @@ pub enum Value {
 
 // Make sure value doesn't grow beyond what we expect it to be
 const_assert_eq!(mem::size_of::<Value>(), 16);
+
+impl Trace for Value {
+    fn trace(&self) {
+        use Value::*;
+        match self {
+            Unit => {},
+            I64(_) => {},
+            Bytes(value) => value.trace(),
+            Func(value) => value.trace(),
+        }
+    }
+}
 
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
