@@ -52,3 +52,22 @@ impl<T: Trace> Trace for [T] {
         }
     }
 }
+
+macro_rules! impl_trace_tuples {
+    ($first:ident $(, $rest:ident)* $(,)?) => {
+        impl_trace_tuples!($($rest),*);
+
+        impl<$first: Trace, $($rest: Trace),*> Trace for ($first, $($rest,)*) {
+            fn trace(&self) {
+                #[allow(non_snake_case)]
+                let ($first, $($rest,)*) = self;
+                $first.trace();
+                $($rest.trace();)*
+            }
+        }
+    };
+
+    () => ();
+}
+
+impl_trace_tuples!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z);
