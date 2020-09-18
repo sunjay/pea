@@ -327,7 +327,18 @@ impl<'a> Lexer<'a> {
             Some(b'"') => Some(b'"'),
 
             // Hex escape
-            Some(b'x') => self.byte_str_byte_escape_hex(lit_start, b'"')?,
+            Some(b'x') => match self.byte_str_byte_escape_hex(lit_start, b'"') {
+                Ok(ch) => ch,
+                Err(err) => {
+                    // Error recovery: continue until the end quote
+                    while let Some(ch) = self.scanner.next() {
+                        if ch == b'"' {
+                            break;
+                        }
+                    }
+                    Err(err)?
+                }
+            },
 
             // Found backslash at the end of a line
             Some(b'\n') => {
@@ -340,6 +351,13 @@ impl<'a> Lexer<'a> {
             Some(ch) => {
                 let token = self.token_to_current(lit_start, Error, None);
                 self.diag.span_error(token.span, format!("unknown character escape: `{}`", ch as char)).emit();
+
+                // Error recovery: continue until the end quote
+                while let Some(ch) = self.scanner.next() {
+                    if ch == b'"' {
+                        break;
+                    }
+                }
                 return Err(token);
             },
 
@@ -650,10 +668,11 @@ mod tests {
 
     #[test]
     fn byte_str_lits_invalid() {
-        expect_tokens!(b"b\" \\q\"", &[t!(Error), t!(Error)]);
-        expect_tokens!(b"b\" \\x\"", &[t!(Error), t!(Error)]);
-        expect_tokens!(b"b\" \\xq \"", &[t!(Error), t!(Error)]);
-        expect_tokens!(b"b\" \\x1q \"", &[t!(Error), t!(Error)]);
+        expect_error!(b"b\" \\q\"");
+        expect_error!(b"b\" \\x\"");
+        expect_error!(b"b\" \\x1\"");
+        expect_error!(b"b\" \\xq \"");
+        expect_error!(b"b\" \\x1q \"");
 
         expect_error!(b"b\"");
         expect_error!(b"b\"\\\"");

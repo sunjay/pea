@@ -1,0 +1,9 @@
+fn main() {
+    // Invalid byte strings
+    expect_error!(b"\q");
+    expect_error!(b"\x");
+    expect_error!(b"\x1");
+    expect_error!(b"\xq");
+    expect_error!(b"\x1q");
+    expect_error!(b"\");
+}
