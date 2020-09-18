@@ -100,6 +100,12 @@ impl<T: ?Sized> Clone for Gc<T> {
     }
 }
 
+impl<T: Trace + Default> Default for Gc<T> {
+    fn default() -> Self {
+        Self::new(T::default())
+    }
+}
+
 impl<T: ?Sized + fmt::Debug> fmt::Debug for Gc<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Debug::fmt(&**self, f)
