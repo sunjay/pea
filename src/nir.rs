@@ -77,14 +77,15 @@ pub struct ExprStmt {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
-    Call(CallExpr),
+    Call(Box<CallExpr>),
+    Def(DefSpan),
     Integer(IntegerLiteral),
-    BStr(BStr),
+    BStr(BStrLiteral),
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct CallExpr {
-    pub name: DefSpan,
+    pub lhs: Expr,
     pub paren_open_token: Token,
     pub args: [(); 0], //TODO
     pub paren_close_token: Token,
@@ -97,4 +98,4 @@ pub struct DefSpan {
 }
 
 pub type IntegerLiteral = ast::IntegerLiteral;
-pub type BStr = ast::BStr;
+pub type BStrLiteral = ast::BStrLiteral;

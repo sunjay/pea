@@ -11,5 +11,5 @@ println_stmt ::= "println" "!" "(" expr ")" ";"
 var_decl_stmt ::= "let" ident "=" expr ";"
 expr_stmt ::= expr ";"
 
-expr ::= call | integer_literal | byte_str
-call ::= ident "(" ")"
+expr ::= call | ident | integer_literal | byte_str
+call ::= expr "(" ")"

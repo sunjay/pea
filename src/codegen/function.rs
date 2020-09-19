@@ -88,16 +88,16 @@ impl<'a> FunctionCompiler<'a> {
         use nir::Expr::*;
         match expr {
             Call(call) => self.walk_call(call),
+            Def(def_id) => todo!(),
             Integer(lit) => self.walk_integer_literal(lit),
             BStr(lit) => self.walk_bstr_literal(lit),
         }
     }
 
     fn walk_call(&mut self, call: &nir::CallExpr) {
-        let nir::CallExpr {name, paren_open_token: _, args, paren_close_token: _} = call;
+        let nir::CallExpr {lhs, paren_open_token: _, args, paren_close_token: _} = call;
 
-        let func_const = self.func_const_id(name);
-        self.code.write_instr_u16(OpCode::Constant, func_const.into_u16());
+        self.walk_expr(lhs);
 
         //TODO: Walk argument exprs and push their values onto the stack
 
@@ -116,8 +116,8 @@ impl<'a> FunctionCompiler<'a> {
         self.code.write_instr_u16(OpCode::Constant, index.into_u16());
     }
 
-    fn walk_bstr_literal(&mut self, lit: &nir::BStr) {
-        let nir::BStr {value, ..} = lit;
+    fn walk_bstr_literal(&mut self, lit: &nir::BStrLiteral) {
+        let nir::BStrLiteral {value, ..} = lit;
 
         let index = self.consts.push(Value::Bytes(Gc::new((**value).into())));
         self.code.write_instr_u16(OpCode::Constant, index.into_u16());

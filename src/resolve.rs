@@ -131,21 +131,22 @@ impl<'a> NameResolver<'a> {
     fn resolve_expr(&mut self, expr: &ast::Expr) -> nir::Expr {
         use ast::Expr::*;
         match expr {
-            Call(call) => nir::Expr::Call(self.resolve_call(call)),
+            Call(call) => nir::Expr::Call(Box::new(self.resolve_call(call))),
+            Ident(name) => todo!(),
             Integer(value) => nir::Expr::Integer(value.clone()),
             BStr(value) => nir::Expr::BStr(value.clone()),
         }
     }
 
     fn resolve_call(&mut self, call: &ast::CallExpr) -> nir::CallExpr {
-        let ast::CallExpr {name, paren_open_token, args, paren_close_token} = call;
+        let ast::CallExpr {lhs, paren_open_token, args, paren_close_token} = call;
 
-        let name = self.lookup_func(name);
+        let lhs = self.resolve_expr(lhs);
         let paren_open_token = paren_open_token.clone();
         let args = args.clone(); //TODO: Walk args
         let paren_close_token = paren_close_token.clone();
 
-        nir::CallExpr {name, paren_open_token, args, paren_close_token}
+        nir::CallExpr {lhs, paren_open_token, args, paren_close_token}
     }
 
     /// Declares a function name in the current scope

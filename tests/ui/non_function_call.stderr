@@ -1,0 +1,3 @@
+stack backtrace:
+   0: main
+error: attempt to call a value that is not a function
