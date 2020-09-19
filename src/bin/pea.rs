@@ -82,17 +82,22 @@ fn main() {
     let mut interpreter = pea::compile_path(program_path, source_files, &diag)
         .unwrap_or_else(|err| quit!(&diag, "{}", err));
 
+    let mut exit_status = 0;
     loop {
         match interpreter.step() {
             Ok(Status::Running) => {},
             Ok(Status::Complete) => break,
             Err(err) => {
                 interpreter.print_call_stack();
-                eprintln!("{}", err);
+                eprintln!("error: {}", err);
+                exit_status = 1;
+                break;
             },
         }
     }
 
     // Clean up any remaining memory allocated by the GC
     gc::sweep();
+
+    process::exit(exit_status);
 }

@@ -46,7 +46,8 @@ fn run_pass_miri() {
                 Ok(Status::Complete) => break,
                 Err(err) => {
                     interpreter.print_call_stack();
-                    eprintln!("{}", err);
+                    eprintln!("error: {}", err);
+                    break;
                 },
             }
         }
