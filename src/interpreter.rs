@@ -1,3 +1,6 @@
+mod execute;
+mod instr;
+
 use std::mem;
 
 use thiserror::Error;
@@ -9,6 +12,8 @@ use crate::{
     value::Value,
     gc::{self, Gc, Trace},
 };
+
+use execute::Execute;
 
 /// The current status of the interpreter
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -22,6 +27,8 @@ pub enum RuntimeError {
     #[error("attempt to call a value that is not a function")]
     NonFunctionCall,
 }
+
+pub type RuntimeResult = Result<Status, RuntimeError>;
 
 #[derive(Debug)]
 pub struct CallFrame {
@@ -123,57 +130,13 @@ impl Interpreter {
 
         use OpCode::*;
         match next_op {
-            Call => {
-                let nargs = self.read_u8() as usize;
-
-                let func = match self.peek(nargs) {
-                    Value::Func(func) => func.clone(),
-                    _ => return Err(RuntimeError::NonFunctionCall),
-                };
-
-                // Start with the arguments on the start of the stack frame
-                let frame_index = self.value_stack.len() - nargs;
-                self.call_stack.push(CallFrame::new(func, frame_index));
-            },
-
-            Return => {
-                let result = self.pop();
-
-                // Remove the top call frame
-                self.call_stack.pop();
-                if self.call_stack.is_empty() {
-                    return Ok(Status::Complete);
-                }
-
-                //TODO: Pop off any local variables from the value stack
-                //self.value_stack.set_len(self.value_stack.len() - num_locals)
-
-                // push the returned value
-                self.value_stack.push(result);
-            },
-
-            ConstUnit => {
-                self.value_stack.push(Value::Unit);
-            },
-
-            Constant => {
-                let index = self.read_u16();
-                // Safety: If the bytecode is compiled correctly, this will always be a valid
-                // constant ID
-                let id = unsafe { ConstId::new_unchecked(index) };
-                self.value_stack.push(self.consts.get(id).clone());
-            },
-
-            Pop => {
-                self.pop();
-            },
-
-            Print => {
-                println!("{}", self.pop());
-            },
+            Call => instr::call.run(self),
+            Return => instr::ret.run(self),
+            ConstUnit => instr::const_unit.run(self),
+            Constant => instr::constant.run(self),
+            Pop => instr::pop.run(self),
+            Print => instr::print(self),
         }
-
-        Ok(Status::Running)
     }
 
     /// Returns the next byte from the code segment of the call frame at the top of the call stack.
