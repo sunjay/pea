@@ -1,3 +1,4 @@
+use std::fmt;
 use std::collections::HashMap;
 
 use crate::{gc::Trace, source_files::Span, value::Value};
@@ -67,6 +68,12 @@ impl Bytecode {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ConstId(u16);
 
+impl fmt::Display for ConstId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(&self.0, f)
+    }
+}
+
 impl ConstId {
     /// Creates a new constant ID from the given value
     ///
@@ -119,6 +126,11 @@ impl Constants {
         let ConstId(index) = id;
         // Safety: All ConstIds are guaranteed to be valid indexes
         unsafe { self.0.get_unchecked(index as usize) }
+    }
+
+    /// Iterates through each constant in an unspecified order
+    pub fn iter(&self) -> impl Iterator<Item=(ConstId, &Value)> {
+        (0..).zip(self.0.iter()).map(|(id, value)| (ConstId(id), value))
     }
 }
 

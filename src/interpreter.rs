@@ -112,6 +112,27 @@ impl Interpreter {
         }
     }
 
+    /// Prints the table of constants to stderr
+    pub fn print_constants(&self) {
+        eprintln!("Constants:\n");
+        eprintln!("| ID    | Value");
+        eprintln!("|-------|-----------------------");
+        for (id, constant) in self.consts.iter() {
+            eprintln!("| {:<5} | {}", id, constant);
+        }
+    }
+
+    /// Prints the annotated bytecode of every function constant to stderr
+    pub fn print_all_annotated_bytecode(&self) {
+        eprintln!("Bytecode:\n");
+        for (_, constant) in self.consts.iter() {
+            match constant {
+                Value::Func(func) => func.print_annotated_bytecode(),
+                _ => {},
+            }
+        }
+    }
+
     /// Executes the next bytecode instruction
     ///
     /// Returns the status of the interpreter after running the instruction. This method should no

@@ -25,6 +25,11 @@ impl Func {
     pub fn with_code(name: Arc<str>, code: Bytecode) -> Self {
         Self {name, code}
     }
+
+    /// Prints the annotated bytecode this function to stderr
+    pub fn print_annotated_bytecode(&self) {
+        todo!()
+    }
 }
 
 impl gc::Trace for Func {
