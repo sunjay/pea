@@ -51,6 +51,7 @@ impl<'a> FunctionCompiler<'a> {
         use nir::Stmt::*;
         match stmt {
             Println(stmt) => self.walk_println_stmt(stmt),
+            VarDecl(stmt) => self.walk_var_decl_stmt(stmt),
             Expr(stmt) => self.walk_expr_stmt(stmt),
         }
     }
@@ -61,6 +62,10 @@ impl<'a> FunctionCompiler<'a> {
         self.walk_expr(&expr.value);
 
         self.code.write_instr(OpCode::Print);
+    }
+
+    fn walk_var_decl_stmt(&mut self, stmt: &nir::VarDeclStmt) {
+        todo!()
     }
 
     fn walk_expr_stmt(&mut self, stmt: &nir::ExprStmt) {

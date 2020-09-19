@@ -30,6 +30,7 @@ pub struct Block {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Stmt {
     Println(PrintlnStmt),
+    VarDecl(VarDeclStmt),
     Expr(ExprStmt),
 }
 
@@ -41,11 +42,28 @@ pub struct PrintlnStmt {
     pub not_token: Token,
     /// The expression to be printed
     pub expr: Parens<Expr>,
+    /// The token for the `;` symbol
+    pub semicolon_token: Token,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct VarDeclStmt {
+    /// The token for the `let` keyword
+    pub let_token: Token,
+    /// The variable name being declared
+    pub name: Ident,
+    /// The token for the `=` symbol
+    pub equals_token: Token,
+    /// The expression assigned to the variable
+    pub expr: Expr,
+    /// The token for the `;` symbol
+    pub semicolon_token: Token,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExprStmt {
     pub expr: Expr,
+    /// The token for the `;` symbol
     pub semicolon_token: Token,
 }
 

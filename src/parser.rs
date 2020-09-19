@@ -137,6 +137,7 @@ impl<'a> Parser<'a> {
     fn stmt(&mut self) -> ParseResult<ast::Stmt> {
         match self.input.peek().kind {
             TokenKind::Keyword(Keyword::Println) => self.println_stmt().map(ast::Stmt::Println),
+            TokenKind::Keyword(Keyword::Let) => self.var_decl_stmt().map(ast::Stmt::VarDecl),
             _ => self.expr_stmt().map(ast::Stmt::Expr),
         }
     }
@@ -147,13 +148,21 @@ impl<'a> Parser<'a> {
 
         let expr = self.parens(|this| this.expr())?;
 
-        self.input.match_kind(TokenKind::Semicolon)?;
+        let semicolon_token = self.input.match_kind(TokenKind::Semicolon)?.clone();
 
-        Ok(ast::PrintlnStmt {
-            println_token,
-            not_token,
-            expr,
-        })
+        Ok(ast::PrintlnStmt {println_token, not_token, expr, semicolon_token})
+    }
+
+    fn var_decl_stmt(&mut self) -> ParseResult<ast::VarDeclStmt> {
+        let let_token = self.input.keyword(Keyword::Let)?.clone();
+        let name = self.ident()?;
+        let equals_token = self.input.match_kind(TokenKind::Equals)?.clone();
+
+        let expr = self.expr()?;
+
+        let semicolon_token = self.input.match_kind(TokenKind::Semicolon)?.clone();
+
+        Ok(ast::VarDeclStmt {let_token, name, equals_token, expr, semicolon_token})
     }
 
     fn expr_stmt(&mut self) -> ParseResult<ast::ExprStmt> {

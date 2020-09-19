@@ -76,17 +76,30 @@ impl<'a> NameResolver<'a> {
         use ast::Stmt::*;
         match stmt {
             Println(stmt) => nir::Stmt::Println(self.resolve_println_stmt(stmt)),
+            VarDecl(stmt) => nir::Stmt::VarDecl(self.resolve_var_decl_stmt(stmt)),
             Expr(stmt) => nir::Stmt::Expr(self.resolve_expr_stmt(stmt)),
         }
     }
 
     fn resolve_println_stmt(&mut self, stmt: &ast::PrintlnStmt) -> nir::PrintlnStmt {
-        let ast::PrintlnStmt {println_token, not_token, expr} = stmt;
+        let ast::PrintlnStmt {println_token, not_token, expr, semicolon_token} = stmt;
         let println_token = println_token.clone();
         let not_token = not_token.clone();
         let expr = expr.map(|expr| self.resolve_expr(expr));
+        let semicolon_token = semicolon_token.clone();
 
-        nir::PrintlnStmt {println_token, not_token, expr}
+        nir::PrintlnStmt {println_token, not_token, expr, semicolon_token}
+    }
+
+    fn resolve_var_decl_stmt(&mut self, stmt: &ast::VarDeclStmt) -> nir::VarDeclStmt {
+        let ast::VarDeclStmt {let_token, name, equals_token, expr, semicolon_token} = stmt;
+        let let_token = let_token.clone();
+        let name = (|| { todo!("{}", name.value) })();
+        let equals_token = equals_token.clone();
+        let expr = self.resolve_expr(expr);
+        let semicolon_token = semicolon_token.clone();
+
+        nir::VarDeclStmt {let_token, name, equals_token, expr, semicolon_token}
     }
 
     fn resolve_expr_stmt(&mut self, stmt: &ast::ExprStmt) -> nir::ExprStmt {

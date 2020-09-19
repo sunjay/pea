@@ -39,6 +39,8 @@ pub enum TokenKind {
     /// The `}` symbol
     BraceClose,
 
+    /// The `=` symbol
+    Equals,
     /// The `!` symbol
     Not,
     /// The `;` symbol
@@ -66,6 +68,7 @@ impl fmt::Display for TokenKind {
             BraceOpen => write!(f, "`{{`"),
             BraceClose => write!(f, "`}}`"),
 
+            Equals => write!(f, "`=`"),
             Not => write!(f, "`!`"),
             Semicolon => write!(f, "`;`"),
 
@@ -172,6 +175,7 @@ macro_rules! keywords {
 
 keywords! {
     Fn : "fn"
+    Let : "let"
 
     //TODO: This should be removed when println stops being used as a keyword
     Println : "println"
