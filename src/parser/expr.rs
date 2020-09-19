@@ -1,20 +1,9 @@
 use crate::ast;
 
-use super::{TokenStream, ParseResult, TokenKind, Literal};
+use super::{Parser, ParseResult, TokenKind, Literal};
 
-pub(in super) fn parse_expr<'a, 'b>(
-    input: &'b mut TokenStream<'a>,
-) -> ParseResult<ast::Expr> {
-    let mut parser = ExprParser {input};
-    parser.expr()
-}
-
-struct ExprParser<'a, 'b> {
-    input: &'b mut TokenStream<'a>,
-}
-
-impl<'a, 'b> ExprParser<'a, 'b> {
-    fn expr(&mut self) -> ParseResult<ast::Expr> {
+impl<'a> Parser<'a> {
+    pub(in super) fn expr(&mut self) -> ParseResult<ast::Expr> {
         match self.input.peek().kind {
             TokenKind::Ident => self.call().map(ast::Expr::Call),
             TokenKind::Literal(Literal::Integer) => self.integer_literal().map(ast::Expr::Integer),
@@ -23,7 +12,7 @@ impl<'a, 'b> ExprParser<'a, 'b> {
     }
 
     fn call(&mut self) -> ParseResult<ast::CallExpr> {
-        let name = self.input.ident()?;
+        let name = self.ident()?;
         let args = self.parens(|_| Ok([]))?;
 
         Ok(ast::CallExpr {name, args})
@@ -41,15 +30,5 @@ impl<'a, 'b> ExprParser<'a, 'b> {
             value: token.unwrap_bytes().clone(),
             span: token.span,
         })
-    }
-
-    fn parens<T>(
-        &mut self,
-        parser: impl FnOnce(&mut Self) -> ParseResult<T>,
-    ) -> ParseResult<ast::Parens<T>> {
-        let paren_open_token = self.input.match_kind(TokenKind::ParenOpen)?.clone();
-        let value = parser(self)?;
-        let paren_close_token = self.input.match_kind(TokenKind::ParenClose)?.clone();
-        Ok(ast::Parens {paren_open_token, value, paren_close_token})
     }
 }

@@ -1,5 +1,3 @@
-use crate::ast;
-
 use super::{
     ParseResult,
     ParseError,
@@ -18,13 +16,6 @@ impl<'a> From<&'a [Token]> for TokenStream<'a> {
 }
 
 impl<'a> TokenStream<'a> {
-    pub(in super) fn ident(&mut self) -> ParseResult<ast::Ident> {
-        self.match_kind(TokenKind::Ident).map(|token| ast::Ident {
-            value: token.unwrap_ident().clone(),
-            span: token.span,
-        })
-    }
-
     pub(in super) fn keyword(&mut self, keyword: Keyword) -> ParseResult<&Token> {
         self.match_kind(TokenKind::Keyword(keyword))
     }

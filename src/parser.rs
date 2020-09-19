@@ -15,7 +15,6 @@ use crate::{
 use lexer::Lexer;
 use scanner::Scanner;
 use token_stream::TokenStream;
-use expr::parse_expr;
 
 pub fn collect_tokens(source: FileSource, diag: &Diagnostics) -> Vec<Token> {
     let scanner = Scanner::new(source);
@@ -85,7 +84,7 @@ impl<'a> Parser<'a> {
 
     fn func_decl(&mut self) -> ParseResult<ast::FuncDecl> {
         let fn_token = self.input.match_kind(TokenKind::Keyword(Keyword::Fn))?.clone();
-        let name = self.input.ident()?;
+        let name = self.ident()?;
 
         let params = self.parens(|_| Ok(()))?;
         let body = self.block()?;
@@ -142,10 +141,6 @@ impl<'a> Parser<'a> {
         Ok(ast::ExprStmt {expr, semicolon_token})
     }
 
-    fn expr(&mut self) -> ParseResult<ast::Expr> {
-        parse_expr(&mut self.input)
-    }
-
     fn parens<T>(
         &mut self,
         parser: impl FnOnce(&mut Self) -> ParseResult<T>,
@@ -154,5 +149,12 @@ impl<'a> Parser<'a> {
         let value = parser(self)?;
         let paren_close_token = self.input.match_kind(TokenKind::ParenClose)?.clone();
         Ok(ast::Parens {paren_open_token, value, paren_close_token})
+    }
+
+    fn ident(&mut self) -> ParseResult<ast::Ident> {
+        self.input.match_kind(TokenKind::Ident).map(|token| ast::Ident {
+            value: token.unwrap_ident().clone(),
+            span: token.span,
+        })
     }
 }
