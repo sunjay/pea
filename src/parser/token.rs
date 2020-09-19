@@ -4,18 +4,28 @@ use std::cmp::Ordering;
 
 use crate::source_files::Span;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Literal {
     Integer,
     Bytes,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+impl fmt::Display for Literal {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use Literal::*;
+        match self {
+            Integer => write!(f, "an integer"),
+            Bytes => write!(f, "a byte string"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum TokenKind {
-    /// A keyword reserved by the language
-    Keyword(Keyword),
     /// An identifier
     Ident,
+    /// A keyword reserved by the language
+    Keyword(Keyword),
     /// A literal, e.g. `122`, `"abc"`, etc.
     Literal(Literal),
 
@@ -40,6 +50,30 @@ pub enum TokenKind {
     /// A placeholder for an invalid token, propagated to avoid cascading error messages and to
     /// allow the lexer to continue past errors
     Error,
+}
+
+impl fmt::Display for TokenKind {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use TokenKind::*;
+        match self {
+            Ident => write!(f, "an identifier"),
+            Keyword(keyword) => write!(f, "{}", keyword),
+            Literal(literal) => write!(f, "{}", literal),
+
+            ParenOpen => write!(f, "`(`"),
+            ParenClose => write!(f, "`)`"),
+
+            BraceOpen => write!(f, "`{{`"),
+            BraceClose => write!(f, "`}}`"),
+
+            Not => write!(f, "`!`"),
+            Semicolon => write!(f, "`;`"),
+
+            Eof => write!(f, "end of file"),
+
+            Error => unreachable!("The Error token kind should not be formatted"),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

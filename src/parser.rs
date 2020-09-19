@@ -6,6 +6,8 @@ mod expr;
 
 pub use token::*;
 
+use std::fmt::Write;
+
 use crate::{
     ast,
     source_files::FileSource,
@@ -42,15 +44,35 @@ pub fn parse_program(input: &[Token], diag: &Diagnostics) -> ast::Program {
 #[derive(Debug, Clone)]
 enum ParseError {
     UnexpectedToken {
-        expected: TokenKind,
-        found: Vec<TokenKind>,
+        expected: Vec<TokenKind>,
+        actual: Token,
     },
 }
 
 impl ParseError {
     fn emit(self, diag: &Diagnostics) {
-        dbg!(self);
-        todo!()
+        use ParseError::*;
+        match self {
+            UnexpectedToken {mut expected, actual} => {
+                expected.sort_unstable();
+
+                let mut message = String::new();
+                match &expected[..] {
+                    [] => unreachable!("bug: no parser should produce zero expected tokens"),
+                    [tk] => write!(message, "expected {}", tk).unwrap(),
+                    [tk1, tk2] => write!(message, "expected {} or {}", tk1, tk2).unwrap(),
+                    kinds => {
+                        write!(message, "expected one of ").unwrap();
+                        for kind in &kinds[..kinds.len()-1] {
+                            write!(message, "{}, ", kind).unwrap();
+                        }
+                        write!(message, "or {}", kinds[kinds.len()-1]).unwrap();
+                    },
+                }
+                write!(message, ", found: {}", actual.kind).unwrap();
+                diag.span_error(actual.span, message).emit();
+            },
+        }
     }
 }
 

@@ -26,8 +26,8 @@ impl<'a> TokenStream<'a> {
             Ok(token)
         } else {
             Err(ParseError::UnexpectedToken {
-                expected,
-                found: vec![token.kind.clone()],
+                expected: vec![expected],
+                actual: token.clone(),
             })
         }
     }
