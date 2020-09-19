@@ -1,35 +1,45 @@
-use crate::{value::Value, gc::Trace};
+use std::collections::HashMap;
+
+use crate::{gc::Trace, source_files::Span, value::Value};
 
 /// A compiled chunk of bytecode, including both opcodes and operand bytes
 #[derive(Debug, Default, Clone)]
-pub struct Bytecode(Vec<u8>);
+pub struct Bytecode {
+    bytes: Vec<u8>,
+    /// Map of offset into `bytes` to the corresponding `Span`
+    ///
+    /// Spans are only inserted for each `OpCode`.
+    spans: HashMap<usize, Span>,
+}
 
 impl Bytecode {
     /// Writes an instruction opcode into the bytecode chunk with no arguments
-    pub fn write_instr(&mut self, opcode: OpCode) {
-        self.0.push(opcode as u8);
+    pub fn write_instr(&mut self, opcode: OpCode, span: Span) {
+        let offset = self.bytes.len();
+        self.bytes.push(opcode as u8);
+        self.spans.insert(offset, span);
     }
 
     /// Writes an instruction opcode into the bytecode chunk with a single u8 argument
-    pub fn write_instr_u8(&mut self, opcode: OpCode, arg: u8) {
-        self.0.push(opcode as u8);
-        self.0.push(arg);
+    pub fn write_instr_u8(&mut self, opcode: OpCode, arg: u8, span: Span) {
+        self.write_instr(opcode, span);
+        self.bytes.push(arg);
     }
 
     /// Writes an instruction opcode into the bytecode chunk with a single u16 argument
-    pub fn write_instr_u16(&mut self, opcode: OpCode, arg: u16) {
-        self.0.push(opcode as u8);
-        self.0.extend(&arg.to_le_bytes());
+    pub fn write_instr_u16(&mut self, opcode: OpCode, arg: u16, span: Span) {
+        self.write_instr(opcode, span);
+        self.bytes.extend(&arg.to_le_bytes());
     }
 
     /// Returns true if this chunk of bytecode is empty
     pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
+        self.bytes.is_empty()
     }
 
     /// Returns the number of bytes in this chunk of bytecode
     pub fn len(&self) -> usize {
-        self.0.len()
+        self.bytes.len()
     }
 
     /// Returns the byte at the given index
@@ -38,7 +48,18 @@ impl Bytecode {
     ///
     /// No bounds checking is performed.
     pub unsafe fn get_unchecked(&self, index: usize) -> u8 {
-        *self.0.get_unchecked(index)
+        *self.bytes.get_unchecked(index)
+    }
+
+    /// Returns the `Span` for the `OpCode` at the given offset
+    ///
+    /// # Panics
+    ///
+    /// A `Span` is only recorded for each `OpCode`, so if this does not correspond to a byte
+    /// position that has an `OpCode`, this method will panic.
+    pub fn span(&self, index: usize) -> Span {
+        self.spans.get(&index).copied()
+            .expect("bug: attempt to get a span for a non-opcode byte offset")
     }
 }
 

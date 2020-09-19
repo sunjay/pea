@@ -53,10 +53,10 @@ impl<'a> FunctionCompiler<'a> {
         self.walk_block(body);
 
         // The default return value is unit
-        self.code.write_instr(OpCode::ConstUnit);
+        self.code.write_instr(OpCode::ConstUnit, body.brace_close_token.span);
 
         // Return from the function
-        self.code.write_instr(OpCode::Return);
+        self.code.write_instr(OpCode::Return, body.brace_close_token.span);
     }
 
     fn walk_block(&mut self, block: &nir::Block) {
@@ -84,11 +84,11 @@ impl<'a> FunctionCompiler<'a> {
     }
 
     fn walk_println_stmt(&mut self, stmt: &nir::PrintlnStmt) {
-        let nir::PrintlnStmt {expr, ..} = stmt;
+        let nir::PrintlnStmt {println_token, expr, ..} = stmt;
 
         self.walk_expr(expr);
 
-        self.code.write_instr(OpCode::Print);
+        self.code.write_instr(OpCode::Print, println_token.span);
     }
 
     fn walk_var_decl_stmt(&mut self, stmt: &nir::VarDeclStmt) {
@@ -107,12 +107,12 @@ impl<'a> FunctionCompiler<'a> {
     }
 
     fn walk_expr_stmt(&mut self, stmt: &nir::ExprStmt) {
-        let nir::ExprStmt {expr, ..} = stmt;
+        let nir::ExprStmt {expr, semicolon_token} = stmt;
 
         self.walk_expr(&expr);
 
         // discard the expression value
-        self.code.write_instr(OpCode::Pop);
+        self.code.write_instr(OpCode::Pop, semicolon_token.span);
     }
 
     fn walk_expr(&mut self, expr: &nir::Expr) {
@@ -126,7 +126,7 @@ impl<'a> FunctionCompiler<'a> {
     }
 
     fn walk_call(&mut self, call: &nir::CallExpr) {
-        let nir::CallExpr {lhs, paren_open_token: _, args, paren_close_token: _} = call;
+        let nir::CallExpr {lhs, paren_open_token, args, paren_close_token} = call;
 
         self.walk_expr(lhs);
 
@@ -134,38 +134,39 @@ impl<'a> FunctionCompiler<'a> {
 
         let nargs = args.len().try_into()
             .expect("bug: should have validated that no more 255 arguments can be passed to a function");
-        self.code.write_instr_u8(OpCode::Call, nargs);
+        let call_span = paren_open_token.span.to(paren_close_token.span);
+        self.code.write_instr_u8(OpCode::Call, nargs, call_span);
     }
 
-    fn walk_def(&mut self, def_id: &nir::DefSpan) {
+    fn walk_def(&mut self, def: &nir::DefSpan) {
         // Name resolution has already taken place, so this name should be either a variable or a
         // constant
 
-        if let Some(&offset) = self.local_var_offsets.get(&def_id.id) {
+        if let Some(&offset) = self.local_var_offsets.get(&def.id) {
             todo!() //TODO: GetLocalVar instr with offset as argument
-        }
 
-        if let Some(const_id) = self.const_ids.get(def_id.id) {
-            self.code.write_instr_u16(OpCode::Constant, const_id.into_u16());
-        }
+        } else if let Some(const_id) = self.const_ids.get(def.id) {
+            self.code.write_instr_u16(OpCode::Constant, const_id.into_u16(), def.span);
 
-        unreachable!("bug: name resolution should have caught undefined variable");
+        } else {
+            unreachable!("bug: name resolution should have caught undefined variable");
+        }
     }
 
     fn walk_integer_literal(&mut self, lit: &nir::IntegerLiteral) {
-        let &nir::IntegerLiteral {value, ..} = lit;
+        let &nir::IntegerLiteral {value, span} = lit;
 
         //TODO: Check the range on the type of the value being produced
         let value = value.try_into()
             .expect("bug: values out of the 64-bit range are not currently supported");
         let const_id = self.consts.push(Value::I64(value));
-        self.code.write_instr_u16(OpCode::Constant, const_id.into_u16());
+        self.code.write_instr_u16(OpCode::Constant, const_id.into_u16(), span);
     }
 
     fn walk_bstr_literal(&mut self, lit: &nir::BStrLiteral) {
-        let nir::BStrLiteral {value, ..} = lit;
+        let nir::BStrLiteral {value, span} = lit;
 
         let const_id = self.consts.push(Value::Bytes(Gc::new((**value).into())));
-        self.code.write_instr_u16(OpCode::Constant, const_id.into_u16());
+        self.code.write_instr_u16(OpCode::Constant, const_id.into_u16(), *span);
     }
 }
