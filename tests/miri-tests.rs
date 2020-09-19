@@ -40,7 +40,16 @@ fn run_pass_miri() {
             },
         };
 
-        while interpreter.step() == Status::Running {}
+        loop {
+            match interpreter.step() {
+                Ok(Status::Running) => {},
+                Ok(Status::Complete) => break,
+                Err(err) => {
+                    interpreter.print_call_stack();
+                    eprintln!("{}", err);
+                },
+            }
+        }
 
         // Clean up any remaining memory allocated by the GC
         gc::sweep();

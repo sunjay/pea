@@ -1,5 +1,7 @@
 use std::mem;
 
+use thiserror::Error;
+
 use crate::{
     gc_debug,
     prim,
@@ -13,6 +15,12 @@ use crate::{
 pub enum Status {
     Running,
     Complete,
+}
+
+#[derive(Debug, Error)]
+pub enum RuntimeError {
+    #[error("attempt to call a value that is not a function")]
+    NonFunctionCall,
 }
 
 #[derive(Debug)]
@@ -85,7 +93,23 @@ impl Interpreter {
         self.call_stack.push(CallFrame::new(func.clone(), frame_index));
     }
 
-    pub fn step(&mut self) -> Status {
+    /// Prints the call stack to stderr
+    pub fn print_call_stack(&self) {
+        eprintln!("stack backtrace:");
+        for (i, frame) in self.call_stack.iter().rev().enumerate() {
+            //TODO: Use `frame.next_instr` to print the exact line that was running
+            //  Will need to store `Span` and `diag` somewhere to do that.
+
+            let func = &frame.func;
+            eprintln!("{:>4}: {}", i, func.name);
+        }
+    }
+
+    /// Executes the next bytecode instruction
+    ///
+    /// Returns the status of the interpreter after running the instruction. This method should no
+    /// longer be called once `Status::Complete` has been returned.
+    pub fn step(&mut self) -> Result<Status, RuntimeError> {
         // Trigger garbage collection if that is necessary
         if cfg!(feature = "gc_stress_test") || gc::needs_collect() {
             self.collect_garbage();
@@ -102,10 +126,10 @@ impl Interpreter {
             Call => {
                 let nargs = self.read_u8() as usize;
 
-                //TODO: Pop args off stack (NOTE: they will be in REVERSE order)
-
-                // The compiler should statically verify that called values are callable
-                let func = self.peek(nargs).unwrap_func().clone();
+                let func = match self.peek(nargs) {
+                    Value::Func(func) => func.clone(),
+                    _ => return Err(RuntimeError::NonFunctionCall),
+                };
 
                 // Start with the arguments on the start of the stack frame
                 let frame_index = self.value_stack.len() - nargs;
@@ -118,7 +142,7 @@ impl Interpreter {
                 // Remove the top call frame
                 self.call_stack.pop();
                 if self.call_stack.is_empty() {
-                    return Status::Complete;
+                    return Ok(Status::Complete);
                 }
 
                 //TODO: Pop off any local variables from the value stack
@@ -149,7 +173,7 @@ impl Interpreter {
             },
         }
 
-        Status::Running
+        Ok(Status::Running)
     }
 
     /// Returns the next byte from the code segment of the call frame at the top of the call stack.

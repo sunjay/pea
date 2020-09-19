@@ -82,7 +82,16 @@ fn main() {
     let mut interpreter = pea::compile_path(program_path, source_files, &diag)
         .unwrap_or_else(|err| quit!(&diag, "{}", err));
 
-    while interpreter.step() == Status::Running {}
+    loop {
+        match interpreter.step() {
+            Ok(Status::Running) => {},
+            Ok(Status::Complete) => break,
+            Err(err) => {
+                interpreter.print_call_stack();
+                eprintln!("{}", err);
+            },
+        }
+    }
 
     // Clean up any remaining memory allocated by the GC
     gc::sweep();
