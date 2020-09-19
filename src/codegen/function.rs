@@ -34,7 +34,14 @@ impl<'a> FunctionCompiler<'a> {
     }
 
     fn walk_func(&mut self, func: &nir::FuncDecl) {
-        let nir::FuncDecl {fn_token: _, name: _, params: _, body} = func;
+        let nir::FuncDecl {
+            fn_token: _,
+            name: _,
+            paren_open_token: _,
+            params: _,
+            paren_close_token: _,
+            body,
+        } = func;
 
         for stmt in &body.stmts {
             self.walk_stmt(stmt);
@@ -59,7 +66,7 @@ impl<'a> FunctionCompiler<'a> {
     fn walk_println_stmt(&mut self, stmt: &nir::PrintlnStmt) {
         let nir::PrintlnStmt {expr, ..} = stmt;
 
-        self.walk_expr(&expr.value);
+        self.walk_expr(expr);
 
         self.code.write_instr(OpCode::Print);
     }
@@ -87,14 +94,14 @@ impl<'a> FunctionCompiler<'a> {
     }
 
     fn walk_call(&mut self, call: &nir::CallExpr) {
-        let nir::CallExpr {name, args} = call;
+        let nir::CallExpr {name, paren_open_token: _, args, paren_close_token: _} = call;
 
         let func_const = self.func_const_id(name);
         self.code.write_instr_u16(OpCode::Constant, func_const.into_u16());
 
         //TODO: Walk argument exprs and push their values onto the stack
 
-        let nargs = args.value.len().try_into()
+        let nargs = args.len().try_into()
             .expect("bug: should have validated that no more 255 arguments can be passed to a function");
         self.code.write_instr_u8(OpCode::Call, nargs);
     }

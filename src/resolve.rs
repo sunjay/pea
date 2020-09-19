@@ -46,14 +46,16 @@ impl<'a> NameResolver<'a> {
     }
 
     fn resolve_func_decl(&mut self, func: &ast::FuncDecl) -> nir::FuncDecl {
-        let ast::FuncDecl {fn_token, name, params, body} = func;
+        let ast::FuncDecl {fn_token, name, paren_open_token, params, paren_close_token, body} = func;
 
         let fn_token = fn_token.clone();
         let name = self.declare_func(name);
+        let paren_open_token = paren_open_token.clone();
         let params = params.clone(); //TODO
+        let paren_close_token = paren_close_token.clone();
         let body = self.resolve_block(body);
 
-        nir::FuncDecl {fn_token, name, params, body}
+        nir::FuncDecl {fn_token, name, paren_open_token, params, paren_close_token, body}
     }
 
     fn resolve_block(&mut self, block: &ast::Block) -> nir::Block {
@@ -82,13 +84,30 @@ impl<'a> NameResolver<'a> {
     }
 
     fn resolve_println_stmt(&mut self, stmt: &ast::PrintlnStmt) -> nir::PrintlnStmt {
-        let ast::PrintlnStmt {println_token, not_token, expr, semicolon_token} = stmt;
+        let ast::PrintlnStmt {
+            println_token,
+            not_token,
+            paren_open_token,
+            expr,
+            paren_close_token,
+            semicolon_token,
+        } = stmt;
+
         let println_token = println_token.clone();
         let not_token = not_token.clone();
-        let expr = expr.map(|expr| self.resolve_expr(expr));
+        let paren_open_token = paren_open_token.clone();
+        let expr = self.resolve_expr(expr);
+        let paren_close_token = paren_close_token.clone();
         let semicolon_token = semicolon_token.clone();
 
-        nir::PrintlnStmt {println_token, not_token, expr, semicolon_token}
+        nir::PrintlnStmt {
+            println_token,
+            not_token,
+            paren_open_token,
+            expr,
+            paren_close_token,
+            semicolon_token,
+        }
     }
 
     fn resolve_var_decl_stmt(&mut self, stmt: &ast::VarDeclStmt) -> nir::VarDeclStmt {
@@ -119,12 +138,14 @@ impl<'a> NameResolver<'a> {
     }
 
     fn resolve_call(&mut self, call: &ast::CallExpr) -> nir::CallExpr {
-        let ast::CallExpr {name, args} = call;
+        let ast::CallExpr {name, paren_open_token, args, paren_close_token} = call;
 
         let name = self.lookup_func(name);
-        let args = args.map(|args| args.clone()); //TODO: Walk args
+        let paren_open_token = paren_open_token.clone();
+        let args = args.clone(); //TODO: Walk args
+        let paren_close_token = paren_close_token.clone();
 
-        nir::CallExpr {name, args}
+        nir::CallExpr {name, paren_open_token, args, paren_close_token}
     }
 
     /// Declares a function name in the current scope

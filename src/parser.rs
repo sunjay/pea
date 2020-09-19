@@ -108,10 +108,12 @@ impl<'a> Parser<'a> {
         let fn_token = self.input.match_kind(TokenKind::Keyword(Keyword::Fn))?.clone();
         let name = self.ident()?;
 
-        let params = self.parens(|_| Ok(()))?;
+        let paren_open_token = self.input.match_kind(TokenKind::ParenOpen)?.clone();
+        let params = ();
+        let paren_close_token = self.input.match_kind(TokenKind::ParenClose)?.clone();
         let body = self.block()?;
 
-        Ok(ast::FuncDecl {fn_token, name, params, body})
+        Ok(ast::FuncDecl {fn_token, name, paren_open_token, params, paren_close_token, body})
     }
 
     fn block(&mut self) -> ParseResult<ast::Block> {
@@ -146,11 +148,20 @@ impl<'a> Parser<'a> {
         let println_token = self.input.keyword(Keyword::Println)?.clone();
         let not_token = self.input.match_kind(TokenKind::Not)?.clone();
 
-        let expr = self.parens(|this| this.expr())?;
+        let paren_open_token = self.input.match_kind(TokenKind::ParenOpen)?.clone();
+        let expr = self.expr()?;
+        let paren_close_token = self.input.match_kind(TokenKind::ParenClose)?.clone();
 
         let semicolon_token = self.input.match_kind(TokenKind::Semicolon)?.clone();
 
-        Ok(ast::PrintlnStmt {println_token, not_token, expr, semicolon_token})
+        Ok(ast::PrintlnStmt {
+            println_token,
+            not_token,
+            paren_open_token,
+            expr,
+            paren_close_token,
+            semicolon_token,
+        })
     }
 
     fn var_decl_stmt(&mut self) -> ParseResult<ast::VarDeclStmt> {
@@ -170,16 +181,6 @@ impl<'a> Parser<'a> {
         let semicolon_token = self.input.match_kind(TokenKind::Semicolon)?.clone();
 
         Ok(ast::ExprStmt {expr, semicolon_token})
-    }
-
-    fn parens<T>(
-        &mut self,
-        parser: impl FnOnce(&mut Self) -> ParseResult<T>,
-    ) -> ParseResult<ast::Parens<T>> {
-        let paren_open_token = self.input.match_kind(TokenKind::ParenOpen)?.clone();
-        let value = parser(self)?;
-        let paren_close_token = self.input.match_kind(TokenKind::ParenClose)?.clone();
-        Ok(ast::Parens {paren_open_token, value, paren_close_token})
     }
 
     fn ident(&mut self) -> ParseResult<ast::Ident> {

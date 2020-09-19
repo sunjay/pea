@@ -30,7 +30,9 @@ pub enum Decl {
 pub struct FuncDecl {
     pub fn_token: Token,
     pub name: DefSpan,
-    pub params: Parens<(/* TODO */)>,
+    pub paren_open_token: Token,
+    pub params: (/* TODO */),
+    pub paren_close_token: Token,
     pub body: Block,
 }
 
@@ -50,27 +52,20 @@ pub enum Stmt {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct PrintlnStmt {
-    /// The token for the `println` keyword
     pub println_token: Token,
-    /// The token for the `!` symbol
     pub not_token: Token,
-    /// The expression to be printed
-    pub expr: Parens<Expr>,
-    /// The token for the `;` symbol
+    pub paren_open_token: Token,
+    pub expr: Expr,
+    pub paren_close_token: Token,
     pub semicolon_token: Token,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct VarDeclStmt {
-    /// The token for the `let` keyword
     pub let_token: Token,
-    /// The variable name being declared
     pub name: DefSpan,
-    /// The token for the `=` symbol
     pub equals_token: Token,
-    /// The expression assigned to the variable
     pub expr: Expr,
-    /// The token for the `;` symbol
     pub semicolon_token: Token,
 }
 
@@ -90,7 +85,9 @@ pub enum Expr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct CallExpr {
     pub name: DefSpan,
-    pub args: Parens<[(); 0]>, //TODO
+    pub paren_open_token: Token,
+    pub args: [(); 0], //TODO
+    pub paren_close_token: Token,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -99,6 +96,5 @@ pub struct DefSpan {
     pub span: Span,
 }
 
-pub type Parens<T> = ast::Parens<T>;
 pub type IntegerLiteral = ast::IntegerLiteral;
 pub type BStr = ast::BStr;

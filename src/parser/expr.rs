@@ -13,9 +13,11 @@ impl<'a> Parser<'a> {
 
     fn call(&mut self) -> ParseResult<ast::CallExpr> {
         let name = self.ident()?;
-        let args = self.parens(|_| Ok([]))?;
+        let paren_open_token = self.input.match_kind(TokenKind::ParenOpen)?.clone();
+        let args = [];
+        let paren_close_token = self.input.match_kind(TokenKind::ParenClose)?.clone();
 
-        Ok(ast::CallExpr {name, args})
+        Ok(ast::CallExpr {name, paren_open_token, args, paren_close_token})
     }
 
     fn integer_literal(&mut self) -> ParseResult<ast::IntegerLiteral> {
