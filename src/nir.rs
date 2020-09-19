@@ -41,6 +41,8 @@ pub struct Block {
     pub brace_open_token: Token,
     pub stmts: Vec<Stmt>,
     pub brace_close_token: Token,
+    /// The variables declared in this scope
+    pub scope: Scope,
 }
 
 #[derive(Debug, Clone, PartialEq)]

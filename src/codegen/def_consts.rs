@@ -16,8 +16,7 @@ impl DefConsts {
         self.const_ids.insert(def_id, const_id);
     }
 
-    pub fn get(&self, def_id: nir::DefId) -> bytecode::ConstId {
+    pub fn get(&self, def_id: nir::DefId) -> Option<bytecode::ConstId> {
         self.const_ids.get(&def_id).copied()
-            .expect("bug: no `ConstId` associated with the given `DefId`")
     }
 }

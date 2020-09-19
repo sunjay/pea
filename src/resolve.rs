@@ -48,9 +48,22 @@ impl<'a> NameResolver<'a> {
     fn resolve_func_decl(&mut self, func: &ast::FuncDecl) -> nir::FuncDecl {
         let ast::FuncDecl {fn_token, name, paren_open_token, params, paren_close_token, body} = func;
 
+        // Functions are not allowed to shadow other names in the same scope
+        if let Some(orig) = self.scope_stack.top().lookup(&name.value) {
+            let orig = self.def_table.get(orig);
+            self.diag.error(format!("the name `{}` is defined multiple times", name.value))
+                .span_info(orig.span, format!("previous definition of the value `{}` here", name.value))
+                .span_error(name.span, format!("`{}` redefined here", name.value))
+                .span_note(name.span, format!("`{}` must be defined only once in the value namespace of this module", name.value))
+                .emit();
+
+            // Error Recovery: continue past this point and allow the name to be redefined
+        }
+
         let fn_token = fn_token.clone();
-        let name = self.declare_func(name);
+        let name = self.declare(name);
         let paren_open_token = paren_open_token.clone();
+        //TODO: Make a new scope for the function and put the params in it
         let params = params.clone(); //TODO
         let paren_close_token = paren_close_token.clone();
         let body = self.resolve_block(body);
@@ -63,15 +76,16 @@ impl<'a> NameResolver<'a> {
         let brace_open_token = brace_open_token.clone();
         let brace_close_token = brace_close_token.clone();
 
-        //TODO: Push new var scope
+        // Push a new scope for all the variables in the block
+        let token = self.scope_stack.push();
 
         let stmts = stmts.iter()
             .map(|stmt| self.resolve_stmt(stmt))
             .collect();
 
-        //TODO: Pop var scope
+        let scope = self.scope_stack.pop(token);
 
-        nir::Block {brace_open_token, stmts, brace_close_token}
+        nir::Block {brace_open_token, stmts, brace_close_token, scope}
     }
 
     fn resolve_stmt(&mut self, stmt: &ast::Stmt) -> nir::Stmt {
@@ -113,10 +127,13 @@ impl<'a> NameResolver<'a> {
     fn resolve_var_decl_stmt(&mut self, stmt: &ast::VarDeclStmt) -> nir::VarDeclStmt {
         let ast::VarDeclStmt {let_token, name, equals_token, expr, semicolon_token} = stmt;
         let let_token = let_token.clone();
-        let name = (|| { todo!("{}", name.value) })();
         let equals_token = equals_token.clone();
-        let expr = self.resolve_expr(expr);
         let semicolon_token = semicolon_token.clone();
+
+        // Note that we are careful to resolve the expression before declaring the variable name
+        // because otherwise we would allow `let a = a;` to slip through.
+        let expr = self.resolve_expr(expr);
+        let name = self.declare(name);
 
         nir::VarDeclStmt {let_token, name, equals_token, expr, semicolon_token}
     }
@@ -132,7 +149,7 @@ impl<'a> NameResolver<'a> {
         use ast::Expr::*;
         match expr {
             Call(call) => nir::Expr::Call(Box::new(self.resolve_call(call))),
-            Ident(name) => todo!(),
+            Ident(name) => nir::Expr::Def(self.lookup(name)),
             Integer(value) => nir::Expr::Integer(value.clone()),
             BStr(value) => nir::Expr::BStr(value.clone()),
         }
@@ -149,23 +166,12 @@ impl<'a> NameResolver<'a> {
         nir::CallExpr {lhs, paren_open_token, args, paren_close_token}
     }
 
-    /// Declares a function name in the current scope
+    /// Declares a name in the current scope
     ///
     /// The returned `DefSpan` preserves the `Span` of the given `Ident`
-    fn declare_func(&mut self, name: &ast::Ident) -> nir::DefSpan {
-        if let Some(&orig) = self.scope_stack.top().functions.get(&name.value) {
-            let orig = self.def_table.get(orig);
-            self.diag.error(format!("the name `{}` is defined multiple times", name.value))
-                .span_info(orig.span, format!("previous definition of the value `{}` here", name.value))
-                .span_error(name.span, format!("`{}` redefined here", name.value))
-                .span_note(name.span, format!("`{}` must be defined only once in the value namespace of this module", name.value))
-                .emit();
-
-            // Error Recovery: continue past this point and redefine the name so we can continue
-        }
-
+    fn declare(&mut self, name: &ast::Ident) -> nir::DefSpan {
         let id = self.def_table.insert(name.clone());
-        self.scope_stack.top_mut().functions.insert(name.value.clone(), id);
+        self.scope_stack.top_mut().define(name.value.clone(), id);
 
         nir::DefSpan {
             id,
@@ -173,23 +179,25 @@ impl<'a> NameResolver<'a> {
         }
     }
 
-    /// Lookup a function name in the current scope or surrounding scopes
+    /// Lookup a name in the current scope or surrounding scopes
     ///
     /// Emits an error if the name cannot be resolved and returns a placeholder `DefId`
     ///
     /// The returned `DefSpan` preserves the `Span` of the given `Ident`
-    fn lookup_func(&mut self, name: &ast::Ident) -> nir::DefSpan {
-        match self.scope_stack.top().functions.get(&name.value) {
-            Some(&id) => nir::DefSpan {
-                id,
-                span: name.span,
-            },
-            None => {
-                self.diag.span_error(name.span, format!("cannot find function `{}` in this scope", name.value)).emit();
-
-                // Error recovery: Insert this name and pretend it exists so we can continue past this
-                self.declare_func(name)
-            },
+    fn lookup(&mut self, name: &ast::Ident) -> nir::DefSpan {
+        for scope in self.scope_stack.iter_top_down() {
+            if let Some(id) = scope.lookup(&name.value) {
+                return nir::DefSpan {
+                    id,
+                    span: name.span,
+                };
+            }
         }
+
+        // No name found
+        self.diag.span_error(name.span, format!("cannot find name `{}` in this scope", name.value)).emit();
+
+        // Error recovery: Insert this name and pretend it exists so we can continue past this
+        self.declare(name)
     }
 }

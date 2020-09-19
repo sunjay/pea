@@ -43,4 +43,9 @@ impl ScopeStack {
     pub fn top_mut(&mut self) -> &mut nir::Scope {
         self.stack.last_mut().expect("bug: no current scope")
     }
+
+    /// Iterates through the scopes from top to bottom
+    pub fn iter_top_down(&self) -> impl Iterator<Item=&nir::Scope> {
+        self.stack.iter().rev()
+    }
 }

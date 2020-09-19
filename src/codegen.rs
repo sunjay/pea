@@ -47,11 +47,12 @@ impl<'a> Compiler<'a> {
         // Call main function
         //
         // Note: `main` must be declared in the root scope, take zero arguments, and return nothing.
-        let main_const_id = program.scope.functions.get("main")
-            .map(|&def_id| const_ids.get(def_id));
+        let main_const_id = program.scope.lookup("main")
+            .and_then(|def_id| const_ids.get(def_id));
 
         match main_const_id {
             Some(index) => {
+                //TODO: Check that `main` is a function with zero arguments
                 interpreter.call_main(index);
             },
 
@@ -113,7 +114,8 @@ impl<'a> Compiler<'a> {
 
         let def_id = func.name.id;
         let name = self.def_table.get(def_id);
-        let const_id = self.const_ids.get(def_id);
+        let const_id = self.const_ids.get(def_id)
+            .expect("bug: function constant did not remain a constant");
 
         // Replace the defined constant for this function with a version that has the compiled code
         let func = Gc::new(prim::Func::with_code(name.value.clone(), func_code));

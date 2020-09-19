@@ -1,0 +1,6 @@
+fn main() {
+    // Cannot use a variable before it is defined
+    let b = d;
+    // `a` is not defined until after its initializer has been walked
+    let a = a;
+}
