@@ -104,9 +104,11 @@ impl Constants {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(u8)]
 pub enum OpCode {
-    /// Calls a function with the given number of arguments (up to 255). The arguments should appear
-    /// after the function to call on the stack. This will pop one value (the function) + the number
-    /// of arguments off the stack.
+    /// Calls a function with the given number of arguments (up to 255).
+    ///
+    /// The number of arguments is specified by the next byte in the bytecode. The arguments should
+    /// appear after the function to call on the stack. This will pop one value (the function) + the
+    /// number of arguments off the stack.
     Call,
 
     /// Return from the current function or exit the program if we are already at the bottom of the
