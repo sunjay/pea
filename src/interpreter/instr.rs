@@ -11,8 +11,8 @@ pub fn call(ctx: &mut Interpreter, nargs: u8) -> RuntimeResult {
         _ => return Err(RuntimeError::NonFunctionCall),
     };
 
-    // Start with the arguments on the start of the stack frame
-    let frame_index = ctx.value_stack.len() - nargs;
+    // Start with the arguments and the function itself on the start of the stack frame
+    let frame_index = ctx.value_stack.len() - nargs - 1;
     ctx.call_stack.push(CallFrame::new(func, frame_index))?;
 
     Ok(Status::Running)

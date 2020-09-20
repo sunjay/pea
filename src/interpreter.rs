@@ -74,9 +74,11 @@ impl Interpreter {
 
         let func = self.consts.get(const_index).unwrap_func();
 
-        // main starts at the first item in the stack
-        let frame_index = self.value_stack.len();
-        self.call_stack.push(CallFrame::new(func.clone(), frame_index))
+        // Push the function being called onto the value stack and pretend a call instruction took
+        // place
+        self.value_stack.push(Value::Func(func.clone()));
+
+        instr::call(self, 0)
             .expect("bug: should always have enough call stack space to push main");
     }
 
