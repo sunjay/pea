@@ -4,7 +4,6 @@ mod call_stack;
 
 pub use call_stack::*;
 
-use std::mem;
 use std::sync::Arc;
 
 use thiserror::Error;
@@ -133,9 +132,7 @@ impl Interpreter {
         // function. If the compiler accidentally creates a jump to some arbitrary position, this
         // can cause UB.
         let frame = unsafe { self.call_stack.top_unchecked_mut() };
-        let next_op: u8 = unsafe { frame.cursor.read_u8_unchecked(&frame.func.code) };
-        // Safety: If the program is compiled correctly, this will be a valid opcode.
-        let next_op: OpCode = unsafe { mem::transmute(next_op) };
+        let next_op = unsafe { frame.cursor.read_opcode_unchecked(&frame.func.code) };
 
         use OpCode::*;
         match next_op {

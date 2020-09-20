@@ -83,6 +83,29 @@ pub struct BytecodeCursor {
 }
 
 impl BytecodeCursor {
+    /// Returns the current offset of the cursor in the bytecode
+    pub fn offset(&self) -> usize {
+        self.next_pos
+    }
+
+    /// Returns true if it is safe to continue reading at least one more byte of the given bytecode
+    /// using this cursor
+    pub fn can_read_further(&self, code: &Bytecode) -> bool {
+        self.next_pos < code.len()
+    }
+
+    /// Advances the cursor to read a `u8` from the given bytecode and then interprets that value as
+    /// an `OpCode`
+    ///
+    /// # Safety
+    ///
+    /// No bounds checking is performed, so you must guarantee that there are enough bytes left to
+    /// successfully read this value. It is UB for the value of the byte to be outside the valid
+    /// range of values for `OpCode`.
+    pub unsafe fn read_opcode_unchecked(&mut self, code: &Bytecode) -> OpCode {
+        mem::transmute(self.read_u8_unchecked(code))
+    }
+
     /// Advances the cursor to read a `u8` from the given bytecode
     ///
     /// # Safety
