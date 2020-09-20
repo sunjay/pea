@@ -47,8 +47,15 @@ impl<'a> Lexer<'a> {
             (b'!', _) => self.byte_token(start, Not),
             (b';', _) => self.byte_token(start, Semicolon),
 
+            (b'*', _) => self.byte_token(start, Times),
+            (b'/', _) => self.byte_token(start, Slash),
+            (b'%', _) => self.byte_token(start, Percent),
+
             (b'0' ..= b'9', _) |
+            (b'+', Some(b'0' ..= b'9')) |
             (b'-', Some(b'0' ..= b'9')) => self.integer_lit(start, current_char),
+            (b'+', _) => self.byte_token(start, Plus),
+            (b'-', _) => self.byte_token(start, Minus),
 
             (b'b', Some(b'"')) => self.byte_str(start),
 
@@ -142,7 +149,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    /// Parses an integer literal, given a starting digit or negative sign
+    /// Parses an integer literal, given a starting digit or positive/negative sign
     fn integer_lit(&mut self, start: usize, start_byte: u8) -> Token {
         // If the start digit is zero, we may have a hex or binary literal
         let value = match (start_byte, self.scanner.peek()) {
@@ -582,11 +589,21 @@ mod tests {
     }
 
     #[test]
+    fn operators() {
+        expect_token!(b"+", t!(Plus));
+        expect_token!(b"-", t!(Minus));
+        expect_token!(b"*", t!(Times));
+        expect_token!(b"/", t!(Slash));
+        expect_token!(b"%", t!(Percent));
+    }
+
+    #[test]
     fn decimal_literals() {
         expect_token!(b"0", int!(0));
         expect_token!(b"000", int!(0));
         expect_token!(b"013", int!(013));
         expect_token!(b"123", int!(123));
+        expect_token!(b"+123", int!(123));
         expect_token!(b"9_999", int!(9999));
         expect_token!(b"-9_999", int!(-9999));
         expect_token!(b"-9223372036854775808", int!(i64::MIN as i128));

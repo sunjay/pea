@@ -46,6 +46,17 @@ pub enum TokenKind {
     /// The `;` symbol
     Semicolon,
 
+    /// The `+` symbol
+    Plus,
+    /// The `-` symbol
+    Minus,
+    /// The `*` symbol
+    Times,
+    /// The `/` symbol
+    Slash,
+    /// The `%` symbol
+    Percent,
+
     /// End-of-file
     Eof,
 
@@ -71,6 +82,12 @@ impl fmt::Display for TokenKind {
             Equals => write!(f, "`=`"),
             Not => write!(f, "`!`"),
             Semicolon => write!(f, "`;`"),
+
+            Plus => write!(f, "`+`"),
+            Minus => write!(f, "`-`"),
+            Times => write!(f, "`*`"),
+            Slash => write!(f, "`/`"),
+            Percent => write!(f, "`%`"),
 
             Eof => write!(f, "end of file"),
 
