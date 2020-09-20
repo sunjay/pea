@@ -79,10 +79,45 @@ pub struct ExprStmt {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
+    UnaryOp(Box<UnaryOpExpr>),
+    BinaryOp(Box<BinaryOpExpr>),
+    Assign(Box<AssignExpr>),
+    Group(Box<GroupExpr>),
     Call(Box<CallExpr>),
     Def(DefSpan),
     Integer(IntegerLiteral),
     BStr(BStrLiteral),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct UnaryOpExpr {
+    pub op: UnaryOp,
+    pub op_token: Token,
+    pub expr: Expr,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct BinaryOpExpr {
+    pub lhs: Expr,
+    pub op: BinaryOp,
+    pub op_token: Token,
+    pub rhs: Expr,
+}
+
+/// Assignment expression
+#[derive(Debug, Clone, PartialEq)]
+pub struct AssignExpr {
+    pub lhs: Expr,
+    pub equals_token: Token,
+    pub rhs: Expr,
+}
+
+/// An expression in parens
+#[derive(Debug, Clone, PartialEq)]
+pub struct GroupExpr {
+    pub paren_open_token: Token,
+    pub expr: Expr,
+    pub paren_close_token: Token,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -99,5 +134,7 @@ pub struct DefSpan {
     pub span: Span,
 }
 
+pub type UnaryOp = ast::UnaryOp;
+pub type BinaryOp = ast::BinaryOp;
 pub type IntegerLiteral = ast::IntegerLiteral;
 pub type BStrLiteral = ast::BStrLiteral;

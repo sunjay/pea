@@ -119,6 +119,10 @@ impl<'a> FunctionCompiler<'a> {
     fn walk_expr(&mut self, expr: &nir::Expr) {
         use nir::Expr::*;
         match expr {
+            UnaryOp(expr) => todo!(),
+            BinaryOp(expr) => todo!(),
+            Assign(expr) => todo!(),
+            Group(expr) => todo!(),
             Call(call) => self.walk_call(call),
             Def(def_id) => self.walk_def(def_id),
             Integer(lit) => self.walk_integer_literal(lit),

@@ -156,15 +156,56 @@ impl<'a> NameResolver<'a> {
     fn resolve_expr(&mut self, expr: &ast::Expr) -> nir::Expr {
         use ast::Expr::*;
         match expr {
-            UnaryOp(expr) => todo!(),
-            BinaryOp(expr) => todo!(),
-            Assign(expr) => todo!(),
-            Group(group) => todo!(),
+            UnaryOp(expr) => nir::Expr::UnaryOp(Box::new(self.resolve_unary_op(expr))),
+            BinaryOp(expr) => nir::Expr::BinaryOp(Box::new(self.resolve_binary_op(expr))),
+            Assign(expr) => nir::Expr::Assign(Box::new(self.resolve_assign(expr))),
+            Group(expr) => nir::Expr::Group(Box::new(self.resolve_group(expr))),
             Call(call) => nir::Expr::Call(Box::new(self.resolve_call(call))),
             Ident(name) => nir::Expr::Def(self.lookup(name)),
             Integer(value) => nir::Expr::Integer(value.clone()),
             BStr(value) => nir::Expr::BStr(value.clone()),
         }
+    }
+
+    fn resolve_unary_op(&mut self, expr: &ast::UnaryOpExpr) -> nir::UnaryOpExpr {
+        let ast::UnaryOpExpr {op, op_token, expr} = expr;
+
+        let op = *op;
+        let op_token = op_token.clone();
+        let expr = self.resolve_expr(expr);
+
+        nir::UnaryOpExpr {op, op_token, expr}
+    }
+
+    fn resolve_binary_op(&mut self, expr: &ast::BinaryOpExpr) -> nir::BinaryOpExpr {
+        let ast::BinaryOpExpr {lhs, op, op_token, rhs} = expr;
+
+        let lhs = self.resolve_expr(lhs);
+        let op = *op;
+        let op_token = op_token.clone();
+        let rhs = self.resolve_expr(rhs);
+
+        nir::BinaryOpExpr {lhs, op, op_token, rhs}
+    }
+
+    fn resolve_assign(&mut self, expr: &ast::AssignExpr) -> nir::AssignExpr {
+        let ast::AssignExpr {lhs, equals_token, rhs} = expr;
+
+        let lhs = self.resolve_expr(lhs);
+        let equals_token = equals_token.clone();
+        let rhs = self.resolve_expr(rhs);
+
+        nir::AssignExpr {lhs, equals_token, rhs}
+    }
+
+    fn resolve_group(&mut self, expr: &ast::GroupExpr) -> nir::GroupExpr {
+        let ast::GroupExpr {paren_open_token, expr, paren_close_token} = expr;
+
+        let paren_open_token = paren_open_token.clone();
+        let expr = self.resolve_expr(expr);
+        let paren_close_token = paren_close_token.clone();
+
+        nir::GroupExpr {paren_open_token, expr, paren_close_token}
     }
 
     fn resolve_call(&mut self, call: &ast::CallExpr) -> nir::CallExpr {
