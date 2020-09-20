@@ -156,6 +156,10 @@ impl<'a> NameResolver<'a> {
     fn resolve_expr(&mut self, expr: &ast::Expr) -> nir::Expr {
         use ast::Expr::*;
         match expr {
+            UnaryOp(expr) => todo!(),
+            BinaryOp(expr) => todo!(),
+            Assign(expr) => todo!(),
+            Group(group) => todo!(),
             Call(call) => nir::Expr::Call(Box::new(self.resolve_call(call))),
             Ident(name) => nir::Expr::Def(self.lookup(name)),
             Integer(value) => nir::Expr::Integer(value.clone()),
@@ -168,7 +172,7 @@ impl<'a> NameResolver<'a> {
 
         let lhs = self.resolve_expr(lhs);
         let paren_open_token = paren_open_token.clone();
-        let args = args.clone(); //TODO: Walk args
+        let args = args.iter().map(|expr| self.resolve_expr(expr)).collect();
         let paren_close_token = paren_close_token.clone();
 
         nir::CallExpr {lhs, paren_open_token, args, paren_close_token}

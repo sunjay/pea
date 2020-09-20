@@ -63,17 +63,68 @@ pub struct ExprStmt {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
+    UnaryOp(Box<UnaryOpExpr>),
+    BinaryOp(Box<BinaryOpExpr>),
+    Assign(Box<AssignExpr>),
+    Group(Box<GroupExpr>),
     Call(Box<CallExpr>),
     Ident(Ident),
     Integer(IntegerLiteral),
     BStr(BStrLiteral),
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum UnaryOp {
+    Pos,
+    Neg,
+    Not,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct UnaryOpExpr {
+    pub op: UnaryOp,
+    pub op_token: Token,
+    pub expr: Expr,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum BinaryOp {
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Rem,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct BinaryOpExpr {
+    pub lhs: Expr,
+    pub op: BinaryOp,
+    pub op_token: Token,
+    pub rhs: Expr,
+}
+
+/// Assignment expression
+#[derive(Debug, Clone, PartialEq)]
+pub struct AssignExpr {
+    pub lhs: Expr,
+    pub equals_token: Token,
+    pub rhs: Expr,
+}
+
+/// An expression in parens
+#[derive(Debug, Clone, PartialEq)]
+pub struct GroupExpr {
+    pub paren_open_token: Token,
+    pub expr: Expr,
+    pub paren_close_token: Token,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct CallExpr {
     pub lhs: Expr,
     pub paren_open_token: Token,
-    pub args: [(); 0], //TODO
+    pub args: Vec<Expr>,
     pub paren_close_token: Token,
 }
 

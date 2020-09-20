@@ -89,7 +89,7 @@ pub enum Expr {
 pub struct CallExpr {
     pub lhs: Expr,
     pub paren_open_token: Token,
-    pub args: [(); 0], //TODO
+    pub args: Vec<Expr>,
     pub paren_close_token: Token,
 }
 

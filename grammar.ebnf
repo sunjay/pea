@@ -2,14 +2,19 @@ program ::= decl*
 
 decl ::= func_decl
 
-func_decl ::= "fn" ident "(" ")" block
+func_decl ::= 'fn' ident '(' ')' block
 
-block ::= "{" stmt* "}"
+block ::= '{' stmt* '}'
 
 stmt ::= println_stmt | var_decl_stmt | expr_stmt
-println_stmt ::= "println" "!" "(" expr ")" ";"
-var_decl_stmt ::= "let" ident "=" expr ";"
-expr_stmt ::= expr ";"
+println_stmt ::= 'println' '!' '(' expr ')' ';'
+var_decl_stmt ::= 'let' ident '=' expr ';'
+expr_stmt ::= expr ';'
 
-expr ::= call | ident | integer_literal | byte_str
-call ::= expr "(" ")"
+expr ::= expr bin_op expr | unary_op expr | group | call | ident | integer_literal | byte_str
+# The precendence of these operators is defined in the code
+bin_op ::= '+' | '-' | '*' | '/' | '%'
+unary_op ::= '+' | '-' | '!'
+group ::= '(' expr ')'
+call ::= expr '(' func_args ')'
+func_args ::= (expr ',')* expr?
