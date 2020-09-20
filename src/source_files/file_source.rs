@@ -1,5 +1,7 @@
 use std::ops::Range;
 
+use super::Span;
+
 /// The source for a file, represented as a slice of bytes and indexed from `start_index()` onwards
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct FileSource<'a> {
@@ -40,5 +42,49 @@ impl<'a> FileSource<'a> {
     /// Iterates over the bytes of this file's source, yielding the offset for each one
     pub fn iter_bytes(&self) -> impl Iterator<Item=(usize, u8)> + '_ {
         self.bytes.iter().copied().enumerate().map(move |(index, byte)| (self.offset + index, byte))
+    }
+
+    /// Iterates over each line of the file's source and the line's span
+    ///
+    /// Each line will contain its trailing newline
+    pub fn lines(&self) -> FileSourceLines {
+        let &Self {bytes, offset} = self;
+        FileSourceLines {bytes, offset, pos: 0}
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct FileSourceLines<'a> {
+    /// A slice of `SourceFiles::source`
+    bytes: &'a [u8],
+    /// The offset at which the slice of bytes was extracted from `SourceFiles::source`
+    offset: usize,
+    /// The amount this iterator has moved forward
+    pos: usize,
+}
+
+impl<'a> Iterator for FileSourceLines<'a> {
+    type Item = (Span, &'a [u8]);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let start = self.pos;
+        while let Some(&ch) = self.bytes.get(self.pos) {
+            self.pos += 1;
+
+            if ch == b'\n' {
+                break;
+            }
+        }
+
+        if start == self.pos {
+            return None;
+        }
+
+        let span = Span {
+            start: self.offset + start,
+            end: self.offset + self.pos,
+        };
+
+        Some((span, &self.bytes[start..self.pos]))
     }
 }
