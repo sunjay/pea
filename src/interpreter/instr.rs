@@ -28,18 +28,16 @@ pub fn ret(ctx: &mut Interpreter) -> RuntimeResult {
     // Remove the top call frame
     let frame = ctx.call_stack.pop()
         .expect("bug: should always pop off at least one frame while program is running");
-    if ctx.call_stack.is_empty() {
-        // Pop the main function
-        ctx.pop();
 
+    // Reset the value stack to before this call
+    ctx.value_stack.truncate(frame.frame_index);
+
+    if ctx.call_stack.is_empty() {
         assert!(ctx.value_stack.is_empty(),
             "bug: value stack was not empty at the end of the program");
 
         return Ok(Status::Complete);
     }
-
-    // Reset the value stack to before this call
-    ctx.value_stack.truncate(frame.frame_index);
 
     // Push the returned value
     ctx.value_stack.push(return_value);
@@ -60,6 +58,16 @@ pub fn constant(ctx: &mut Interpreter, index: u16) -> RuntimeResult {
     // constant ID
     let id = unsafe { ConstId::new_unchecked(index) };
     ctx.value_stack.push(ctx.consts.get(id).clone());
+
+    Ok(Status::Running)
+}
+
+pub fn get_local(ctx: &mut Interpreter, fp_offset: u8) -> RuntimeResult {
+    // Must have at least one call frame to get to this point
+    let frame = unsafe { ctx.call_stack.top_unchecked() };
+
+    let value = ctx.value_stack[frame.frame_index+fp_offset as usize].clone();
+    ctx.value_stack.push(value);
 
     Ok(Status::Running)
 }

@@ -78,6 +78,15 @@ impl CallStack {
         self.stack.iter().rev()
     }
 
+    /// Returns a reference to the top frame of the call stack
+    ///
+    /// # Safety
+    ///
+    /// The call stack must have at least one call frame or this will result in UB.
+    pub unsafe fn top_unchecked(&self) -> &CallFrame {
+        &*self.top_frame
+    }
+
     /// Returns a mutable reference to the top frame of the call stack
     ///
     /// # Safety

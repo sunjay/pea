@@ -33,7 +33,8 @@ impl<'a> FunctionCompiler<'a> {
 
             code: Default::default(),
             local_var_offsets: Default::default(),
-            next_frame_offset: 0,
+            // The first value at the frame pointer is always the function itself
+            next_frame_offset: 1,
         };
 
         compiler.walk_func(func);
@@ -143,7 +144,7 @@ impl<'a> FunctionCompiler<'a> {
         // constant
 
         if let Some(&offset) = self.local_var_offsets.get(&def.id) {
-            todo!() //TODO: GetLocalVar instr with offset as argument
+            self.code.write_instr_u8(OpCode::GetLocal, offset, def.span);
 
         } else if let Some(const_id) = self.const_ids.get(def.id) {
             self.code.write_instr_u16(OpCode::Constant, const_id.into_u16(), def.span);

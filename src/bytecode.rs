@@ -215,33 +215,54 @@ impl Constants {
     }
 }
 
+/// The valid bytecode instruction opcodes
+///
+/// Any required arguments are listed with the opcode below. The arguments are expected to appear in
+/// the bytecode after the opcode with no additional padding. All values are interpreted as
+/// little-endian. For example, the two bytes for a `u16` will be read and then interpreted in
+/// little-endian byte order.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(u8)]
 pub enum OpCode {
     /// Calls a function with the given number of arguments (up to 255).
     ///
-    /// The number of arguments is specified by the next byte in the bytecode. The arguments should
-    /// appear after the function to call on the stack. This will pop one value (the function) + the
-    /// number of arguments off the stack.
+    /// # Arguments
+    ///
+    /// * `u8` - The number of arguments to call the function with. The top of the value stack
+    ///   is expected to have the function being called, followed by each argument. These values
+    ///   should be arranged such that popping the value stack first retrieves the arguments in
+    ///   reverse order and then the function being called itself.
     Call,
 
     /// Return from the current function or exit the program if we are already at the bottom of the
-    /// call stack
+    /// call stack.
+    ///
+    /// This will reset the value stack to the frame pointer of the call frame that was just popped.
+    /// That will result in all local variables from the popped frame being removed. It will then
+    /// push the returned value on to the top of the stack.
     Return,
 
-    /// Push the unit value onto the stack
+    /// Push the unit value `()` onto the top of the stack.
     ConstUnit,
 
-    /// Load a constant value from the constants array and push it onto the stack
+    /// Load a constant value from the constants table and push it onto the top of the stack.
     ///
-    /// The next two bytes in the bytecode represent the constant index. They will be interpreted as
-    /// an unsigned 16-bit integer (little-endian byte order).
+    /// # Arguments
+    ///
+    /// * `u16` - The ID of the constant to read.
     Constant,
 
-    /// Pops the value at the top of the stack, discarding it
+    /// Loads a value from the stack and pushes a copy of it onto the top of the stack.
+    ///
+    /// # Arguments
+    ///
+    /// * `u8` - The index of the value on the stack relative to the frame pointer.
+    GetLocal,
+
+    /// Pops the value at the top of the stack, discarding it.
     Pop,
 
-    /// Pops and prints the value at the top of the stack
+    /// Pops and prints the value at the top of the stack.
     //TODO: Get rid of this and make printing an ordinary function call
     Print,
 }
