@@ -29,10 +29,6 @@ impl Func {
 
     /// Prints the annotated bytecode this function to stderr
     pub fn print_annotated_bytecode(&self, source_files: &SourceFiles) {
-        //TODO: Figure out how to get stream from `diag` here
-        let mut out = StandardStream::stderr(ColorChoice::Auto);
-        let mut cursor = BytecodeCursor::default();
-
         // Safety: If the bytecode is compiled correctly, this should all be valid
         let read_opcode = |cursor: &mut BytecodeCursor| unsafe {
             cursor.read_opcode_span_unchecked(&self.code)
@@ -62,7 +58,11 @@ impl Func {
             };
         }
 
+        //TODO: Figure out how to get stream from `diag` here
+        let mut out = StandardStream::stderr(ColorChoice::Auto);
+
         cwriteln!(out, "{}:", self.name);
+        let mut cursor = BytecodeCursor::default();
         while cursor.can_read_further(&self.code) {
             let offset = cursor.offset();
             let (opcode, span) = read_opcode(&mut cursor);
