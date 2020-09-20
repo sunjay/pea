@@ -28,7 +28,7 @@ impl Func {
     }
 
     /// Prints the annotated bytecode this function to stderr
-    pub fn print_annotated_bytecode(&self, source_files: &SourceFiles) {
+    pub fn print_annotated_bytecode(&self, _source_files: &SourceFiles) {
         // Safety: If the bytecode is compiled correctly, this should all be valid
         let read_opcode = |cursor: &mut BytecodeCursor| unsafe {
             cursor.read_opcode_span_unchecked(&self.code)
@@ -65,7 +65,8 @@ impl Func {
         let mut cursor = BytecodeCursor::default();
         while cursor.can_read_further(&self.code) {
             let offset = cursor.offset();
-            let (opcode, span) = read_opcode(&mut cursor);
+            //TODO: Actually figure out how to print the source line for the given span
+            let (opcode, _span) = read_opcode(&mut cursor);
 
             out.set_color(ColorSpec::new().set_fg(Some(Color::Cyan))).expect("IO error");
             cwrite!(out, "  {:04} ", offset);
