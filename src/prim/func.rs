@@ -32,7 +32,7 @@ impl Func {
 
         // Safety: If the bytecode is compiled correctly, this should all be valid
         let read_opcode = |cursor: &mut BytecodeCursor| unsafe {
-            cursor.read_opcode_unchecked(&self.code)
+            cursor.read_opcode_span_unchecked(&self.code)
         };
         let read_u8 = |cursor: &mut BytecodeCursor| unsafe {
             cursor.read_u8_unchecked(&self.code)
@@ -44,7 +44,7 @@ impl Func {
         eprintln!("{}:", self.name);
         while cursor.can_read_further(&self.code) {
             let offset = cursor.offset();
-            let opcode: OpCode = read_opcode(&mut cursor);
+            let (opcode, span) = read_opcode(&mut cursor);
 
             eprint!("  {:04} ", offset);
 

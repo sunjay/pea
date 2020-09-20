@@ -106,6 +106,15 @@ impl BytecodeCursor {
         mem::transmute(self.read_u8_unchecked(code))
     }
 
+    /// Reads both an `OpCode` and its corresponding `Span`
+    ///
+    /// See `read_opcode_unchecked` for more details.
+    pub unsafe fn read_opcode_span_unchecked(&mut self, code: &Bytecode) -> (OpCode, Span) {
+        let span = code.span(self.next_pos);
+        let opcode = self.read_opcode_unchecked(code);
+        (opcode, span)
+    }
+
     /// Advances the cursor to read a `u8` from the given bytecode
     ///
     /// # Safety
