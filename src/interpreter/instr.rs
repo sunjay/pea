@@ -11,6 +11,8 @@ pub fn call(ctx: &mut Interpreter, nargs: u8) -> RuntimeResult {
         _ => return Err(RuntimeError::NonFunctionCall),
     };
 
+    //TODO: Validate that the function was passed the correct number of arguments
+
     // Start with the arguments and the function itself on the start of the stack frame
     let frame_index = ctx.value_stack.len() - nargs - 1;
     ctx.call_stack.push(CallFrame::new(func, frame_index))?;
@@ -20,19 +22,27 @@ pub fn call(ctx: &mut Interpreter, nargs: u8) -> RuntimeResult {
 
 #[inline]
 pub fn ret(ctx: &mut Interpreter) -> RuntimeResult {
-    let result = ctx.pop();
+    // Pop the return value
+    let return_value = ctx.pop();
 
     // Remove the top call frame
-    ctx.call_stack.pop();
+    let frame = ctx.call_stack.pop()
+        .expect("bug: should always pop off at least one frame while program is running");
     if ctx.call_stack.is_empty() {
+        // Pop the main function
+        ctx.pop();
+
+        assert!(ctx.value_stack.is_empty(),
+            "bug: value stack was not empty at the end of the program");
+
         return Ok(Status::Complete);
     }
 
-    //TODO: Pop off any local variables (incl. func args) from the value stack
-    //ctx.value_stack.set_len(ctx.value_stack.len() - num_locals)
+    // Reset the value stack to before this call
+    ctx.value_stack.truncate(frame.frame_index);
 
-    // push the returned value
-    ctx.value_stack.push(result);
+    // Push the returned value
+    ctx.value_stack.push(return_value);
 
     Ok(Status::Running)
 }
