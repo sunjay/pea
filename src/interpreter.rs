@@ -2,15 +2,18 @@ mod execute;
 mod instr;
 
 use std::mem;
+use std::sync::Arc;
 
 use thiserror::Error;
+use parking_lot::RwLock;
 
 use crate::{
     gc_debug,
     prim,
-    bytecode::{Constants, ConstId, OpCode},
-    value::Value,
     gc::{self, Gc, Trace},
+    bytecode::{Constants, ConstId, OpCode},
+    source_files::SourceFiles,
+    value::Value,
 };
 
 use execute::Execute;
@@ -64,11 +67,12 @@ pub struct Interpreter {
     consts: Constants,
     call_stack: Vec<CallFrame>,
     value_stack: Vec<Value>,
+    source_files: Arc<RwLock<SourceFiles>>,
 }
 
 impl Trace for Interpreter {
     fn trace(&self) {
-        let Self {consts, call_stack, value_stack} = self;
+        let Self {consts, call_stack, value_stack, source_files: _} = self;
         consts.trace();
         call_stack.trace();
         value_stack.trace();
@@ -76,13 +80,14 @@ impl Trace for Interpreter {
 }
 
 impl Interpreter {
-    pub fn new(consts: Constants) -> Self {
+    pub fn new(consts: Constants, source_files: Arc<RwLock<SourceFiles>>) -> Self {
         Self {
             consts,
             call_stack: Vec::with_capacity(64),
             // Start with an initial capacity so programs can avoid allocating too often and so that
             // many small programs don't allocate more than once
             value_stack: Vec::with_capacity(256),
+            source_files,
         }
     }
 
@@ -125,9 +130,13 @@ impl Interpreter {
     /// Prints the annotated bytecode of every function constant to stderr
     pub fn print_all_annotated_bytecode(&self) {
         eprintln!("Bytecode:\n");
+
+        let source_files = self.source_files.read();
         for (_, constant) in self.consts.iter() {
             match constant {
-                Value::Func(func) => func.print_annotated_bytecode(),
+                Value::Func(func) => {
+                    func.print_annotated_bytecode(&source_files);
+                },
                 _ => {},
             }
         }

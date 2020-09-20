@@ -37,6 +37,10 @@ impl Diagnostics {
         }
     }
 
+    pub fn source_files(&self) -> &Arc<RwLock<SourceFiles>> {
+        &self.source_files
+    }
+
     /// Returns the number of errors that have been emitted
     pub fn emitted_errors(&self) -> usize {
         self.errors.load(Ordering::SeqCst)

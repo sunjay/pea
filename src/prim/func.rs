@@ -1,7 +1,7 @@
 use std::fmt;
 use std::sync::Arc;
 
-use crate::bytecode::Bytecode;
+use crate::{bytecode::Bytecode, source_files::SourceFiles};
 
 use crate::gc;
 
@@ -27,7 +27,7 @@ impl Func {
     }
 
     /// Prints the annotated bytecode this function to stderr
-    pub fn print_annotated_bytecode(&self) {
+    pub fn print_annotated_bytecode(&self, source_files: &SourceFiles) {
         todo!()
     }
 }

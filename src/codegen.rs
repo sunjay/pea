@@ -42,7 +42,7 @@ impl<'a> Compiler<'a> {
 
         let Compiler {consts, const_ids, ..} = compiler;
 
-        let mut interpreter = Interpreter::new(consts);
+        let mut interpreter = Interpreter::new(consts, diag.source_files().clone());
 
         // Call main function
         //
