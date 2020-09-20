@@ -9,7 +9,7 @@ use crate::{
 };
 
 #[derive(Debug, Clone, Error)]
-#[error("stack overflow: call stack grew past maximum {0} call frames")]
+#[error("stack overflow: call stack grew past maximum of {0} call frames")]
 pub struct StackOverflow(usize);
 
 #[derive(Debug)]

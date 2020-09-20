@@ -32,10 +32,24 @@ impl<'a> NameResolver<'a> {
         let ast::Program {decls} = prog;
 
         let token = self.scope_stack.push();
-        let decls = decls.iter().map(|decl| self.resolve_decl(decl)).collect();
+        let decls = self.resolve_decls(decls);
         let scope = self.scope_stack.pop(token);
 
         nir::Program {decls, scope}
+    }
+
+    fn resolve_decls(&mut self, decls: &[ast::Decl]) -> Vec<nir::Decl> {
+        // Order of declaration doesn't matter, so go through and declare each name first
+        for decl in decls {
+            use ast::Decl::*;
+            match decl {
+                Func(func) => {
+                    self.declare_func(&func.name);
+                },
+            }
+        }
+
+        decls.iter().map(|decl| self.resolve_decl(decl)).collect()
     }
 
     fn resolve_decl(&mut self, decl: &ast::Decl) -> nir::Decl {
@@ -48,20 +62,14 @@ impl<'a> NameResolver<'a> {
     fn resolve_func_decl(&mut self, func: &ast::FuncDecl) -> nir::FuncDecl {
         let ast::FuncDecl {fn_token, name, paren_open_token, params, paren_close_token, body} = func;
 
-        // Functions are not allowed to shadow other names in the same scope
-        if let Some(orig) = self.scope_stack.top().lookup(&name.value) {
-            let orig = self.def_table.get(orig);
-            self.diag.error(format!("the name `{}` is defined multiple times", name.value))
-                .span_info(orig.span, format!("previous definition of the value `{}` here", name.value))
-                .span_error(name.span, format!("`{}` redefined here", name.value))
-                .span_note(name.span, format!("`{}` must be defined only once in the value namespace of this module", name.value))
-                .emit();
-
-            // Error Recovery: continue past this point and allow the name to be redefined
-        }
-
         let fn_token = fn_token.clone();
-        let name = self.declare(name);
+
+        // Note that we are careful here to only look at the top scope instead of calling
+        // `self.lookup` because that is where we expect the name to be defined
+        let id = self.scope_stack.top().lookup(&name.value)
+            .expect("bug: all decls should have already been defined in this scope");
+        let name = nir::DefSpan {id, span: name.span};
+
         let paren_open_token = paren_open_token.clone();
         //TODO: Make a new scope for the function and put the params in it
         let params = params.clone(); //TODO
@@ -164,6 +172,22 @@ impl<'a> NameResolver<'a> {
         let paren_close_token = paren_close_token.clone();
 
         nir::CallExpr {lhs, paren_open_token, args, paren_close_token}
+    }
+
+    fn declare_func(&mut self, name: &ast::Ident) -> nir::DefSpan {
+        // Functions are not allowed to shadow other names in the same scope
+        if let Some(orig) = self.scope_stack.top().lookup(&name.value) {
+            let orig = self.def_table.get(orig);
+            self.diag.error(format!("the name `{}` is defined multiple times", name.value))
+                .span_info(orig.span, format!("previous definition of the value `{}` here", name.value))
+                .span_error(name.span, format!("`{}` redefined here", name.value))
+                .span_note(name.span, format!("`{}` must be defined only once in the value namespace of this module", name.value))
+                .emit();
+
+            // Error Recovery: continue past this point and allow the name to be redefined
+        }
+
+        self.declare(name)
     }
 
     /// Declares a name in the current scope
