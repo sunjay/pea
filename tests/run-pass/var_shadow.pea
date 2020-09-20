@@ -1,0 +1,26 @@
+fn main() {
+    let a = 3;
+    println!(a);
+    // Shadow variable `a`
+    let a = 4;
+    println!(a);
+    // This is fine because it's using the previously defined `a`
+    let a = a;
+    println!(a);
+
+    // Functions are first class and can be printed like anything else
+    println!(foo);
+    println!(foo());
+
+    // Function names can be shadowed by variables
+    let foo = b"cool";
+    println!(foo);
+    let main = 3249;
+    println!(main);
+}
+
+fn foo() {
+    // Shadows the `main` function
+    let main = b"wow!";
+    println!(main);
+}
