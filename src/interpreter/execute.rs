@@ -7,14 +7,20 @@ pub trait ReadArg {
 impl ReadArg for u8 {
     #[inline(always)]
     fn read_arg(interpreter: &mut Interpreter) -> Self {
-        interpreter.read_u8()
+        // Safety: If this code is running, the interpreter must have at least one call frame
+        let frame = unsafe { interpreter.call_stack.top_unchecked_mut() };
+        // Safety: This relies on the bytecode being compiled correctly
+        unsafe { frame.cursor.read_u8_unchecked(&frame.func.code) }
     }
 }
 
 impl ReadArg for u16 {
     #[inline(always)]
     fn read_arg(interpreter: &mut Interpreter) -> Self {
-        interpreter.read_u16()
+        // Safety: If this code is running, the interpreter must have at least one call frame
+        let frame = unsafe { interpreter.call_stack.top_unchecked_mut() };
+        // Safety: This relies on the bytecode being compiled correctly
+        unsafe { frame.cursor.read_u16_unchecked(&frame.func.code) }
     }
 }
 

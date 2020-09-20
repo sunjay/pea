@@ -1,5 +1,7 @@
 use std::fmt;
+use std::mem;
 use std::collections::HashMap;
+use std::slice::SliceIndex;
 
 use crate::{gc::Trace, source_files::Span, value::Value};
 
@@ -44,12 +46,17 @@ impl Bytecode {
     }
 
     /// Returns the byte at the given index
+    pub fn get<I: SliceIndex<[u8]>>(&self, index: I) -> &<I as SliceIndex<[u8]>>::Output {
+        &self.bytes[index]
+    }
+
+    /// Returns the byte at the given index
     ///
     /// # Safety
     ///
     /// No bounds checking is performed.
-    pub unsafe fn get_unchecked(&self, index: usize) -> u8 {
-        *self.bytes.get_unchecked(index)
+    pub unsafe fn get_unchecked<I: SliceIndex<[u8]>>(&self, index: I) -> &<I as SliceIndex<[u8]>>::Output {
+        self.bytes.get_unchecked(index)
     }
 
     /// Returns the `Span` for the `OpCode` at the given offset
@@ -61,6 +68,48 @@ impl Bytecode {
     pub fn span(&self, index: usize) -> Span {
         self.spans.get(&index).copied()
             .expect("bug: attempt to get a span for a non-opcode byte offset")
+    }
+}
+
+/// A cursor into a chunk of bytecode
+///
+/// This does not explicitly keep ownership or even a reference to the bytecode being read, so it is
+/// up to the user of the API to ensure that this cursor is only used with a single chunk of
+/// bytecode.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct BytecodeCursor {
+    /// The next byte position that will be read
+    next_pos: usize,
+}
+
+impl BytecodeCursor {
+    /// Advances the cursor to read a `u8` from the given bytecode
+    ///
+    /// # Safety
+    ///
+    /// No bounds checking is performed, so you must guarantee that there are enough bytes left to
+    /// successfully read this value.
+    pub unsafe fn read_u8_unchecked(&mut self, code: &Bytecode) -> u8 {
+        let addr = self.next_pos;
+        self.next_pos += mem::size_of::<u8>();
+        *code.get_unchecked(addr)
+    }
+
+    /// Advances the cursor to read a `u16` from the given bytecode
+    ///
+    /// # Safety
+    ///
+    /// No bounds checking is performed, so you must guarantee that there are enough bytes left to
+    /// successfully read this value.
+    pub unsafe fn read_u16_unchecked(&mut self, code: &Bytecode) -> u16 {
+        let addr = self.next_pos;
+        self.next_pos += mem::size_of::<u16>();
+        let bytes = code.get_unchecked(addr..self.next_pos);
+        // Safety: we just sliced the correct number of bytes
+        // See: https://github.com/rust-lang/rust/blob/f68e08933d8f519a9655934fedebbc509661b219/library/core/src/array/mod.rs#L148-L161
+        let bytes = *(bytes.as_ptr() as *const [u8; 2]);
+
+        u16::from_le_bytes(bytes)
     }
 }
 
