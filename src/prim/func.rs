@@ -1,9 +1,10 @@
 use std::fmt;
 use std::sync::Arc;
+use std::io::Write;
 
-use crate::{bytecode::{Bytecode, BytecodeCursor, OpCode}, source_files::SourceFiles};
+use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 
-use crate::gc;
+use crate::{gc, bytecode::{Bytecode, BytecodeCursor, OpCode}, source_files::SourceFiles};
 
 #[derive(Debug, Clone)]
 pub struct Func {
@@ -28,6 +29,8 @@ impl Func {
 
     /// Prints the annotated bytecode this function to stderr
     pub fn print_annotated_bytecode(&self, source_files: &SourceFiles) {
+        //TODO: Figure out how to get stream from `diag` here
+        let mut out = StandardStream::stderr(ColorChoice::Auto);
         let mut cursor = BytecodeCursor::default();
 
         // Safety: If the bytecode is compiled correctly, this should all be valid
@@ -41,24 +44,44 @@ impl Func {
             cursor.read_u16_unchecked(&self.code)
         };
 
-        eprintln!("{}:", self.name);
+        macro_rules! cwrite {
+            ($out:ident, $($t:tt)*) => {
+                write!($out, $($t)*).expect("IO error")
+            };
+            ($out:ident) => {
+                write!($out).expect("IO error")
+            };
+        }
+
+        macro_rules! cwriteln {
+            ($out:ident, $($t:tt)*) => {
+                writeln!($out, $($t)*).expect("IO error")
+            };
+            ($out:ident) => {
+                writeln!($out).expect("IO error")
+            };
+        }
+
+        cwriteln!(out, "{}:", self.name);
         while cursor.can_read_further(&self.code) {
             let offset = cursor.offset();
             let (opcode, span) = read_opcode(&mut cursor);
 
-            eprint!("  {:04} ", offset);
+            out.set_color(ColorSpec::new().set_fg(Some(Color::Cyan))).expect("IO error");
+            cwrite!(out, "  {:04} ", offset);
+            out.reset().expect("IO error");
 
             use OpCode::*;
             match opcode {
-                Call => eprintln!("call(nargs={})", read_u8(&mut cursor)),
-                Return => eprintln!("return()"),
-                ConstUnit => eprintln!("const_unit()"),
-                Constant => eprintln!("const(const_id={})", read_u16(&mut cursor)),
-                Pop => eprintln!("pop()"),
-                Print => eprintln!("print()"),
+                Call => cwriteln!(out, "call(nargs={})", read_u8(&mut cursor)),
+                Return => cwriteln!(out, "return()"),
+                ConstUnit => cwriteln!(out, "const_unit()"),
+                Constant => cwriteln!(out, "const(const_id={})", read_u16(&mut cursor)),
+                Pop => cwriteln!(out, "pop()"),
+                Print => cwriteln!(out, "print()"),
             }
         }
-        eprintln!();
+        cwriteln!(out);
     }
 }
 

@@ -13,9 +13,9 @@ use termcolor::ColorChoice;
 use crate::source_files::{Span, SourceFiles};
 
 #[cfg(not(test))]
-type OutputStream = termcolor::StandardStream;
+pub type OutputStream = termcolor::StandardStream;
 #[cfg(test)]
-type OutputStream = writer::NullWriter;
+pub type OutputStream = writer::NullWriter;
 
 pub struct Diagnostics {
     source_files: Arc<RwLock<SourceFiles>>,
@@ -41,14 +41,14 @@ impl Diagnostics {
         &self.source_files
     }
 
-    /// Returns the number of errors that have been emitted
-    pub fn emitted_errors(&self) -> usize {
-        self.errors.load(Ordering::SeqCst)
-    }
-
     /// Returns a mutable handle to the output stream
     pub fn output_stream(&self) -> MutexGuard<OutputStream> {
         self.out.lock()
+    }
+
+    /// Returns the number of errors that have been emitted
+    pub fn emitted_errors(&self) -> usize {
+        self.errors.load(Ordering::SeqCst)
     }
 
     pub fn error<'a>(&'a self, message: impl Into<Cow<'a, str>>) -> DiagnosticWriter<'a> {
