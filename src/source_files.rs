@@ -26,6 +26,8 @@ struct File {
     start_offset: usize,
     /// An index of the line numbers for all offsets in the file
     line_numbers: LineNumbers,
+    /// The handle to this file
+    handle: FileHandle,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -83,8 +85,14 @@ impl SourceFiles {
             path: path.to_path_buf(),
             start_offset: start,
             line_numbers,
+            handle,
         });
         handle
+    }
+
+    /// Returns the handle containing the given span
+    pub fn handle(&self, span: Span) -> FileHandle {
+        self.file(span.start).handle
     }
 
     /// Returns the resolved file and position information for a span
