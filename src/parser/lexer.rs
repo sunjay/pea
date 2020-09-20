@@ -45,6 +45,7 @@ impl<'a> Lexer<'a> {
 
             (b'=', _) => self.byte_token(start, Equals),
             (b'!', _) => self.byte_token(start, Not),
+            (b',', _) => self.byte_token(start, Comma),
             (b';', _) => self.byte_token(start, Semicolon),
 
             (b'*', _) => self.byte_token(start, Times),

@@ -43,6 +43,8 @@ pub enum TokenKind {
     Equals,
     /// The `!` symbol
     Not,
+    /// The `,` symbol
+    Comma,
     /// The `;` symbol
     Semicolon,
 
@@ -81,6 +83,7 @@ impl fmt::Display for TokenKind {
 
             Equals => write!(f, "`=`"),
             Not => write!(f, "`!`"),
+            Comma => write!(f, "`,`"),
             Semicolon => write!(f, "`;`"),
 
             Plus => write!(f, "`+`"),
