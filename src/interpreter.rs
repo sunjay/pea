@@ -67,19 +67,17 @@ impl Interpreter {
 
     /// Pushes the first call frame onto the call stack
     ///
-    /// The given constant index should point to a function that takes zero arguments
-    pub fn call_main(&mut self, const_index: ConstId) {
+    /// The given constant ID should point to a function that takes zero arguments
+    pub fn call_main(&mut self, id: ConstId) {
         assert!(self.call_stack.is_empty(),
             "bug: main can only be initialized before the interpreter has begun");
 
-        let func = self.consts.get(const_index).unwrap_func();
-
-        // Push the function being called onto the value stack and pretend a call instruction took
-        // place
-        self.value_stack.push(Value::Func(func.clone()));
+        // Delegate to the call instruction since it will do all necessary validations for us and
+        // then update the interpreter state to be consistent with our calling convention
+        self.value_stack.push(self.consts.get(id).clone());
 
         instr::call(self, 0)
-            .expect("bug: should always have enough call stack space to push main");
+            .expect("bug: failed to call `main` function while setting up interpreter");
     }
 
     /// Prints the call stack to stderr
