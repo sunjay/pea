@@ -1,0 +1,6 @@
+[tests/ui/var_decl_before_use.pea:3:13] error: cannot find name `d` in this scope
+
+[tests/ui/var_decl_before_use.pea:5:13] error: cannot find name `a` in this scope
+
+error: aborting due to 2 previous errors
+
