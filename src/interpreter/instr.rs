@@ -1,4 +1,4 @@
-use crate::{bytecode::ConstId, value::Value};
+use crate::{ast, bytecode::ConstId, value::Value};
 
 use super::{CallFrame, Interpreter, RuntimeError, RuntimeResult, Status};
 
@@ -88,47 +88,29 @@ pub fn print(ctx: &mut Interpreter) -> RuntimeResult {
 
 #[inline]
 pub fn neg(ctx: &mut Interpreter) -> RuntimeResult {
-    use crate::ast;
-
-    let value = ctx.pop();
-    let typ = value.typ();
-
-    let result = value.neg().ok_or_else(|| RuntimeError::UnsupportedUnaryOp {
-        op: ast::UnaryOp::Neg,
-        typ,
-    })?;
-    ctx.value_stack.push(result);
-
-    Ok(Status::Running)
+    unary_op(ctx, Value::neg, ast::UnaryOp::Neg)
 }
 
 #[inline]
 pub fn pos(ctx: &mut Interpreter) -> RuntimeResult {
-    use crate::ast;
-
-    let value = ctx.pop();
-    let typ = value.typ();
-
-    let result = value.pos().ok_or_else(|| RuntimeError::UnsupportedUnaryOp {
-        op: ast::UnaryOp::Pos,
-        typ,
-    })?;
-    ctx.value_stack.push(result);
-
-    Ok(Status::Running)
+    unary_op(ctx, Value::pos, ast::UnaryOp::Pos)
 }
 
 #[inline]
 pub fn not(ctx: &mut Interpreter) -> RuntimeResult {
-    use crate::ast;
+    unary_op(ctx, Value::not, ast::UnaryOp::Not)
+}
 
+#[inline(always)]
+fn unary_op(
+    ctx: &mut Interpreter,
+    f: impl FnOnce(Value) -> Option<Value>,
+    op: ast::UnaryOp,
+) -> RuntimeResult {
     let value = ctx.pop();
     let typ = value.typ();
 
-    let result = value.not().ok_or_else(|| RuntimeError::UnsupportedUnaryOp {
-        op: ast::UnaryOp::Not,
-        typ,
-    })?;
+    let result = f(value).ok_or_else(|| RuntimeError::UnsupportedUnaryOp {op, typ})?;
     ctx.value_stack.push(result);
 
     Ok(Status::Running)
@@ -136,25 +118,45 @@ pub fn not(ctx: &mut Interpreter) -> RuntimeResult {
 
 #[inline]
 pub fn add(ctx: &mut Interpreter) -> RuntimeResult {
-    todo!()
+    binary_op(ctx, Value::add, ast::BinaryOp::Add)
 }
 
 #[inline]
 pub fn sub(ctx: &mut Interpreter) -> RuntimeResult {
-    todo!()
+    binary_op(ctx, Value::sub, ast::BinaryOp::Sub)
 }
 
 #[inline]
 pub fn mul(ctx: &mut Interpreter) -> RuntimeResult {
-    todo!()
+    binary_op(ctx, Value::mul, ast::BinaryOp::Mul)
 }
 
 #[inline]
 pub fn div(ctx: &mut Interpreter) -> RuntimeResult {
-    todo!()
+    binary_op(ctx, Value::div, ast::BinaryOp::Div)
 }
 
 #[inline]
 pub fn rem(ctx: &mut Interpreter) -> RuntimeResult {
-    todo!()
+    binary_op(ctx, Value::rem, ast::BinaryOp::Rem)
+}
+
+#[inline(always)]
+fn binary_op(
+    ctx: &mut Interpreter,
+    f: impl FnOnce(Value, Value) -> Option<Value>,
+    op: ast::BinaryOp,
+) -> RuntimeResult {
+    // Note that the values are on the stack in **reverse** order (rhs, then lhs)
+    let rhs = ctx.pop();
+    let lhs = ctx.pop();
+
+    let lhs_type = lhs.typ();
+    let rhs_type = rhs.typ();
+
+    let result = f(lhs, rhs)
+        .ok_or_else(|| RuntimeError::UnsupportedBinaryOp {op, lhs_type, rhs_type})?;
+    ctx.value_stack.push(result);
+
+    Ok(Status::Running)
 }

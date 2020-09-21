@@ -1,0 +1,3 @@
+stack backtrace:
+   0: main
+error: unsupported binary operator `-` for types `[u8]` and `i64`

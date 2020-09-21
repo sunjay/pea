@@ -129,4 +129,60 @@ impl Value {
             Func(_) => None,
         }
     }
+
+    /// Applies the binary `+` operator to this value and the given other value or returns `None` if
+    /// that operation is not supported for the types of values provided
+    pub fn add(self, other: Self) -> Option<Self> {
+        use Value::*;
+        match (self, other) {
+            (I64(value1), I64(value2)) => Some(Value::I64(value1 + value2)),
+            (Bytes(_value1), Bytes(_value2)) => todo!(),
+
+            _ => None,
+        }
+    }
+
+    /// Applies the binary `-` operator to this value and the given other value or returns `None` if
+    /// that operation is not supported for the types of values provided
+    pub fn sub(self, other: Self) -> Option<Self> {
+        use Value::*;
+        match (self, other) {
+            (I64(value1), I64(value2)) => Some(Value::I64(value1 - value2)),
+
+            _ => None,
+        }
+    }
+
+    /// Applies the binary `*` operator to this value and the given other value or returns `None` if
+    /// that operation is not supported for the types of values provided
+    pub fn mul(self, other: Self) -> Option<Self> {
+        use Value::*;
+        match (self, other) {
+            (I64(value1), I64(value2)) => Some(Value::I64(value1 * value2)),
+
+            _ => None,
+        }
+    }
+
+    /// Applies the binary `/` operator to this value and the given other value or returns `None` if
+    /// that operation is not supported for the types of values provided
+    pub fn div(self, other: Self) -> Option<Self> {
+        use Value::*;
+        match (self, other) {
+            (I64(value1), I64(value2)) => Some(Value::I64(value1 / value2)),
+
+            _ => None,
+        }
+    }
+
+    /// Applies the binary `%` operator to this value and the given other value or returns `None` if
+    /// that operation is not supported for the types of values provided
+    pub fn rem(self, other: Self) -> Option<Self> {
+        use Value::*;
+        match (self, other) {
+            (I64(value1), I64(value2)) => Some(Value::I64(value1 % value2)),
+
+            _ => None,
+        }
+    }
 }

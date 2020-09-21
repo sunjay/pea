@@ -1,0 +1,3 @@
+stack backtrace:
+   0: main
+error: unsupported unary operator `!` for type `[u8]`

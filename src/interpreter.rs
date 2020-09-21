@@ -31,12 +31,21 @@ pub enum Status {
 pub enum RuntimeError {
     #[error("attempt to call a value that is not a function")]
     NonFunctionCall,
+
     #[error(transparent)]
     StackOverflow(#[from] call_stack::StackOverflow),
-    #[error("unsupported unary operator `{op}` for type `{typ}`")]
+
+    #[error("unsupported unary operator {op} for type `{typ}`")]
     UnsupportedUnaryOp {
         op: ast::UnaryOp,
         typ: value::Type,
+    },
+
+    #[error("unsupported binary operator {op} for types `{lhs_type}` and `{rhs_type}`")]
+    UnsupportedBinaryOp {
+        op: ast::BinaryOp,
+        lhs_type: value::Type,
+        rhs_type: value::Type,
     },
 }
 

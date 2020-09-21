@@ -1,0 +1,5 @@
+fn main() {
+    let a = 3;
+    let cool_stuff = 9280 + (-3 + 4);
+    println!(a * +4 - cool_stuff / -(43 + 33));
+}
