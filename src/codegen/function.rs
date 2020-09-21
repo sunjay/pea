@@ -198,9 +198,13 @@ impl<'a> FunctionCompiler<'a> {
     fn walk_call(&mut self, call: &nir::CallExpr) {
         let nir::CallExpr {lhs, paren_open_token, args, paren_close_token} = call;
 
+        // Walk the lhs first so the function to be called is on the stack before the args
         self.walk_expr(lhs);
 
-        //TODO: Walk argument exprs and push their values onto the stack
+        // Walk the arguments in order so they get put on the stack left to right
+        for arg in args {
+            self.walk_expr(arg);
+        }
 
         let nargs = args.len().try_into()
             .expect("bug: should have validated that no more 255 arguments can be passed to a function");
