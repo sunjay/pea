@@ -10,7 +10,7 @@ use std::fmt::Write;
 
 use crate::{
     ast,
-    source_files::FileSource,
+    source_files::{FileSource, Span},
     diagnostics::Diagnostics,
 };
 
@@ -47,6 +47,10 @@ enum ParseError {
         expected: Vec<TokenKind>,
         actual: Token,
     },
+
+    UnsupportedLValue {
+        span: Span,
+    },
 }
 
 impl ParseError {
@@ -71,6 +75,10 @@ impl ParseError {
                 }
                 write!(message, ", found: {}", actual.kind).unwrap();
                 diag.span_error(actual.span, message).emit();
+            },
+
+            UnsupportedLValue {span} => {
+                diag.span_error(span, "unsupported left-hand side of assignment expression").emit();
             },
         }
     }

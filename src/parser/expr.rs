@@ -4,7 +4,7 @@
 
 use crate::ast;
 
-use super::{Parser, ParseResult, TokenKind, Literal};
+use super::{Parser, ParseResult, ParseError, TokenKind, Literal};
 
 fn prefix_binding_power(kind: TokenKind) -> Result<(TokenKind, ast::UnaryOp, ((), u8)), TokenKind> {
     let (op, bp) = match kind {
@@ -115,11 +115,21 @@ impl<'a> Parser<'a> {
                 let rhs = self.expr_bp(r_bp)?;
 
                 lhs = match op {
-                    InfixOp::Assign => ast::Expr::Assign(Box::new(ast::AssignExpr {
-                        lhs,
-                        equals_token: op_token,
-                        rhs,
-                    })),
+                    InfixOp::Assign => {
+                        let lvalue = match lhs {
+                            ast::Expr::Ident(ident) => ast::LValueExpr::Ident(ident),
+
+                            _ => {
+                                return Err(ParseError::UnsupportedLValue {span: lhs.span()});
+                            },
+                        };
+
+                        ast::Expr::Assign(Box::new(ast::AssignExpr {
+                            lvalue,
+                            equals_token: op_token,
+                            rhs,
+                        }))
+                    },
 
                     InfixOp::BinaryOp(op) => ast::Expr::BinaryOp(Box::new(ast::BinaryOpExpr {
                         lhs,

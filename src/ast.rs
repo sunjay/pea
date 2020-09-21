@@ -73,6 +73,22 @@ pub enum Expr {
     BStr(BStrLiteral),
 }
 
+impl Expr {
+    pub fn span(&self) -> Span {
+        use Expr::*;
+        match self {
+            UnaryOp(expr) => expr.span(),
+            BinaryOp(expr) => expr.span(),
+            Assign(expr) => expr.span(),
+            Group(expr) => expr.span(),
+            Call(expr) => expr.span(),
+            Ident(expr) => expr.span,
+            Integer(expr) => expr.span,
+            BStr(expr) => expr.span,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum UnaryOp {
     Pos,
@@ -85,6 +101,12 @@ pub struct UnaryOpExpr {
     pub op: UnaryOp,
     pub op_token: Token,
     pub expr: Expr,
+}
+
+impl UnaryOpExpr {
+    pub fn span(&self) -> Span {
+        self.op_token.span.to(self.expr.span())
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -104,12 +126,38 @@ pub struct BinaryOpExpr {
     pub rhs: Expr,
 }
 
+impl BinaryOpExpr {
+    pub fn span(&self) -> Span {
+        self.lhs.span().to(self.rhs.span())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum LValueExpr {
+    Ident(Ident),
+}
+
+impl LValueExpr {
+    pub fn span(&self) -> Span {
+        use LValueExpr::*;
+        match self {
+            Ident(ident) => ident.span,
+        }
+    }
+}
+
 /// Assignment expression
 #[derive(Debug, Clone, PartialEq)]
 pub struct AssignExpr {
-    pub lhs: Expr,
+    pub lvalue: LValueExpr,
     pub equals_token: Token,
     pub rhs: Expr,
+}
+
+impl AssignExpr {
+    pub fn span(&self) -> Span {
+        self.lvalue.span().to(self.rhs.span())
+    }
 }
 
 /// An expression in parens
@@ -120,12 +168,24 @@ pub struct GroupExpr {
     pub paren_close_token: Token,
 }
 
+impl GroupExpr {
+    pub fn span(&self) -> Span {
+        self.paren_open_token.span.to(self.paren_close_token.span)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct CallExpr {
     pub lhs: Expr,
     pub paren_open_token: Token,
     pub args: Vec<Expr>,
     pub paren_close_token: Token,
+}
+
+impl CallExpr {
+    pub fn span(&self) -> Span {
+        self.lhs.span().to(self.paren_close_token.span)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

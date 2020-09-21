@@ -104,10 +104,15 @@ pub struct BinaryOpExpr {
     pub rhs: Expr,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum LValueExpr {
+    Def(DefSpan),
+}
+
 /// Assignment expression
 #[derive(Debug, Clone, PartialEq)]
 pub struct AssignExpr {
-    pub lhs: Expr,
+    pub lvalue: LValueExpr,
     pub equals_token: Token,
     pub rhs: Expr,
 }

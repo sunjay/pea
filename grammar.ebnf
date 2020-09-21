@@ -11,10 +11,13 @@ println_stmt ::= 'println' '!' '(' expr ')' ';'
 var_decl_stmt ::= 'let' ident '=' expr ';'
 expr_stmt ::= expr ';'
 
-expr ::= expr bin_op expr | unary_op expr | group | call | ident | integer_literal | byte_str
+expr ::= expr bin_op expr | unary_op expr | assign | group | call |
+         ident | integer_literal | byte_str
 # The precendence of these operators is defined in the code
 bin_op ::= '+' | '-' | '*' | '/' | '%'
 unary_op ::= '+' | '-' | '!'
+assign ::= lvalue '=' expr
+lvalue ::= ident
 group ::= '(' expr ')'
 call ::= expr '(' func_args ')'
 func_args ::= (expr ',')* expr?

@@ -1,0 +1,6 @@
+[tests/ui/invalid_lvalue.pea:4:5-4:9] error: unsupported left-hand side of assignment expression
+
+[tests/ui/invalid_lvalue.pea:5:5-5:13] error: unsupported left-hand side of assignment expression
+
+error: aborting due to 2 previous errors
+

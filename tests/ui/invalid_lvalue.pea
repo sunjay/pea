@@ -1,0 +1,6 @@
+fn foo() {}
+
+fn main() {
+    foo() = 3;
+    abc + bcd = 5;
+}

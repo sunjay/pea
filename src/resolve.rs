@@ -189,13 +189,20 @@ impl<'a> NameResolver<'a> {
     }
 
     fn resolve_assign(&mut self, expr: &ast::AssignExpr) -> nir::AssignExpr {
-        let ast::AssignExpr {lhs, equals_token, rhs} = expr;
+        let ast::AssignExpr {lvalue, equals_token, rhs} = expr;
 
-        let lhs = self.resolve_expr(lhs);
+        let lvalue = self.resolve_lvalue(lvalue);
         let equals_token = equals_token.clone();
         let rhs = self.resolve_expr(rhs);
 
-        nir::AssignExpr {lhs, equals_token, rhs}
+        nir::AssignExpr {lvalue, equals_token, rhs}
+    }
+
+    fn resolve_lvalue(&mut self, lvalue: &ast::LValueExpr) -> nir::LValueExpr {
+        use ast::LValueExpr::*;
+        match lvalue {
+            Ident(name) => nir::LValueExpr::Def(self.lookup(name)),
+        }
     }
 
     fn resolve_group(&mut self, expr: &ast::GroupExpr) -> nir::GroupExpr {
