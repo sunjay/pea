@@ -1,3 +1,4 @@
+use std::fmt;
 use std::sync::Arc;
 
 use crate::{source_files::Span, parser::Token};
@@ -96,6 +97,17 @@ pub enum UnaryOp {
     Not,
 }
 
+impl fmt::Display for UnaryOp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use UnaryOp::*;
+        match self {
+            Pos => write!(f, "`+`"),
+            Neg => write!(f, "`-`"),
+            Not => write!(f, "`!`"),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct UnaryOpExpr {
     pub op: UnaryOp,
@@ -116,6 +128,19 @@ pub enum BinaryOp {
     Mul,
     Div,
     Rem,
+}
+
+impl fmt::Display for BinaryOp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use BinaryOp::*;
+        match self {
+            Add => write!(f, "`+`"),
+            Sub => write!(f, "`-`"),
+            Mul => write!(f, "`*`"),
+            Div => write!(f, "`/`"),
+            Rem => write!(f, "`%`"),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

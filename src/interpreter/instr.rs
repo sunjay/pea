@@ -88,17 +88,50 @@ pub fn print(ctx: &mut Interpreter) -> RuntimeResult {
 
 #[inline]
 pub fn neg(ctx: &mut Interpreter) -> RuntimeResult {
-    todo!()
+    use crate::ast;
+
+    let value = ctx.pop();
+    let typ = value.typ();
+
+    let result = value.neg().ok_or_else(|| RuntimeError::UnsupportedUnaryOp {
+        op: ast::UnaryOp::Neg,
+        typ,
+    })?;
+    ctx.value_stack.push(result);
+
+    Ok(Status::Running)
 }
 
 #[inline]
 pub fn pos(ctx: &mut Interpreter) -> RuntimeResult {
-    todo!()
+    use crate::ast;
+
+    let value = ctx.pop();
+    let typ = value.typ();
+
+    let result = value.pos().ok_or_else(|| RuntimeError::UnsupportedUnaryOp {
+        op: ast::UnaryOp::Pos,
+        typ,
+    })?;
+    ctx.value_stack.push(result);
+
+    Ok(Status::Running)
 }
 
 #[inline]
 pub fn not(ctx: &mut Interpreter) -> RuntimeResult {
-    todo!()
+    use crate::ast;
+
+    let value = ctx.pop();
+    let typ = value.typ();
+
+    let result = value.not().ok_or_else(|| RuntimeError::UnsupportedUnaryOp {
+        op: ast::UnaryOp::Not,
+        typ,
+    })?;
+    ctx.value_stack.push(result);
+
+    Ok(Status::Running)
 }
 
 #[inline]

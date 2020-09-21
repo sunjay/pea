@@ -11,10 +11,11 @@ use parking_lot::RwLock;
 
 use crate::{
     gc_debug,
+    ast,
     bytecode::{ConstId, Constants, OpCode},
     gc::{self, Trace},
     source_files::SourceFiles,
-    value::Value,
+    value::{self, Value},
 };
 
 use execute::Execute;
@@ -32,6 +33,11 @@ pub enum RuntimeError {
     NonFunctionCall,
     #[error(transparent)]
     StackOverflow(#[from] call_stack::StackOverflow),
+    #[error("unsupported unary operator `{op}` for type `{typ}`")]
+    UnsupportedUnaryOp {
+        op: ast::UnaryOp,
+        typ: value::Type,
+    },
 }
 
 pub type RuntimeResult = Result<Status, RuntimeError>;
