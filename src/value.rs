@@ -9,6 +9,7 @@ use crate::{prim, gc::{Gc, Trace}};
 pub enum Value {
     /// The `()` value
     Unit,
+    Bool(bool),
     I64(i64),
     Bytes(Gc<prim::Bytes>),
     Func(Gc<prim::Func>),
@@ -21,7 +22,8 @@ impl Trace for Value {
     fn trace(&self) {
         use Value::*;
         match self {
-            Unit => {},
+            Unit |
+            Bool(_) |
             I64(_) => {},
             Bytes(value) => value.trace(),
             Func(value) => value.trace(),
@@ -34,6 +36,7 @@ impl fmt::Display for Value {
         use Value::*;
         match self {
             Unit => write!(f, "()"),
+            Bool(value) => write!(f, "{}", value),
             I64(value) => write!(f, "{}", value),
             Bytes(value) => write!(f, "{}", *value),
             Func(value) => write!(f, "{}", **value),
