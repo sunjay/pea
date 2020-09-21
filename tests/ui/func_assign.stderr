@@ -1,0 +1,6 @@
+[tests/ui/func_assign.pea:3:5-3:7] error: invalid left-hand side of assignment
+
+[tests/ui/func_assign.pea:5:5-5:7] error: invalid left-hand side of assignment
+
+error: aborting due to 2 previous errors
+

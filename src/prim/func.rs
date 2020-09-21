@@ -79,6 +79,7 @@ impl Func {
                 ConstUnit => cwriteln!(out, "const_unit()"),
                 Constant => cwriteln!(out, "const(const_id={})", read_u16(&mut cursor)),
                 GetLocal => cwriteln!(out, "get_local(fp_offset={})", read_u8(&mut cursor)),
+                SetLocal => cwriteln!(out, "set_local(fp_offset={})", read_u8(&mut cursor)),
                 Pop => cwriteln!(out, "pop()"),
                 Print => cwriteln!(out, "print()"),
                 Neg => cwriteln!(out, "neg()"),

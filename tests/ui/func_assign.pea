@@ -1,0 +1,11 @@
+fn main() {
+    // A name `foo` is in scope, but it's not a local variable, so it should not be assignable
+    foo = 3;
+    // This is also invalid
+    foo = main;
+
+    // This is fine
+    let foo = main;
+}
+
+fn foo() {}

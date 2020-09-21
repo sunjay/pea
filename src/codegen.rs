@@ -16,6 +16,7 @@ use function::FunctionCompiler;
 
 pub struct Compiler<'a> {
     def_table: &'a nir::DefTable,
+    diag: &'a Diagnostics,
 
     consts: bytecode::Constants,
     const_ids: DefConsts,
@@ -29,6 +30,7 @@ impl<'a> Compiler<'a> {
     ) -> Interpreter {
         let mut compiler = Compiler {
             def_table,
+            diag,
 
             consts: Default::default(),
             const_ids: Default::default(),
@@ -110,6 +112,7 @@ impl<'a> Compiler<'a> {
             func,
             &mut self.consts,
             &self.const_ids,
+            self.diag,
         );
 
         let def_id = func.name.id;

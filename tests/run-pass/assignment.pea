@@ -1,0 +1,19 @@
+fn foo() {
+    println!(b"foo");
+}
+
+fn bar() {
+    println!(b"bar");
+}
+
+fn main() {
+    let a = 3;
+    println!(a);
+    a = a + 4;
+    println!(a);
+
+    let b = foo;
+    b();
+    b = bar;
+    b();
+}

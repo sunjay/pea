@@ -72,6 +72,20 @@ pub fn get_local(ctx: &mut Interpreter, fp_offset: u8) -> RuntimeResult {
     Ok(Status::Running)
 }
 
+pub fn set_local(ctx: &mut Interpreter, fp_offset: u8) -> RuntimeResult {
+    let value = ctx.pop();
+
+    // Must have at least one call frame to get to this point
+    let frame = unsafe { ctx.call_stack.top_unchecked() };
+    ctx.value_stack[frame.frame_index+fp_offset as usize] = value;
+
+    // Replace the popped value (needed because assignment is an expression and expressions must
+    // have a stack effect = 1)
+    ctx.value_stack.push(Value::Unit);
+
+    Ok(Status::Running)
+}
+
 #[inline]
 pub fn pop(ctx: &mut Interpreter) -> RuntimeResult {
     ctx.pop();

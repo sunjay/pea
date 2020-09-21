@@ -258,6 +258,13 @@ pub enum OpCode {
     ///
     /// * `u8` - The index of the value on the stack relative to the frame pointer.
     GetLocal,
+    /// Pops the value at the top of the stack and assigns it to the given stack slot. Pushes `()`
+    /// onto the stack to replace the popped value.
+    ///
+    /// # Arguments
+    ///
+    /// * `u8` - The index of the slot on the stack relative to the frame pointer.
+    SetLocal,
 
     /// Pops the value at the top of the stack, discarding it.
     Pop,

@@ -3,6 +3,7 @@ use std::collections::HashMap;
 
 use crate::{
     nir,
+    diagnostics::Diagnostics,
     bytecode::{self, OpCode},
     value::Value,
     gc::Gc,
@@ -13,6 +14,7 @@ use super::def_consts::DefConsts;
 pub struct FunctionCompiler<'a> {
     consts: &'a mut bytecode::Constants,
     const_ids: &'a DefConsts,
+    diag: &'a Diagnostics,
 
     code: bytecode::Bytecode,
     /// The frame offset of each local variable
@@ -26,10 +28,12 @@ impl<'a> FunctionCompiler<'a> {
         func: &nir::FuncDecl,
         consts: &'a mut bytecode::Constants,
         const_ids: &'a DefConsts,
+        diag: &'a Diagnostics,
     ) -> bytecode::Bytecode {
         let mut compiler = Self {
             consts,
             const_ids,
+            diag,
 
             code: Default::default(),
             local_var_offsets: Default::default(),
@@ -158,7 +162,22 @@ impl<'a> FunctionCompiler<'a> {
     }
 
     fn walk_assign(&mut self, expr: &nir::AssignExpr) {
-        todo!()
+        let nir::AssignExpr {lvalue, equals_token: _, rhs} = expr;
+
+        self.walk_expr(rhs);
+
+        use nir::LValueExpr::*;
+        match lvalue {
+            Def(def) => match self.local_var_offsets.get(&def.id) {
+                Some(&offset) => {
+                    self.code.write_instr_u8(OpCode::SetLocal, offset, def.span)
+                },
+
+                None => {
+                    self.diag.span_error(def.span, "invalid left-hand side of assignment").emit();
+                },
+            },
+        }
     }
 
     fn walk_group(&mut self, expr: &nir::GroupExpr) {

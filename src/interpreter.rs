@@ -156,6 +156,7 @@ impl Interpreter {
             ConstUnit => instr::const_unit.run(self),
             Constant => instr::constant.run(self),
             GetLocal => instr::get_local.run(self),
+            SetLocal => instr::set_local.run(self),
             Pop => instr::pop.run(self),
             Print => instr::print(self),
 
