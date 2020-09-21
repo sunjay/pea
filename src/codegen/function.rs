@@ -119,15 +119,33 @@ impl<'a> FunctionCompiler<'a> {
     fn walk_expr(&mut self, expr: &nir::Expr) {
         use nir::Expr::*;
         match expr {
-            UnaryOp(expr) => todo!(),
-            BinaryOp(expr) => todo!(),
-            Assign(expr) => todo!(),
-            Group(expr) => todo!(),
+            UnaryOp(expr) => self.walk_unary_op(expr),
+            BinaryOp(expr) => self.walk_binary_op(expr),
+            Assign(expr) => self.walk_assign(expr),
+            Group(expr) => self.walk_group(expr),
             Call(call) => self.walk_call(call),
             Def(def_id) => self.walk_def(def_id),
             Integer(lit) => self.walk_integer_literal(lit),
             BStr(lit) => self.walk_bstr_literal(lit),
         }
+    }
+
+    fn walk_unary_op(&mut self, expr: &nir::UnaryOpExpr) {
+        todo!()
+    }
+
+    fn walk_binary_op(&mut self, expr: &nir::BinaryOpExpr) {
+        todo!()
+    }
+
+    fn walk_assign(&mut self, expr: &nir::AssignExpr) {
+        todo!()
+    }
+
+    fn walk_group(&mut self, expr: &nir::GroupExpr) {
+        let nir::GroupExpr {paren_open_token: _, expr, paren_close_token: _} = expr;
+
+        self.walk_expr(expr);
     }
 
     fn walk_call(&mut self, call: &nir::CallExpr) {
