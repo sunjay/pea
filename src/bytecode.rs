@@ -265,4 +265,30 @@ pub enum OpCode {
     /// Pops and prints the value at the top of the stack.
     //TODO: Get rid of this and make printing an ordinary function call
     Print,
+
+    /// Pops the top value from the stack, negates it, and then pushes the result back onto the
+    /// stack.
+    Neg,
+    /// Pops the top value from the stack, applies the positive operator to it, and then pushes
+    /// the result back onto the stack.
+    Pos,
+    /// Pops the top value from the stack, applies the not operator to it, and then pushes the
+    /// result back onto the stack.
+    Not,
+
+    /// Pops the top two values from the stack, adds them, and then pushes the result back onto the
+    /// top of the stack.
+    Add,
+    /// Pops the top two values from the stack, subtracts them, and then pushes the result back onto
+    /// the top of the stack.
+    Sub,
+    /// Pops the top two values from the stack, multiplies them, and then pushes the result back
+    /// onto the top of the stack.
+    Mul,
+    /// Pops the top two values from the stack, divides them, and then pushes the result back onto
+    /// the top of the stack.
+    Div,
+    /// Pops the top two values from the stack, computes the remainder of the second popped value
+    /// from the first popped value, and then pushes the result back onto the top of the stack.
+    Rem,
 }

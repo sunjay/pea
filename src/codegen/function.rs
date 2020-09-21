@@ -131,11 +131,30 @@ impl<'a> FunctionCompiler<'a> {
     }
 
     fn walk_unary_op(&mut self, expr: &nir::UnaryOpExpr) {
-        todo!()
+        let nir::UnaryOpExpr {op, op_token, expr} = expr;
+
+        self.walk_expr(expr);
+
+        self.code.write_instr(match op {
+            nir::UnaryOp::Pos => OpCode::Pos,
+            nir::UnaryOp::Neg => OpCode::Neg,
+            nir::UnaryOp::Not => OpCode::Not,
+        }, op_token.span);
     }
 
     fn walk_binary_op(&mut self, expr: &nir::BinaryOpExpr) {
-        todo!()
+        let nir::BinaryOpExpr {lhs, op, op_token, rhs} = expr;
+
+        self.walk_expr(lhs);
+        self.walk_expr(rhs);
+
+        self.code.write_instr(match op {
+            nir::BinaryOp::Add => OpCode::Add,
+            nir::BinaryOp::Sub => OpCode::Sub,
+            nir::BinaryOp::Mul => OpCode::Mul,
+            nir::BinaryOp::Div => OpCode::Div,
+            nir::BinaryOp::Rem => OpCode::Rem,
+        }, op_token.span);
     }
 
     fn walk_assign(&mut self, expr: &nir::AssignExpr) {

@@ -85,3 +85,43 @@ pub fn print(ctx: &mut Interpreter) -> RuntimeResult {
 
     Ok(Status::Running)
 }
+
+#[inline]
+pub fn neg(ctx: &mut Interpreter) -> RuntimeResult {
+    todo!()
+}
+
+#[inline]
+pub fn pos(ctx: &mut Interpreter) -> RuntimeResult {
+    todo!()
+}
+
+#[inline]
+pub fn not(ctx: &mut Interpreter) -> RuntimeResult {
+    todo!()
+}
+
+#[inline]
+pub fn add(ctx: &mut Interpreter) -> RuntimeResult {
+    todo!()
+}
+
+#[inline]
+pub fn sub(ctx: &mut Interpreter) -> RuntimeResult {
+    todo!()
+}
+
+#[inline]
+pub fn mul(ctx: &mut Interpreter) -> RuntimeResult {
+    todo!()
+}
+
+#[inline]
+pub fn div(ctx: &mut Interpreter) -> RuntimeResult {
+    todo!()
+}
+
+#[inline]
+pub fn rem(ctx: &mut Interpreter) -> RuntimeResult {
+    todo!()
+}

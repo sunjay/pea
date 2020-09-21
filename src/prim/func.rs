@@ -81,6 +81,14 @@ impl Func {
                 GetLocal => cwriteln!(out, "get_local(fp_offset={})", read_u8(&mut cursor)),
                 Pop => cwriteln!(out, "pop()"),
                 Print => cwriteln!(out, "print()"),
+                Neg => cwriteln!(out, "neg()"),
+                Pos => cwriteln!(out, "pos()"),
+                Not => cwriteln!(out, "not()"),
+                Add => cwriteln!(out, "add()"),
+                Sub => cwriteln!(out, "sub()"),
+                Mul => cwriteln!(out, "mul()"),
+                Div => cwriteln!(out, "div()"),
+                Rem => cwriteln!(out, "rem()"),
             }
         }
         cwriteln!(out);

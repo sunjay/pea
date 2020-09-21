@@ -143,6 +143,15 @@ impl Interpreter {
             GetLocal => instr::get_local.run(self),
             Pop => instr::pop.run(self),
             Print => instr::print(self),
+
+            Neg => instr::neg.run(self),
+            Pos => instr::pos.run(self),
+            Not => instr::not.run(self),
+            Add => instr::add.run(self),
+            Sub => instr::sub.run(self),
+            Mul => instr::mul.run(self),
+            Div => instr::div.run(self),
+            Rem => instr::rem.run(self),
         }
     }
 
