@@ -50,10 +50,18 @@ impl<'a> FunctionCompiler<'a> {
             fn_token: _,
             name: _,
             paren_open_token: _,
-            params: _,
+            params,
             paren_close_token: _,
             body,
+            scope: _,
         } = func;
+
+        // Declare a variable for each parameter so we use the right stack slot. Note that no code
+        // is generated for the parameters since they are implicitly provided thanks to our calling
+        // convention.
+        for param in params {
+            self.declare_local(param);
+        }
 
         self.walk_block(body);
 
@@ -108,11 +116,7 @@ impl<'a> FunctionCompiler<'a> {
     fn walk_var_decl_stmt(&mut self, stmt: &nir::VarDeclStmt) {
         let nir::VarDeclStmt {name, expr, ..} = stmt;
 
-        debug_assert!(!self.local_var_offsets.contains_key(&name.id),
-            "bug: two declared variables had the same `DefId` for some reason");
-        self.local_var_offsets.insert(name.id, self.next_frame_offset);
-        debug_assert!(self.next_frame_offset < 255, "bug: ran out of local var frame offsets");
-        self.next_frame_offset += 1;
+        self.declare_local(name);
 
         // This expr will result in a stack effect = 1 (one item added to stack by the end). The
         // local var offset inserted above will correspond to the offset to that item from the frame
@@ -242,5 +246,13 @@ impl<'a> FunctionCompiler<'a> {
 
         let const_id = self.consts.push(Value::Bytes(Gc::new((**value).into())));
         self.code.write_instr_u16(OpCode::Constant, const_id.into_u16(), *span);
+    }
+
+    fn declare_local(&mut self, name: &nir::DefSpan) {
+        debug_assert!(!self.local_var_offsets.contains_key(&name.id),
+            "bug: two declared variables had the same `DefId` for some reason");
+        self.local_var_offsets.insert(name.id, self.next_frame_offset);
+        debug_assert!(self.next_frame_offset < 255, "bug: ran out of local var frame offsets");
+        self.next_frame_offset += 1;
     }
 }

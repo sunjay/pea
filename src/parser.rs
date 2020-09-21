@@ -51,6 +51,10 @@ enum ParseError {
     UnsupportedLValue {
         span: Span,
     },
+
+    DuplicateFuncParam {
+        param: ast::Ident,
+    },
 }
 
 impl ParseError {
@@ -79,6 +83,12 @@ impl ParseError {
 
             UnsupportedLValue {span} => {
                 diag.span_error(span, "unsupported left-hand side of assignment expression").emit();
+            },
+
+            DuplicateFuncParam {param} => {
+                diag.error(format!("identifier `{}` is bound more than once in this parameter list", param.value))
+                    .span_error(param.span, "used as parameter more than once")
+                    .emit();
             },
         }
     }
@@ -117,11 +127,37 @@ impl<'a> Parser<'a> {
         let name = self.ident()?;
 
         let paren_open_token = self.input.match_kind(TokenKind::ParenOpen)?.clone();
-        let params = ();
+        let params = self.func_params()?;
         let paren_close_token = self.input.match_kind(TokenKind::ParenClose)?.clone();
         let body = self.block()?;
 
         Ok(ast::FuncDecl {fn_token, name, paren_open_token, params, paren_close_token, body})
+    }
+
+    /// Parses comma separated function parameters until the `)` token
+    ///
+    /// Trailing comma is allowed but optional. The `)` token is not consumed.
+    fn func_params(&mut self) -> ParseResult<Vec<ast::Ident>> {
+        let mut params = Vec::new();
+
+        while self.input.peek().kind != TokenKind::ParenClose {
+            let param = self.ident()?;
+
+            // Function parameters are not allowed to shadow each other
+            if params.iter().any(|p: &ast::Ident| p.value == param.value) {
+                return Err(ParseError::DuplicateFuncParam {param});
+            }
+
+            params.push(param);
+
+            if self.input.peek().kind != TokenKind::Comma {
+                break;
+            }
+
+            self.input.match_kind(TokenKind::Comma)?;
+        }
+
+        Ok(params)
     }
 
     fn block(&mut self) -> ParseResult<ast::Block> {

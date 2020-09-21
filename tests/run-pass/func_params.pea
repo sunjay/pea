@@ -1,0 +1,34 @@
+fn foo() {
+    println!(b"foo");
+}
+
+fn foo2(a, b) {
+    println!(b"foo2");
+    println!(a);
+    println!(b);
+
+    // Function parameters are still regular variables
+    a = b"cool beans";
+    // Function parameters can be shadowed by variables
+    let b = b"shadowed b";
+    println!(a);
+    println!(b);
+}
+
+fn foo3(
+    a,
+    b,
+    c,
+) {
+    println!(b"foo3");
+    println!(a);
+    println!(b);
+    println!(c);
+}
+
+fn main() {
+    let x = b"wooooo";
+    foo2(3, x);
+    foo();
+    foo3(x, x, 4);
+}

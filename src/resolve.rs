@@ -61,8 +61,9 @@ impl<'a> NameResolver<'a> {
 
     fn resolve_func_decl(&mut self, func: &ast::FuncDecl) -> nir::FuncDecl {
         let ast::FuncDecl {fn_token, name, paren_open_token, params, paren_close_token, body} = func;
-
         let fn_token = fn_token.clone();
+        let paren_open_token = paren_open_token.clone();
+        let paren_close_token = paren_close_token.clone();
 
         // Note that we are careful here to only look at the top scope instead of calling
         // `self.lookup` because that is where we expect the name to be defined
@@ -70,13 +71,18 @@ impl<'a> NameResolver<'a> {
             .expect("bug: all decls should have already been defined in this scope");
         let name = nir::DefSpan {id, span: name.span};
 
-        let paren_open_token = paren_open_token.clone();
-        //TODO: Make a new scope for the function and put the params in it
-        let params = params.clone(); //TODO
-        let paren_close_token = paren_close_token.clone();
+        // Create a new scope for the parameters
+        let token = self.scope_stack.push();
+
+        // Since we check at parse time to make sure there aren't any duplicate function parameters,
+        // we don't have to do any additional checking here
+        let params = params.iter().map(|name| self.declare(name)).collect();
+
         let body = self.resolve_block(body);
 
-        nir::FuncDecl {fn_token, name, paren_open_token, params, paren_close_token, body}
+        let scope = self.scope_stack.pop(token);
+
+        nir::FuncDecl {fn_token, name, paren_open_token, params, paren_close_token, body, scope}
     }
 
     fn resolve_block(&mut self, block: &ast::Block) -> nir::Block {

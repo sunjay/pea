@@ -2,7 +2,8 @@ program ::= decl*
 
 decl ::= func_decl
 
-func_decl ::= 'fn' ident '(' ')' block
+func_decl ::= 'fn' ident '(' func_params ')' block
+func_params ::= (ident ',')* ident?
 
 block ::= '{' stmt* '}'
 

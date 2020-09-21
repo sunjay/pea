@@ -31,9 +31,11 @@ pub struct FuncDecl {
     pub fn_token: Token,
     pub name: DefSpan,
     pub paren_open_token: Token,
-    pub params: (/* TODO */),
+    pub params: Vec<DefSpan>,
     pub paren_close_token: Token,
     pub body: Block,
+    /// The scope containing the function parameters
+    pub scope: Scope,
 }
 
 #[derive(Debug, Clone, PartialEq)]

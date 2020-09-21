@@ -18,7 +18,8 @@ pub struct FuncDecl {
     pub fn_token: Token,
     pub name: Ident,
     pub paren_open_token: Token,
-    pub params: (/* TODO */),
+    /// Guaranteed to not contain duplicate names (if no diagnostics were produced)
+    pub params: Vec<Ident>,
     pub paren_close_token: Token,
     pub body: Block,
 }

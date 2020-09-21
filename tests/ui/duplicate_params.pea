@@ -1,0 +1,5 @@
+fn foo(value, value) {
+    // variables are allowed to shadow params, but params are not allowed to shadow each other
+    let value = 3;
+    println!(value);
+}
