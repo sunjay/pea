@@ -65,7 +65,7 @@ impl<'a> FunctionCompiler<'a> {
     }
 
     fn walk_block(&mut self, block: &nir::Block) {
-        let nir::Block {stmts, ..} = block;
+        let nir::Block {stmts, brace_close_token, ..} = block;
 
         let next_frame_offset = self.next_frame_offset;
 
@@ -73,7 +73,16 @@ impl<'a> FunctionCompiler<'a> {
             self.walk_stmt(stmt);
         }
 
-        //TODO: Pop local variables
+        // Pop local variables
+        //
+        // It's important to do this, especially for conditionals and loops because the frame
+        // offsets we compute need to be correct whether the interpreter executes a given sub-block
+        // or not. It would be bad if not executing an `if` body resulted in all future indexes
+        // being incorrect.
+        let nlocals = self.next_frame_offset - next_frame_offset;
+        if nlocals > 0 {
+            self.code.write_instr_u8(OpCode::Pop, nlocals, brace_close_token.span);
+        }
 
         // Restore the next frame offset since all local variables are now popped
         self.next_frame_offset = next_frame_offset;
@@ -117,7 +126,7 @@ impl<'a> FunctionCompiler<'a> {
         self.walk_expr(&expr);
 
         // discard the expression value
-        self.code.write_instr(OpCode::Pop, semicolon_token.span);
+        self.code.write_instr_u8(OpCode::Pop, 1, semicolon_token.span);
     }
 
     fn walk_expr(&mut self, expr: &nir::Expr) {

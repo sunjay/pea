@@ -87,8 +87,10 @@ pub fn set_local(ctx: &mut Interpreter, fp_offset: u8) -> RuntimeResult {
 }
 
 #[inline]
-pub fn pop(ctx: &mut Interpreter) -> RuntimeResult {
-    ctx.pop();
+pub fn pop(ctx: &mut Interpreter, n: u8) -> RuntimeResult {
+    for _ in 0..n {
+        ctx.pop();
+    }
 
     Ok(Status::Running)
 }

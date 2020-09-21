@@ -266,7 +266,11 @@ pub enum OpCode {
     /// * `u8` - The index of the slot on the stack relative to the frame pointer.
     SetLocal,
 
-    /// Pops the value at the top of the stack, discarding it.
+    /// Pops values starting from the top of the stack, discarding them.
+    ///
+    /// # Arguments
+    ///
+    /// * `u8` - The number of values to pop
     Pop,
 
     /// Pops and prints the value at the top of the stack.
