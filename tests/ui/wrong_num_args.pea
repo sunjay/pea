@@ -1,0 +1,12 @@
+fn foo(a, b) {
+    let q = a * 3 - b;
+    println!(q);
+    println!(b);
+}
+
+fn main() {
+    let x = foo;
+
+    // Wrong number of arguments!!!
+    x(3);
+}

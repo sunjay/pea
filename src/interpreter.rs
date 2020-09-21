@@ -47,6 +47,13 @@ pub enum RuntimeError {
         lhs_type: value::Type,
         rhs_type: value::Type,
     },
+
+    #[error("wrong number of arguments for function `{name}`: expected {arity}, got {nargs}")]
+    ArityMismatch {
+        name: Arc<str>,
+        arity: u8,
+        nargs: u8,
+    },
 }
 
 pub type RuntimeResult = Result<Status, RuntimeError>;

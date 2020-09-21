@@ -4,17 +4,21 @@ use super::{CallFrame, Interpreter, RuntimeError, RuntimeResult, Status};
 
 #[inline]
 pub fn call(ctx: &mut Interpreter, nargs: u8) -> RuntimeResult {
-    let nargs = nargs as usize;
-
-    let func = match ctx.peek(nargs) {
+    let func = match ctx.peek(nargs as usize) {
         Value::Func(func) => func.clone(),
         _ => return Err(RuntimeError::NonFunctionCall),
     };
 
-    //TODO: Validate that the function was passed the correct number of arguments
+    if nargs != func.arity {
+        return Err(RuntimeError::ArityMismatch {
+            name: func.name.clone(),
+            arity: func.arity,
+            nargs,
+        });
+    }
 
     // Start with the arguments and the function itself on the start of the stack frame
-    let frame_index = ctx.value_stack.len() - nargs - 1;
+    let frame_index = ctx.value_stack.len() - nargs as usize - 1;
     ctx.call_stack.push(CallFrame::new(func, frame_index))?;
 
     Ok(Status::Running)

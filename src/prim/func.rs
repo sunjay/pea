@@ -9,6 +9,7 @@ use crate::{gc, bytecode::{Bytecode, BytecodeCursor, OpCode}, source_files::Sour
 #[derive(Debug, Clone)]
 pub struct Func {
     pub name: Arc<str>,
+    pub arity: u8,
     pub code: Bytecode,
 }
 
@@ -19,12 +20,12 @@ impl fmt::Display for Func {
 }
 
 impl Func {
-    pub fn new(name: Arc<str>) -> Self {
-        Self::with_code(name, Default::default())
+    pub fn new(name: Arc<str>, arity: u8) -> Self {
+        Self::with_code(name, arity, Default::default())
     }
 
-    pub fn with_code(name: Arc<str>, code: Bytecode) -> Self {
-        Self {name, code}
+    pub fn with_code(name: Arc<str>, arity: u8, code: Bytecode) -> Self {
+        Self {name, arity, code}
     }
 
     /// Prints the annotated bytecode this function to stderr
@@ -98,6 +99,6 @@ impl Func {
 
 impl gc::Trace for Func {
     fn trace(&self) {
-        let Self {name: _, code: _} = self;
+        let Self {name: _, arity: _, code: _} = self;
     }
 }

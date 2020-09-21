@@ -1,0 +1,3 @@
+stack backtrace:
+   0: main
+error: wrong number of arguments for function `foo`: expected 2, got 1

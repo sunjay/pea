@@ -211,7 +211,7 @@ impl<'a> FunctionCompiler<'a> {
         }
 
         let nargs = args.len().try_into()
-            .expect("bug: should have validated that no more 255 arguments can be passed to a function");
+            .expect("bug: should have validated that no more than 255 arguments can be passed to a function");
         let call_span = paren_open_token.span.to(paren_close_token.span);
         self.code.write_instr_u8(OpCode::Call, nargs, call_span);
     }

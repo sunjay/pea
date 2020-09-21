@@ -1,6 +1,8 @@
 mod def_consts;
 mod function;
 
+use std::convert::TryInto;
+
 use crate::{
     nir,
     bytecode,
@@ -86,7 +88,9 @@ impl<'a> Compiler<'a> {
         let name = self.def_table.get(def_id);
 
         // Define and insert an empty function for now (it will be replaced later during compilation)
-        let func = Gc::new(prim::Func::new(name.value.clone()));
+        let arity = func.params.len().try_into()
+            .expect("bug: should have validated that functions cannot have more than 255 parameters");
+        let func = Gc::new(prim::Func::new(name.value.clone(), arity));
 
         let const_id = self.consts.push(Value::Func(func));
         self.const_ids.insert(def_id, const_id);
@@ -120,8 +124,11 @@ impl<'a> Compiler<'a> {
         let const_id = self.const_ids.get(def_id)
             .expect("bug: function constant did not remain a constant");
 
+        let arity = func.params.len().try_into()
+            .expect("bug: should have validated that functions cannot have more than 255 parameters");
+
         // Replace the defined constant for this function with a version that has the compiled code
-        let func = Gc::new(prim::Func::with_code(name.value.clone(), func_code));
+        let func = Gc::new(prim::Func::with_code(name.value.clone(), arity, func_code));
         self.consts.replace(const_id, Value::Func(func));
     }
 }
