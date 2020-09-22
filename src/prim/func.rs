@@ -87,6 +87,7 @@ impl Func {
                 SetLocal => cwriteln!(out, "set_local(fp_offset={})", read_u8(&mut cursor)),
 
                 Pop => cwriteln!(out, "pop(n={})", read_u8(&mut cursor)),
+                BlockEnd => cwriteln!(out, "block_end(n={})", read_u8(&mut cursor)),
 
                 Print => cwriteln!(out, "print()"),
 

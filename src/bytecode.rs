@@ -304,6 +304,13 @@ pub enum OpCode {
     ///
     /// * `u8` - The number of values to pop
     Pop,
+    /// Pops the top item off the stack, pops the given number of items, then pushes the top item
+    /// back onto the stack
+    ///
+    /// # Arguments
+    ///
+    /// * `u8` - The number of values to pop
+    BlockEnd,
 
     /// Pops and prints the value at the top of the stack.
     //TODO: Get rid of this and make printing an ordinary function call

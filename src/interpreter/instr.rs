@@ -114,6 +114,19 @@ pub fn pop(ctx: &mut Interpreter, n: u8) -> RuntimeResult {
 }
 
 #[inline]
+pub fn block_end(ctx: &mut Interpreter, n: u8) -> RuntimeResult {
+    let result = ctx.pop();
+
+    for _ in 0..n {
+        ctx.pop();
+    }
+
+    ctx.value_stack.push(result);
+
+    Ok(Status::Running)
+}
+
+#[inline]
 pub fn print(ctx: &mut Interpreter) -> RuntimeResult {
     println!("{}", ctx.pop());
 

@@ -65,15 +65,19 @@ impl<'a> FunctionCompiler<'a> {
 
         self.walk_block(body);
 
-        // The default return value is unit
-        self.code.write_instr(OpCode::ConstUnit, body.brace_close_token.span);
-
         // Return from the function
+        // Walking the block guarantees that there will be a return value for this to emit
         self.code.write_instr(OpCode::Return, body.brace_close_token.span);
     }
 
     fn walk_block(&mut self, block: &nir::Block) {
-        let nir::Block {stmts, brace_close_token, ..} = block;
+        let nir::Block {
+            brace_open_token: _,
+            stmts,
+            ret_expr,
+            brace_close_token,
+            scope: _,
+        } = block;
 
         let next_frame_offset = self.next_frame_offset;
 
@@ -81,7 +85,16 @@ impl<'a> FunctionCompiler<'a> {
             self.walk_stmt(stmt);
         }
 
-        // Pop local variables
+        // Generate the return value or default to unit
+        match ret_expr {
+            Some(expr) => self.walk_expr(expr),
+            None => self.code.write_instr(OpCode::ConstUnit, brace_close_token.span),
+        }
+
+        // Pop local variables but keep the return value
+        //
+        // Note that we have to generate the return expression before we do this because otherwise
+        // some of the local variables it uses may get popped.
         //
         // It's important to do this, especially for conditionals and loops because the frame
         // offsets we compute need to be correct whether the interpreter executes a given sub-block
@@ -89,7 +102,7 @@ impl<'a> FunctionCompiler<'a> {
         // being incorrect.
         let nlocals = self.next_frame_offset - next_frame_offset;
         if nlocals > 0 {
-            self.code.write_instr_u8(OpCode::Pop, nlocals, brace_close_token.span);
+            self.code.write_instr_u8(OpCode::BlockEnd, nlocals, brace_close_token.span);
         }
 
         // Restore the next frame offset since all local variables are now popped

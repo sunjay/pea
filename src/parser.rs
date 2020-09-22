@@ -193,9 +193,17 @@ impl<'a> Parser<'a> {
         let brace_open_token = self.input.match_kind(TokenKind::BraceOpen)?.clone();
 
         let mut stmts = Vec::new();
+        let mut ret_expr = None;
         while !self.input.check(TokenKind::BraceClose) {
             match self.stmt() {
-                Ok(stmt) => stmts.push(stmt),
+                Ok(stmt) => match stmt {
+                    Ok(stmt) => stmts.push(stmt),
+                    Err(expr) => {
+                        ret_expr = Some(expr);
+                        // Block ends at the return expression
+                        break;
+                    },
+                },
                 Err(err) => {
                     err.emit(self.diag);
                     // An error occurred, try to recover by finding the nearest statement terminator
@@ -206,14 +214,14 @@ impl<'a> Parser<'a> {
 
         let brace_close_token = self.input.match_kind(TokenKind::BraceClose)?.clone();
 
-        Ok(ast::Block {brace_open_token, stmts, brace_close_token})
+        Ok(ast::Block {brace_open_token, stmts, ret_expr, brace_close_token})
     }
 
-    fn stmt(&mut self) -> ParseResult<ast::Stmt> {
+    fn stmt(&mut self) -> ParseResult<Result<ast::Stmt, ast::Expr>> {
         match self.input.peek().kind {
-            TokenKind::Keyword(Keyword::Println) => self.println_stmt().map(ast::Stmt::Println),
-            TokenKind::Keyword(Keyword::Let) => self.var_decl_stmt().map(ast::Stmt::VarDecl),
-            _ => self.expr_stmt().map(ast::Stmt::Expr),
+            TokenKind::Keyword(Keyword::Println) => self.println_stmt().map(ast::Stmt::Println).map(Ok),
+            TokenKind::Keyword(Keyword::Let) => self.var_decl_stmt().map(ast::Stmt::VarDecl).map(Ok),
+            _ => self.expr_stmt().map(|res| res.map(ast::Stmt::Expr)),
         }
     }
 
@@ -249,11 +257,17 @@ impl<'a> Parser<'a> {
         Ok(ast::VarDeclStmt {let_token, name, equals_token, expr, semicolon_token})
     }
 
-    fn expr_stmt(&mut self) -> ParseResult<ast::ExprStmt> {
+    /// Parses an expression statement or just expression depending on whether the following token
+    /// is a semicolon
+    fn expr_stmt(&mut self) -> ParseResult<Result<ast::ExprStmt, ast::Expr>> {
         let expr = self.expr()?;
-        let semicolon_token = self.input.match_kind(TokenKind::Semicolon)?.clone();
 
-        Ok(ast::ExprStmt {expr, semicolon_token})
+        if self.input.peek().kind == TokenKind::Semicolon {
+            let semicolon_token = self.input.match_kind(TokenKind::Semicolon)?.clone();
+            Ok(Ok(ast::ExprStmt {expr, semicolon_token}))
+        } else {
+            Ok(Err(expr))
+        }
     }
 
     fn ident(&mut self) -> ParseResult<ast::Ident> {

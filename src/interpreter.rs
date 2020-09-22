@@ -176,6 +176,7 @@ impl Interpreter {
             SetLocal => instr::set_local.run(self),
 
             Pop => instr::pop.run(self),
+            BlockEnd => instr::block_end.run(self),
 
             Print => instr::print(self),
 

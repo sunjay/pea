@@ -28,6 +28,7 @@ pub struct FuncDecl {
 pub struct Block {
     pub brace_open_token: Token,
     pub stmts: Vec<Stmt>,
+    pub ret_expr: Option<Expr>,
     pub brace_close_token: Token,
 }
 

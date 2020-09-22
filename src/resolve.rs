@@ -86,7 +86,7 @@ impl<'a> NameResolver<'a> {
     }
 
     fn resolve_block(&mut self, block: &ast::Block) -> nir::Block {
-        let ast::Block {brace_open_token, stmts, brace_close_token} = block;
+        let ast::Block {brace_open_token, stmts, ret_expr, brace_close_token} = block;
         let brace_open_token = brace_open_token.clone();
         let brace_close_token = brace_close_token.clone();
 
@@ -96,10 +96,11 @@ impl<'a> NameResolver<'a> {
         let stmts = stmts.iter()
             .map(|stmt| self.resolve_stmt(stmt))
             .collect();
+        let ret_expr = ret_expr.as_ref().map(|expr| self.resolve_expr(expr));
 
         let scope = self.scope_stack.pop(token);
 
-        nir::Block {brace_open_token, stmts, brace_close_token, scope}
+        nir::Block {brace_open_token, stmts, ret_expr, brace_close_token, scope}
     }
 
     fn resolve_stmt(&mut self, stmt: &ast::Stmt) -> nir::Stmt {
