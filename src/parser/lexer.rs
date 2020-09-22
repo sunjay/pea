@@ -43,6 +43,13 @@ impl<'a> Lexer<'a> {
             (b'{', _) => self.byte_token(start, BraceOpen),
             (b'}', _) => self.byte_token(start, BraceClose),
 
+            (b'=', Some(b'=')) => self.next_token(start, EqualsEquals),
+            (b'!', Some(b'=')) => self.next_token(start, NotEquals),
+            (b'>', Some(b'=')) => self.next_token(start, GreaterThanEquals),
+            (b'>', _) => self.byte_token(start, GreaterThan),
+            (b'<', Some(b'=')) => self.next_token(start, LessThanEquals),
+            (b'<', _) => self.byte_token(start, LessThan),
+
             (b'=', _) => self.byte_token(start, Equals),
             (b'!', _) => self.byte_token(start, Not),
             (b',', _) => self.byte_token(start, Comma),
@@ -458,6 +465,11 @@ impl<'a> Lexer<'a> {
         Token {kind, span, value: None}
     }
 
+    fn next_token(&mut self, start: usize, kind: TokenKind) -> Token {
+        let span = self.scanner.next_span(start);
+        Token {kind, span, value: None}
+    }
+
     fn token_to_current(&self, start: usize, kind: TokenKind, value: impl Into<Option<TokenValue>>) -> Token {
         let value = value.into();
         let span = self.scanner.span(start, self.scanner.current_pos());
@@ -596,6 +608,14 @@ mod tests {
         expect_token!(b"*", t!(Times));
         expect_token!(b"/", t!(Slash));
         expect_token!(b"%", t!(Percent));
+
+        expect_token!(b"=", t!(Equals));
+        expect_token!(b"==", t!(EqualsEquals));
+        expect_token!(b"!=", t!(NotEquals));
+        expect_token!(b">=", t!(GreaterThanEquals));
+        expect_token!(b">", t!(GreaterThan));
+        expect_token!(b"<=", t!(LessThanEquals));
+        expect_token!(b"<", t!(LessThan));
     }
 
     #[test]

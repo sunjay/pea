@@ -57,6 +57,14 @@ impl<'a> Scanner<'a> {
         self.span(index, index+1)
     }
 
+    /// Advances the scanner, and creates a new span between `start` and its current position
+    ///
+    /// Usually used after `peek` to include that character in the span
+    pub fn next_span(&mut self, start: usize) -> Span {
+        self.next();
+        self.span(start, self.current)
+    }
+
     /// Creates a new span between the given byte indexes
     ///
     /// `start` is included in the range, `end` is not.

@@ -39,6 +39,19 @@ pub enum TokenKind {
     /// The `}` symbol
     BraceClose,
 
+    /// The `==` symbol
+    EqualsEquals,
+    /// The `!=` symbol
+    NotEquals,
+    /// The `>` symbol
+    GreaterThan,
+    /// The `>=` symbol
+    GreaterThanEquals,
+    /// The `<` symbol
+    LessThan,
+    /// The `<=` symbol
+    LessThanEquals,
+
     /// The `=` symbol
     Equals,
     /// The `!` symbol
@@ -80,6 +93,13 @@ impl fmt::Display for TokenKind {
 
             BraceOpen => write!(f, "`{{`"),
             BraceClose => write!(f, "`}}`"),
+
+            EqualsEquals => write!(f, "`==`"),
+            NotEquals => write!(f, "`!=`"),
+            GreaterThan => write!(f, "`>`"),
+            GreaterThanEquals => write!(f, "`>=`"),
+            LessThan => write!(f, "`<`"),
+            LessThanEquals => write!(f, "`<=`"),
 
             Equals => write!(f, "`=`"),
             Not => write!(f, "`!`"),
