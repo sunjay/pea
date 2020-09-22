@@ -1,0 +1,11 @@
+fn main() {
+    let a = true;
+    println!(a);
+    let b = !a;
+    a = false;
+    println!(b);
+    println!(a);
+    a = !!!b;
+    println!(a);
+    println!(b);
+}

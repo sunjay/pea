@@ -170,6 +170,7 @@ impl<'a> NameResolver<'a> {
             Return(ret) => nir::Expr::Return(Box::new(self.resolve_return(ret))),
             Ident(name) => nir::Expr::Def(self.lookup(name)),
             Integer(value) => nir::Expr::Integer(value.clone()),
+            Bool(value) => nir::Expr::Bool(value.clone()),
             BStr(value) => nir::Expr::BStr(value.clone()),
         }
     }

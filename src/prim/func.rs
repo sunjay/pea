@@ -77,12 +77,19 @@ impl Func {
             match opcode {
                 Call => cwriteln!(out, "call(nargs={})", read_u8(&mut cursor)),
                 Return => cwriteln!(out, "return()"),
+
                 ConstUnit => cwriteln!(out, "const_unit()"),
+                ConstTrue => cwriteln!(out, "const_true()"),
+                ConstFalse => cwriteln!(out, "const_false()"),
                 Constant => cwriteln!(out, "const(const_id={})", read_u16(&mut cursor)),
+
                 GetLocal => cwriteln!(out, "get_local(fp_offset={})", read_u8(&mut cursor)),
                 SetLocal => cwriteln!(out, "set_local(fp_offset={})", read_u8(&mut cursor)),
+
                 Pop => cwriteln!(out, "pop(n={})", read_u8(&mut cursor)),
+
                 Print => cwriteln!(out, "print()"),
+
                 Neg => cwriteln!(out, "neg()"),
                 Pos => cwriteln!(out, "pos()"),
                 Not => cwriteln!(out, "not()"),

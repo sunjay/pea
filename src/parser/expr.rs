@@ -209,7 +209,12 @@ impl<'a> Parser<'a> {
     fn atom(&mut self) -> ParseResult<ast::Expr> {
         match self.input.peek().kind {
             TokenKind::Ident => self.ident().map(ast::Expr::Ident),
+
             TokenKind::Literal(Literal::Integer) => self.integer_literal().map(ast::Expr::Integer),
+
+            TokenKind::Keyword(Keyword::True) |
+            TokenKind::Keyword(Keyword::False) => self.bool_literal().map(ast::Expr::Bool),
+
             _ => self.bstr_literal().map(ast::Expr::BStr),
         }
     }
@@ -217,6 +222,19 @@ impl<'a> Parser<'a> {
     fn integer_literal(&mut self) -> ParseResult<ast::IntegerLiteral> {
         self.input.match_kind(TokenKind::Literal(Literal::Integer)).map(|token| ast::IntegerLiteral {
             value: token.unwrap_integer(),
+            span: token.span,
+        })
+    }
+
+    fn bool_literal(&mut self) -> ParseResult<ast::BoolLiteral> {
+        let (kind, value) = match self.input.peek().kind {
+            kind@TokenKind::Keyword(Keyword::True) => (kind, true),
+            kind@TokenKind::Keyword(Keyword::False) => (kind, false),
+            _ => unreachable!(),
+        };
+
+        self.input.match_kind(kind).map(|token| ast::BoolLiteral {
+            value,
             span: token.span,
         })
     }

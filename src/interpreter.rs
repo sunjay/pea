@@ -166,11 +166,17 @@ impl Interpreter {
         match next_op {
             Call => instr::call.run(self),
             Return => instr::ret.run(self),
+
             ConstUnit => instr::const_unit.run(self),
+            ConstTrue => instr::const_true.run(self),
+            ConstFalse => instr::const_false.run(self),
             Constant => instr::constant.run(self),
+
             GetLocal => instr::get_local.run(self),
             SetLocal => instr::set_local.run(self),
+
             Pop => instr::pop.run(self),
+
             Print => instr::print(self),
 
             Neg => instr::neg.run(self),

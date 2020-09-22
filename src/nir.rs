@@ -89,6 +89,7 @@ pub enum Expr {
     Return(Box<ReturnExpr>),
     Def(DefSpan),
     Integer(IntegerLiteral),
+    Bool(BoolLiteral),
     BStr(BStrLiteral),
 }
 
@@ -151,4 +152,5 @@ pub struct DefSpan {
 pub type UnaryOp = ast::UnaryOp;
 pub type BinaryOp = ast::BinaryOp;
 pub type IntegerLiteral = ast::IntegerLiteral;
+pub type BoolLiteral = ast::BoolLiteral;
 pub type BStrLiteral = ast::BStrLiteral;

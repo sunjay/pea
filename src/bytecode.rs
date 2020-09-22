@@ -244,6 +244,10 @@ pub enum OpCode {
 
     /// Push the unit value `()` onto the top of the stack.
     ConstUnit,
+    /// Push the bool value `true` onto the top of the stack.
+    ConstTrue,
+    /// Push the bool value `false` onto the top of the stack.
+    ConstFalse,
 
     /// Load a constant value from the constants table and push it onto the top of the stack.
     ///

@@ -57,6 +57,20 @@ pub fn const_unit(ctx: &mut Interpreter) -> RuntimeResult {
 }
 
 #[inline]
+pub fn const_true(ctx: &mut Interpreter) -> RuntimeResult {
+    ctx.value_stack.push(Value::Bool(true));
+
+    Ok(Status::Running)
+}
+
+#[inline]
+pub fn const_false(ctx: &mut Interpreter) -> RuntimeResult {
+    ctx.value_stack.push(Value::Bool(false));
+
+    Ok(Status::Running)
+}
+
+#[inline]
 pub fn constant(ctx: &mut Interpreter, index: u16) -> RuntimeResult {
     // Safety: If the bytecode is compiled correctly, this will always be a valid
     // constant ID

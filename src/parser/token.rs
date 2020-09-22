@@ -197,6 +197,8 @@ keywords! {
     Fn : "fn"
     Let : "let"
     Return : "return"
+    True : "true"
+    False : "false"
 
     //TODO: This should be removed when println stops being used as a keyword
     Println : "println"

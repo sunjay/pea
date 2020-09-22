@@ -73,6 +73,7 @@ pub enum Expr {
     Return(Box<ReturnExpr>),
     Ident(Ident),
     Integer(IntegerLiteral),
+    Bool(BoolLiteral),
     BStr(BStrLiteral),
 }
 
@@ -88,6 +89,7 @@ impl Expr {
             Return(expr) => expr.span(),
             Ident(expr) => expr.span,
             Integer(expr) => expr.span,
+            Bool(expr) => expr.span,
             BStr(expr) => expr.span,
         }
     }
@@ -246,5 +248,11 @@ pub struct BStrLiteral {
 #[derive(Debug, Clone, PartialEq)]
 pub struct IntegerLiteral {
     pub value: i128,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct BoolLiteral {
+    pub value: bool,
     pub span: Span,
 }

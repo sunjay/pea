@@ -144,6 +144,7 @@ impl<'a> FunctionCompiler<'a> {
             Return(ret) => self.walk_return(ret),
             Def(def_id) => self.walk_def(def_id),
             Integer(lit) => self.walk_integer_literal(lit),
+            Bool(lit) => self.walk_bool_literal(lit),
             BStr(lit) => self.walk_bstr_literal(lit),
         }
     }
@@ -254,6 +255,16 @@ impl<'a> FunctionCompiler<'a> {
             .expect("bug: values out of the 64-bit range are not currently supported");
         let const_id = self.consts.push(Value::I64(value));
         self.code.write_instr_u16(OpCode::Constant, const_id.into_u16(), span);
+    }
+
+    fn walk_bool_literal(&mut self, lit: &nir::BoolLiteral) {
+        let &nir::BoolLiteral {value, span} = lit;
+
+        if value {
+            self.code.write_instr(OpCode::ConstTrue, span);
+        } else {
+            self.code.write_instr(OpCode::ConstFalse, span);
+        }
     }
 
     fn walk_bstr_literal(&mut self, lit: &nir::BStrLiteral) {
