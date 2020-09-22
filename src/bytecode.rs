@@ -5,6 +5,15 @@ use std::slice::SliceIndex;
 
 use crate::{gc::Trace, source_files::Span, value::Value};
 
+/// A unique token used to backpatch an argument of an instruction after it has already been written
+/// into the bytecode
+#[derive(Debug)]
+#[must_use]
+pub struct Patch {
+    /// The address of the `u16` value to overwrite
+    addr: usize,
+}
+
 /// A compiled chunk of bytecode, including both opcodes and operand bytes
 #[derive(Debug, Default, Clone)]
 pub struct Bytecode {
@@ -33,6 +42,25 @@ impl Bytecode {
     pub fn write_instr_u16(&mut self, opcode: OpCode, arg: u16, span: Span) {
         self.write_instr(opcode, span);
         self.bytes.extend(&arg.to_le_bytes());
+    }
+
+    /// Writes an instruction opcode into the bytecode chunk with a single u16 argument that is
+    /// backpatched in later using `finish_patch`.
+    pub fn write_instr_u16_patch(&mut self, opcode: OpCode, span: Span) -> Patch {
+        self.write_instr(opcode, span);
+
+        let addr = self.bytes.len();
+        // Put a placeholder value that will be backpatched later
+        self.bytes.extend(&0u16.to_le_bytes());
+
+        Patch {addr}
+    }
+
+    /// Completes a backpatch with the given value
+    pub fn finish_patch(&mut self, patch: Patch, value: u16) {
+        let Patch {addr} = patch;
+
+        self.bytes[addr..addr+mem::size_of::<u16>()].copy_from_slice(&value.to_le_bytes());
     }
 
     /// Returns true if this chunk of bytecode is empty
