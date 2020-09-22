@@ -141,6 +141,7 @@ impl<'a> FunctionCompiler<'a> {
             Assign(expr) => self.walk_assign(expr),
             Group(expr) => self.walk_group(expr),
             Call(call) => self.walk_call(call),
+            Return(ret) => self.walk_return(ret),
             Def(def_id) => self.walk_def(def_id),
             Integer(lit) => self.walk_integer_literal(lit),
             BStr(lit) => self.walk_bstr_literal(lit),
@@ -214,6 +215,20 @@ impl<'a> FunctionCompiler<'a> {
             .expect("bug: should have validated that no more than 255 arguments can be passed to a function");
         let call_span = paren_open_token.span.to(paren_close_token.span);
         self.code.write_instr_u8(OpCode::Call, nargs, call_span);
+    }
+
+    fn walk_return(&mut self, ret: &nir::ReturnExpr) {
+        let nir::ReturnExpr {return_token, expr} = ret;
+
+        // Generate the value to return
+        match expr {
+            Some(expr) => self.walk_expr(expr),
+            // The default return value is `()` if none is specified
+            None => self.code.write_instr(OpCode::ConstUnit, return_token.span),
+        }
+
+        // Return the value
+        self.code.write_instr(OpCode::Return, return_token.span);
     }
 
     fn walk_def(&mut self, def: &nir::DefSpan) {

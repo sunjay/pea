@@ -70,6 +70,7 @@ pub enum Expr {
     Assign(Box<AssignExpr>),
     Group(Box<GroupExpr>),
     Call(Box<CallExpr>),
+    Return(Box<ReturnExpr>),
     Ident(Ident),
     Integer(IntegerLiteral),
     BStr(BStrLiteral),
@@ -84,6 +85,7 @@ impl Expr {
             Assign(expr) => expr.span(),
             Group(expr) => expr.span(),
             Call(expr) => expr.span(),
+            Return(expr) => expr.span(),
             Ident(expr) => expr.span,
             Integer(expr) => expr.span,
             BStr(expr) => expr.span,
@@ -211,6 +213,21 @@ pub struct CallExpr {
 impl CallExpr {
     pub fn span(&self) -> Span {
         self.lhs.span().to(self.paren_close_token.span)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ReturnExpr {
+    pub return_token: Token,
+    pub expr: Option<Expr>,
+}
+
+impl ReturnExpr {
+    pub fn span(&self) -> Span {
+        match &self.expr {
+            Some(expr) => self.return_token.span.to(expr.span()),
+            None => self.return_token.span,
+        }
     }
 }
 

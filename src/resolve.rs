@@ -167,6 +167,7 @@ impl<'a> NameResolver<'a> {
             Assign(expr) => nir::Expr::Assign(Box::new(self.resolve_assign(expr))),
             Group(expr) => nir::Expr::Group(Box::new(self.resolve_group(expr))),
             Call(call) => nir::Expr::Call(Box::new(self.resolve_call(call))),
+            Return(ret) => nir::Expr::Return(Box::new(self.resolve_return(ret))),
             Ident(name) => nir::Expr::Def(self.lookup(name)),
             Integer(value) => nir::Expr::Integer(value.clone()),
             BStr(value) => nir::Expr::BStr(value.clone()),
@@ -230,6 +231,15 @@ impl<'a> NameResolver<'a> {
         let paren_close_token = paren_close_token.clone();
 
         nir::CallExpr {lhs, paren_open_token, args, paren_close_token}
+    }
+
+    fn resolve_return(&mut self, ret: &ast::ReturnExpr) -> nir::ReturnExpr {
+        let ast::ReturnExpr {return_token, expr} = ret;
+
+        let return_token = return_token.clone();
+        let expr = expr.as_ref().map(|expr| self.resolve_expr(expr));
+
+        nir::ReturnExpr {return_token, expr}
     }
 
     fn declare_func(&mut self, name: &ast::Ident) -> nir::DefSpan {

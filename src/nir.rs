@@ -86,6 +86,7 @@ pub enum Expr {
     Assign(Box<AssignExpr>),
     Group(Box<GroupExpr>),
     Call(Box<CallExpr>),
+    Return(Box<ReturnExpr>),
     Def(DefSpan),
     Integer(IntegerLiteral),
     BStr(BStrLiteral),
@@ -133,6 +134,12 @@ pub struct CallExpr {
     pub paren_open_token: Token,
     pub args: Vec<Expr>,
     pub paren_close_token: Token,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ReturnExpr {
+    pub return_token: Token,
+    pub expr: Option<Expr>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

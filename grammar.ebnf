@@ -12,7 +12,7 @@ println_stmt ::= 'println' '!' '(' expr ')' ';'
 var_decl_stmt ::= 'let' ident '=' expr ';'
 expr_stmt ::= expr ';'
 
-expr ::= expr bin_op expr | unary_op expr | assign | group | call |
+expr ::= expr bin_op expr | unary_op expr | assign | group | call | return
          ident | integer_literal | byte_str
 # The precendence of these operators is defined in the code
 bin_op ::= '+' | '-' | '*' | '/' | '%'
@@ -22,3 +22,4 @@ lvalue ::= ident
 group ::= '(' expr ')'
 call ::= expr '(' func_args ')'
 func_args ::= (expr ',')* expr?
+return ::= 'return' expr

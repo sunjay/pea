@@ -1,0 +1,22 @@
+fn foo(b) {
+    let a = 3 - b;
+    return a;
+}
+
+fn bar(a, b, c) {
+    println!(a * b - c / a + b * 33);
+    return;
+}
+
+fn main() {
+    println!(foo(1));
+    println!(foo(100) * 40 - 50 % 3);
+    bar(3019, -29, 300);
+
+    // Weird...but still technically valid!
+    let x = return;
+
+    // should be unreachable
+    println!(b"test");
+    println!(x);
+}

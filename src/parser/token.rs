@@ -196,6 +196,7 @@ macro_rules! keywords {
 keywords! {
     Fn : "fn"
     Let : "let"
+    Return : "return"
 
     //TODO: This should be removed when println stops being used as a keyword
     Println : "println"

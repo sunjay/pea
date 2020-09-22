@@ -4,13 +4,21 @@
 
 use crate::ast;
 
-use super::{Parser, ParseResult, ParseError, TokenKind, Literal, MAX_ARGS};
+use super::{Parser, ParseResult, ParseError, TokenKind, Literal, Keyword, MAX_ARGS};
 
-fn prefix_binding_power(kind: TokenKind) -> Result<(TokenKind, ast::UnaryOp, ((), u8)), TokenKind> {
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum PrefixOp {
+    Return,
+    UnaryOp(ast::UnaryOp),
+}
+
+fn prefix_binding_power(kind: TokenKind) -> Result<(TokenKind, PrefixOp, ((), u8)), TokenKind> {
     let (op, bp) = match kind {
-        TokenKind::Plus => (ast::UnaryOp::Pos, ((), 9)),
-        TokenKind::Minus => (ast::UnaryOp::Neg, ((), 9)),
-        TokenKind::Not => (ast::UnaryOp::Not, ((), 9)),
+        TokenKind::Keyword(Keyword::Return) => (PrefixOp::Return, ((), 1)),
+
+        TokenKind::Plus => (PrefixOp::UnaryOp(ast::UnaryOp::Pos), ((), 9)),
+        TokenKind::Minus => (PrefixOp::UnaryOp(ast::UnaryOp::Neg), ((), 9)),
+        TokenKind::Not => (PrefixOp::UnaryOp(ast::UnaryOp::Not), ((), 9)),
         _ => return Err(kind),
     };
 
@@ -74,10 +82,32 @@ impl<'a> Parser<'a> {
             },
 
             Ok((kind, op, ((), r_bp))) => {
-                let op_token = self.input.match_kind(kind)?.clone();
-                let expr = self.expr_bp(r_bp)?;
+                match op {
+                    PrefixOp::Return => {
+                        let return_token = self.input.match_kind(TokenKind::Keyword(Keyword::Return))?.clone();
 
-                ast::Expr::UnaryOp(Box::new(ast::UnaryOpExpr {op, op_token, expr}))
+                        // HACK: Try to parse an expression and then restore the input to its
+                        // previous state if that fails. This simulates an "optional" value without
+                        // us having to figure out how to lookahead for this.
+                        let input = self.input;
+                        let expr = match self.expr_bp(r_bp) {
+                            Ok(expr) => Some(expr),
+                            Err(_) => {
+                                self.input = input;
+                                None
+                            },
+                        };
+
+                        ast::Expr::Return(Box::new(ast::ReturnExpr {return_token, expr}))
+                    },
+
+                    PrefixOp::UnaryOp(op) => {
+                        let op_token = self.input.match_kind(kind)?.clone();
+                        let expr = self.expr_bp(r_bp)?;
+
+                        ast::Expr::UnaryOp(Box::new(ast::UnaryOpExpr {op, op_token, expr}))
+                    },
+                }
             },
 
             _ => self.atom()?,
