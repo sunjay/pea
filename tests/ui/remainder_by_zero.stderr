@@ -1,0 +1,3 @@
+stack backtrace:
+   0: main
+error: attempt to calculate the remainder with a divisor of zero

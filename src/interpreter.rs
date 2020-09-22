@@ -35,6 +35,12 @@ pub enum RuntimeError {
     #[error(transparent)]
     StackOverflow(#[from] call_stack::StackOverflow),
 
+    #[error("attempt to divide by zero")]
+    DivideByZero,
+
+    #[error("attempt to calculate the remainder with a divisor of zero")]
+    RemainderByZero,
+
     #[error("unsupported unary operator {op} for type `{typ}`")]
     UnsupportedUnaryOp {
         op: ast::UnaryOp,

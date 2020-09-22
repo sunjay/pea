@@ -151,16 +151,6 @@ pub fn mul(ctx: &mut Interpreter) -> RuntimeResult {
     binary_op(ctx, Value::mul, ast::BinaryOp::Mul)
 }
 
-#[inline]
-pub fn div(ctx: &mut Interpreter) -> RuntimeResult {
-    binary_op(ctx, Value::div, ast::BinaryOp::Div)
-}
-
-#[inline]
-pub fn rem(ctx: &mut Interpreter) -> RuntimeResult {
-    binary_op(ctx, Value::rem, ast::BinaryOp::Rem)
-}
-
 #[inline(always)]
 fn binary_op(
     ctx: &mut Interpreter,
@@ -176,6 +166,36 @@ fn binary_op(
 
     let result = f(lhs, rhs)
         .ok_or_else(|| RuntimeError::UnsupportedBinaryOp {op, lhs_type, rhs_type})?;
+    ctx.value_stack.push(result);
+
+    Ok(Status::Running)
+}
+
+#[inline]
+pub fn div(ctx: &mut Interpreter) -> RuntimeResult {
+    try_binary_op(ctx, Value::div, ast::BinaryOp::Div)
+}
+
+#[inline]
+pub fn rem(ctx: &mut Interpreter) -> RuntimeResult {
+    try_binary_op(ctx, Value::rem, ast::BinaryOp::Rem)
+}
+
+#[inline(always)]
+fn try_binary_op(
+    ctx: &mut Interpreter,
+    f: impl FnOnce(Value, Value) -> Option<Result<Value, RuntimeError>>,
+    op: ast::BinaryOp,
+) -> RuntimeResult {
+    // Note that the values are on the stack in **reverse** order (rhs, then lhs)
+    let rhs = ctx.pop();
+    let lhs = ctx.pop();
+
+    let lhs_type = lhs.typ();
+    let rhs_type = rhs.typ();
+
+    let result = f(lhs, rhs)
+        .ok_or_else(|| RuntimeError::UnsupportedBinaryOp {op, lhs_type, rhs_type})??;
     ctx.value_stack.push(result);
 
     Ok(Status::Running)

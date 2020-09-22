@@ -2,7 +2,7 @@ use std::{fmt, mem};
 
 use static_assertions::const_assert_eq;
 
-use crate::{prim, gc::{Gc, Trace}};
+use crate::{prim, gc::{Gc, Trace}, interpreter::RuntimeError};
 
 /// The different supported types of values
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -166,10 +166,13 @@ impl Value {
 
     /// Applies the binary `/` operator to this value and the given other value or returns `None` if
     /// that operation is not supported for the types of values provided
-    pub fn div(self, other: Self) -> Option<Self> {
+    pub fn div(self, other: Self) -> Option<Result<Self, RuntimeError>> {
         use Value::*;
         match (self, other) {
-            (I64(value1), I64(value2)) => Some(Value::I64(value1 / value2)),
+            (I64(value1), I64(value2)) => Some(match value2 {
+                0 => Err(RuntimeError::DivideByZero),
+                _ => Ok(Value::I64(value1 / value2)),
+            }),
 
             _ => None,
         }
@@ -177,10 +180,13 @@ impl Value {
 
     /// Applies the binary `%` operator to this value and the given other value or returns `None` if
     /// that operation is not supported for the types of values provided
-    pub fn rem(self, other: Self) -> Option<Self> {
+    pub fn rem(self, other: Self) -> Option<Result<Self, RuntimeError>> {
         use Value::*;
         match (self, other) {
-            (I64(value1), I64(value2)) => Some(Value::I64(value1 % value2)),
+            (I64(value1), I64(value2)) => Some(match value2 {
+                0 => Err(RuntimeError::RemainderByZero),
+                _ => Ok(Value::I64(value1 % value2)),
+            }),
 
             _ => None,
         }
