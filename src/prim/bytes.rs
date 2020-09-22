@@ -30,8 +30,8 @@ impl fmt::Display for Bytes {
 
 impl gc::Trace for Bytes {
     fn trace(&self) {
-        // No need to trace a bunch of `u8` values
-        let Bytes(_bytes) = self;
+        let Bytes(bytes) = self;
+        bytes.trace();
     }
 }
 
