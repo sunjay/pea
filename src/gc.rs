@@ -5,6 +5,7 @@ pub use trace::*;
 pub use alloc::{sweep, needs_collect};
 
 use std::fmt;
+use std::iter;
 use std::ptr::NonNull;
 use std::ops::Deref;
 
@@ -48,11 +49,27 @@ impl<T: Trace> Gc<T> {
     }
 }
 
+impl<T: Trace> iter::FromIterator<T> for Gc<[T]> {
+    fn from_iter<I: iter::IntoIterator<Item = T>>(iter: I) -> Self {
+        let items: Vec<T> = Vec::from_iter(iter);
+        items.into()
+    }
+}
+
 impl<'a, T: Trace + Clone> From<&'a [T]> for Gc<[T]> {
     #[inline]
     fn from(slice: &'a [T]) -> Self {
         Self {
             ptr: alloc::allocate_array(slice.iter().cloned()),
+        }
+    }
+}
+
+impl<T: Trace> From<Vec<T>> for Gc<[T]> {
+    #[inline]
+    fn from(items: Vec<T>) -> Self {
+        Self {
+            ptr: alloc::allocate_array(items.into_iter()),
         }
     }
 }
