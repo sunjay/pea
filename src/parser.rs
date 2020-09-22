@@ -41,6 +41,11 @@ pub fn parse_program(input: &[Token], diag: &Diagnostics) -> ast::Program {
     parser.parse_program()
 }
 
+// Technically we can support up to 256 params, but we want to leave some space for locals too
+const MAX_PARAMS: usize = 128;
+// -1 for `self`
+const MAX_ARGS: usize = MAX_PARAMS - 1;
+
 #[derive(Debug, Clone)]
 enum ParseError {
     UnexpectedToken {
@@ -54,6 +59,16 @@ enum ParseError {
 
     DuplicateFuncParam {
         param: ast::Ident,
+    },
+
+    TooManyParams {
+        span: Span,
+        nparams: usize,
+    },
+
+    TooManyArgs {
+        span: Span,
+        nargs: usize,
     },
 }
 
@@ -89,6 +104,14 @@ impl ParseError {
                 diag.error(format!("identifier `{}` is bound more than once in this parameter list", param.value))
                     .span_error(param.span, "used as parameter more than once")
                     .emit();
+            },
+
+            TooManyParams {span, nparams} => {
+                diag.span_error(span, format!("functions may have up to {} parameters but {} were provided", MAX_PARAMS, nparams)).emit();
+            },
+
+            TooManyArgs {span, nargs} => {
+                diag.span_error(span, format!("function calls may have up to {} arguments but {} were provided", MAX_ARGS, nargs)).emit();
             },
         }
     }
@@ -155,6 +178,12 @@ impl<'a> Parser<'a> {
             }
 
             self.input.match_kind(TokenKind::Comma)?;
+        }
+
+        let nparams = params.len();
+        if nparams > MAX_PARAMS {
+            let span = params[0].span.to(params[nparams-1].span);
+            return Err(ParseError::TooManyParams {span, nparams});
         }
 
         Ok(params)

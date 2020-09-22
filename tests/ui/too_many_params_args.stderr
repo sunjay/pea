@@ -1,0 +1,6 @@
+[tests/ui/too_many_params_args.pea:3:9-133:16] error: function calls may have up to 127 arguments but 131 were provided
+
+[tests/ui/too_many_params_args.pea:138:5-268:12] error: functions may have up to 128 parameters but 131 were provided
+
+error: aborting due to 2 previous errors
+

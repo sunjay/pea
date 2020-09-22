@@ -4,7 +4,7 @@
 
 use crate::ast;
 
-use super::{Parser, ParseResult, ParseError, TokenKind, Literal};
+use super::{Parser, ParseResult, ParseError, TokenKind, Literal, MAX_ARGS};
 
 fn prefix_binding_power(kind: TokenKind) -> Result<(TokenKind, ast::UnaryOp, ((), u8)), TokenKind> {
     let (op, bp) = match kind {
@@ -163,6 +163,12 @@ impl<'a> Parser<'a> {
             }
 
             self.input.match_kind(TokenKind::Comma)?;
+        }
+
+        let nargs = args.len();
+        if nargs > MAX_ARGS {
+            let span = args[0].span().to(args[nargs-1].span());
+            return Err(ParseError::TooManyArgs {span, nargs});
         }
 
         Ok(args)
