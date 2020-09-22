@@ -1,10 +1,16 @@
 use std::fmt;
 
-use crate::gc;
+use crate::gc::{self, Gc};
 
 /// A growable ASCII byte string
-#[derive(Debug, Default)]
-pub struct Bytes(Vec<u8>);
+#[derive(Debug)]
+pub struct Bytes(Gc<[u8]>);
+
+impl Default for Bytes {
+    fn default() -> Self {
+        Bytes(Gc::from(&[][..]))
+    }
+}
 
 impl From<&[u8]> for Bytes {
     fn from(value: &[u8]) -> Self {
@@ -26,5 +32,11 @@ impl gc::Trace for Bytes {
     fn trace(&self) {
         // No need to trace a bunch of `u8` values
         let Bytes(_bytes) = self;
+    }
+}
+
+impl Bytes {
+    pub fn add(&self, other: &Self) -> Self {
+        Bytes(self.0.iter().copied().chain(other.0.iter().copied()).collect())
     }
 }

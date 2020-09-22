@@ -1,0 +1,19 @@
+fn say_hello(name) {
+    println!(b"Hello, " + name + b".");
+}
+
+fn full_name(first, last) {
+    return first + b" " + last;
+}
+
+fn main() {
+    let name1 = b"Manish";
+    let name2 = b"Earth";
+    let name3 = b"Moon";
+    // Testing to make sure that string operations do not mutate the original string
+    let full_name1 = full_name(name1, name2);
+    let full_name2 = full_name(name1, name3);
+
+    say_hello(full_name1);
+    say_hello(full_name2);
+}

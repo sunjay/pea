@@ -136,7 +136,7 @@ impl Value {
         use Value::*;
         match (self, other) {
             (I64(value1), I64(value2)) => Some(Value::I64(value1 + value2)),
-            (Bytes(_value1), Bytes(_value2)) => todo!(),
+            (Bytes(value1), Bytes(value2)) => Some(Value::Bytes(Gc::new(value1.add(&value2)))),
 
             _ => None,
         }
