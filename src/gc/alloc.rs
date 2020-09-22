@@ -10,6 +10,7 @@
 
 use std::mem;
 use std::iter;
+use std::cmp::max;
 use std::ptr::{self, NonNull};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::alloc::{alloc, dealloc, Layout, handle_alloc_error};
@@ -19,6 +20,15 @@ use parking_lot::{Mutex, const_mutex};
 use crate::gc_debug;
 
 use super::Trace;
+
+// An arbitrary value. The goal is to make it so that as the amount of memory the program uses
+// grows, the threshold moves farther out to limit the total time spent re-traversing the larger
+// live set. Could be tuned with some real-world programs.
+const GC_HEAP_GROW_FACTOR: usize = 2;
+
+// An arbitrary value. The goal is to not trigger the first few GCs too quickly but also to not wait
+// too long. Could be tuned with some real-world programs.
+const GC_DEFAULT_THRESHOLD: usize = 1024 * 1024; // bytes
 
 #[derive(Debug)]
 struct GcState {
@@ -35,17 +45,10 @@ unsafe impl Send for GcState {}
 
 static GC_STATE: Mutex<GcState> = const_mutex(GcState {
     alloc_list: ptr::null_mut(),
-    // arbitrary -- goal is to not trigger the first few GCs too quickly but also to not wait too
-    // long. Could be tuned with some real-world programs.
-    threshold: 1024 * 1024,
+    threshold: GC_DEFAULT_THRESHOLD,
     // Nothing has been allocated yet
     allocated: 0,
 });
-
-// arbitrary -- goal is to make it so that as the amount of memory the program uses grows, the
-// threshold moves farther out to limit the total time spent re-traversing the larger live set.
-// Could be tuned with some real-world programs.
-const GC_HEAP_GROW_FACTOR: usize = 2;
 
 /// true if the threshold has been reached for the next collection
 static NEEDS_COLLECT: AtomicBool = AtomicBool::new(false);
@@ -332,7 +335,9 @@ pub fn sweep() {
     }
 
     // Adjust the threshold based on how much is still allocated
-    gc_state.threshold = gc_state.allocated * GC_HEAP_GROW_FACTOR;
+    //
+    // If all memory gets deallocated, we don't want the threshold to get set to zero
+    gc_state.threshold = max(gc_state.allocated * GC_HEAP_GROW_FACTOR, GC_DEFAULT_THRESHOLD);
 }
 
 #[cfg(test)]
