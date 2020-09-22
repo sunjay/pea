@@ -81,7 +81,7 @@ steps:
     rustup component add miri
     echo "Successfully installed miri on $MIRI_NIGHTLY"
 
-    MIRIFLAGS="-Zmiri-disable-isolation" cargo miri test --verbose --all
+    MIRIFLAGS="-Zmiri-disable-isolation" cargo miri test --verbose --all -- -- --nocapture
   displayName: miri
   condition: and( ne( variables['Agent.OS'], 'Windows_NT' ), eq( variables['rustup_toolchain'], 'nightly' ) )
 
