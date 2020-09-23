@@ -1,0 +1,6 @@
+[tests/ui/out_of_order_cond.pea:8:5-8:8] error: expected a byte string, found: `else`
+
+[tests/ui/out_of_order_cond.pea:9:1] error: expected `fn`, found: `}`
+
+error: aborting due to 2 previous errors
+

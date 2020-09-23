@@ -109,6 +109,7 @@ impl<'a> NameResolver<'a> {
             Println(stmt) => nir::Stmt::Println(self.resolve_println_stmt(stmt)),
             VarDecl(stmt) => nir::Stmt::VarDecl(self.resolve_var_decl_stmt(stmt)),
             Expr(stmt) => nir::Stmt::Expr(self.resolve_expr_stmt(stmt)),
+            Cond(stmt) => todo!(),
         }
     }
 
@@ -163,6 +164,7 @@ impl<'a> NameResolver<'a> {
     fn resolve_expr(&mut self, expr: &ast::Expr) -> nir::Expr {
         use ast::Expr::*;
         match expr {
+            Cond(cond) => todo!(),
             UnaryOp(expr) => nir::Expr::UnaryOp(Box::new(self.resolve_unary_op(expr))),
             BinaryOp(expr) => nir::Expr::BinaryOp(Box::new(self.resolve_binary_op(expr))),
             Assign(expr) => nir::Expr::Assign(Box::new(self.resolve_assign(expr))),

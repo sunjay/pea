@@ -88,6 +88,11 @@ impl<'a> Parser<'a> {
                 }))
             },
 
+            Err(TokenKind::Keyword(Keyword::If)) => {
+                let cond = self.cond()?;
+                ast::Expr::Cond(Box::new(cond))
+            },
+
             Ok((kind, op, ((), r_bp))) => {
                 match op {
                     PrefixOp::Return => {
@@ -183,6 +188,41 @@ impl<'a> Parser<'a> {
         }
 
         Ok(lhs)
+    }
+
+    pub(in super) fn cond(&mut self) -> ParseResult<ast::Cond> {
+        let if_token = self.input.match_kind(TokenKind::Keyword(Keyword::If))?.clone();
+        let if_cond = self.expr()?;
+        let if_body = self.block()?;
+
+        let mut else_if_clauses = Vec::new();
+        let mut else_clause = None;
+        while self.input.peek().kind == TokenKind::Keyword(Keyword::Else) {
+            let else_token = self.input.match_kind(TokenKind::Keyword(Keyword::Else))?.clone();
+
+            match self.input.peek().kind {
+                TokenKind::Keyword(Keyword::If) => {
+                    let if_token = self.input.match_kind(TokenKind::Keyword(Keyword::If))?.clone();
+                    let cond = self.expr()?;
+                    let body = self.block()?;
+
+                    else_if_clauses.push(ast::ElseIfClause {else_token, if_token, cond, body});
+                },
+
+                TokenKind::BraceOpen => {
+                    let body = self.block()?;
+                    else_clause = Some(ast::ElseClause {else_token, body});
+                    break;
+                },
+
+                _ => return Err(ParseError::UnexpectedToken {
+                    expected: vec![TokenKind::Keyword(Keyword::If), TokenKind::BraceOpen],
+                    actual: self.input.advance().clone(),
+                }),
+            }
+        }
+
+        Ok(ast::Cond {if_token, if_cond, if_body, else_if_clauses, else_clause})
     }
 
     /// Parses comma separated expressions until the `)` token

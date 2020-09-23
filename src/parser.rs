@@ -221,6 +221,7 @@ impl<'a> Parser<'a> {
         match self.input.peek().kind {
             TokenKind::Keyword(Keyword::Println) => self.println_stmt().map(ast::Stmt::Println).map(Ok),
             TokenKind::Keyword(Keyword::Let) => self.var_decl_stmt().map(ast::Stmt::VarDecl).map(Ok),
+            TokenKind::Keyword(Keyword::If) => self.cond_stmt().map(Ok),
             _ => self.expr_stmt().map(|res| res.map(ast::Stmt::Expr)),
         }
     }
@@ -255,6 +256,20 @@ impl<'a> Parser<'a> {
         let semicolon_token = self.input.match_kind(TokenKind::Semicolon)?.clone();
 
         Ok(ast::VarDeclStmt {let_token, name, equals_token, expr, semicolon_token})
+    }
+
+    /// Parses a conditional statement but allows it to be an expression statement if it ends with a
+    /// semicolon
+    fn cond_stmt(&mut self) -> ParseResult<ast::Stmt> {
+        let cond = self.cond()?;
+
+        if self.input.peek().kind == TokenKind::Semicolon {
+            let expr = ast::Expr::Cond(Box::new(cond));
+            let semicolon_token = self.input.match_kind(TokenKind::Semicolon)?.clone();
+            Ok(ast::Stmt::Expr(ast::ExprStmt {expr, semicolon_token}))
+        } else {
+            Ok(ast::Stmt::Cond(cond))
+        }
     }
 
     /// Parses an expression statement or just expression depending on whether the following token

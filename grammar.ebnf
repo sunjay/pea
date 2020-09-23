@@ -7,13 +7,16 @@ func_params ::= (ident ',')* ident?
 
 block ::= '{' stmt* '}'
 
-stmt ::= println_stmt | var_decl_stmt | expr_stmt
+stmt ::= println_stmt | var_decl_stmt | expr_stmt | cond
 println_stmt ::= 'println' '!' '(' expr ')' ';'
 var_decl_stmt ::= 'let' ident '=' expr ';'
 expr_stmt ::= expr ';'
 
-expr ::= expr bin_op expr | unary_op expr | assign | group | call | return
+expr ::= expr bin_op expr | unary_op expr | assign | group | call | return | cond
          integer_literal | bool_literal | byte_str | ident
+
+cond ::= 'if' expr block ('else' 'if' expr block)* ('else' block)?
+
 # The precendence of these operators is defined in the code
 bin_op ::= '+' | '-' | '*' | '/' | '%' | '==' | '!=' | '>' | '>=' | '<' | '<='
 unary_op ::= '+' | '-' | '!'

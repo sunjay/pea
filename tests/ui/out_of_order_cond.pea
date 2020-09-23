@@ -1,0 +1,9 @@
+fn main() {
+    let a = 3;
+
+    if a == 0 { println!(1); }
+    else if a == 1 { println!(1); }
+    else if a == 2 { println!(1); }
+    else { println!(b"uh oh!"); }
+    else if a == 3 { println!(1); }
+}

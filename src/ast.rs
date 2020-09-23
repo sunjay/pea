@@ -32,11 +32,18 @@ pub struct Block {
     pub brace_close_token: Token,
 }
 
+impl Block {
+    pub fn span(&self) -> Span {
+        self.brace_open_token.span.to(self.brace_close_token.span)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Stmt {
     Println(PrintlnStmt),
     VarDecl(VarDeclStmt),
     Expr(ExprStmt),
+    Cond(Cond),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -66,6 +73,7 @@ pub struct ExprStmt {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
+    Cond(Box<Cond>),
     UnaryOp(Box<UnaryOpExpr>),
     BinaryOp(Box<BinaryOpExpr>),
     Assign(Box<AssignExpr>),
@@ -82,6 +90,7 @@ impl Expr {
     pub fn span(&self) -> Span {
         use Expr::*;
         match self {
+            Cond(expr) => expr.span(),
             UnaryOp(expr) => expr.span(),
             BinaryOp(expr) => expr.span(),
             Assign(expr) => expr.span(),
@@ -93,6 +102,57 @@ impl Expr {
             Bool(expr) => expr.span,
             BStr(expr) => expr.span,
         }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Cond {
+    pub if_token: Token,
+    pub if_cond: Expr,
+    pub if_body: Block,
+    pub else_if_clauses: Vec<ElseIfClause>,
+    pub else_clause: Option<ElseClause>,
+}
+
+impl Cond {
+    pub fn span(&self) -> Span {
+        match (&self.else_clause, self.else_if_clauses.last()) {
+            (Some(else_clause), _) => {
+                self.if_token.span.to(else_clause.span())
+            },
+
+            (None, Some(else_if_clause)) => {
+                self.if_token.span.to(else_if_clause.span())
+            },
+
+            (None, None) => self.if_token.span,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ElseIfClause {
+    pub else_token: Token,
+    pub if_token: Token,
+    pub cond: Expr,
+    pub body: Block,
+}
+
+impl ElseIfClause {
+    pub fn span(&self) -> Span {
+        self.else_token.span.to(self.body.span())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ElseClause {
+    pub else_token: Token,
+    pub body: Block,
+}
+
+impl ElseClause {
+    pub fn span(&self) -> Span {
+        self.else_token.span.to(self.body.span())
     }
 }
 
