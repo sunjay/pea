@@ -178,6 +178,46 @@ pub fn mul(ctx: &mut Interpreter) -> RuntimeResult {
     binary_op(ctx, Value::mul, ast::BinaryOp::Mul)
 }
 
+#[inline]
+pub fn div(ctx: &mut Interpreter) -> RuntimeResult {
+    try_binary_op(ctx, Value::div, ast::BinaryOp::Div)
+}
+
+#[inline]
+pub fn rem(ctx: &mut Interpreter) -> RuntimeResult {
+    try_binary_op(ctx, Value::rem, ast::BinaryOp::Rem)
+}
+
+#[inline]
+pub fn equals_equals(ctx: &mut Interpreter) -> RuntimeResult {
+    binary_op(ctx, Value::equals_equals, ast::BinaryOp::EqualsEquals)
+}
+
+#[inline]
+pub fn not_equals(ctx: &mut Interpreter) -> RuntimeResult {
+    binary_op(ctx, Value::not_equals, ast::BinaryOp::NotEquals)
+}
+
+#[inline]
+pub fn greater_than(ctx: &mut Interpreter) -> RuntimeResult {
+    binary_op(ctx, Value::greater_than, ast::BinaryOp::GreaterThan)
+}
+
+#[inline]
+pub fn greater_than_equals(ctx: &mut Interpreter) -> RuntimeResult {
+    binary_op(ctx, Value::greater_than_equals, ast::BinaryOp::GreaterThanEquals)
+}
+
+#[inline]
+pub fn less_than(ctx: &mut Interpreter) -> RuntimeResult {
+    binary_op(ctx, Value::less_than, ast::BinaryOp::LessThan)
+}
+
+#[inline]
+pub fn less_than_equals(ctx: &mut Interpreter) -> RuntimeResult {
+    binary_op(ctx, Value::less_than_equals, ast::BinaryOp::LessThanEquals)
+}
+
 #[inline(always)]
 fn binary_op(
     ctx: &mut Interpreter,
@@ -196,16 +236,6 @@ fn binary_op(
     ctx.value_stack.push(result);
 
     Ok(Status::Running)
-}
-
-#[inline]
-pub fn div(ctx: &mut Interpreter) -> RuntimeResult {
-    try_binary_op(ctx, Value::div, ast::BinaryOp::Div)
-}
-
-#[inline]
-pub fn rem(ctx: &mut Interpreter) -> RuntimeResult {
-    try_binary_op(ctx, Value::rem, ast::BinaryOp::Rem)
 }
 
 #[inline(always)]

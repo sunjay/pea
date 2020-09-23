@@ -134,6 +134,13 @@ pub enum BinaryOp {
     Mul,
     Div,
     Rem,
+
+    EqualsEquals,
+    NotEquals,
+    GreaterThan,
+    GreaterThanEquals,
+    LessThan,
+    LessThanEquals,
 }
 
 impl fmt::Display for BinaryOp {
@@ -145,6 +152,13 @@ impl fmt::Display for BinaryOp {
             Mul => write!(f, "`*`"),
             Div => write!(f, "`/`"),
             Rem => write!(f, "`%`"),
+
+            EqualsEquals => write!(f, "`==`"),
+            NotEquals => write!(f, "`!=`"),
+            GreaterThan => write!(f, "`>`"),
+            GreaterThanEquals => write!(f, "`>=`"),
+            LessThan => write!(f, "`<`"),
+            LessThanEquals => write!(f, "`<=`"),
         }
     }
 }

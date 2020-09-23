@@ -3,7 +3,7 @@ use std::fmt;
 use crate::gc::{self, Gc};
 
 /// A growable ASCII byte string
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Bytes(Gc<[u8]>);
 
 impl Default for Bytes {

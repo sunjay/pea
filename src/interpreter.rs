@@ -183,11 +183,19 @@ impl Interpreter {
             Neg => instr::neg.run(self),
             Pos => instr::pos.run(self),
             Not => instr::not.run(self),
+
             Add => instr::add.run(self),
             Sub => instr::sub.run(self),
             Mul => instr::mul.run(self),
             Div => instr::div.run(self),
             Rem => instr::rem.run(self),
+
+            EqualsEquals => instr::equals_equals.run(self),
+            NotEquals => instr::not_equals.run(self),
+            GreaterThan => instr::greater_than.run(self),
+            GreaterThanEquals => instr::greater_than_equals.run(self),
+            LessThan => instr::less_than.run(self),
+            LessThanEquals => instr::less_than_equals.run(self),
         }
     }
 

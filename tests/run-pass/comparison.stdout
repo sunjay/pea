@@ -1,0 +1,53 @@
+WOW LOOK AT THESE COMPARISONS
+
+1 vs. 1
+
+a == b
+true
+a != b
+false
+a > b
+false
+a >= b
+true
+a < b
+false
+a <= b
+true
+
+1 vs. 2
+
+a == b
+false
+a != b
+true
+a > b
+false
+a >= b
+false
+a < b
+true
+a <= b
+true
+
+300 vs. -300
+
+a == b
+false
+a != b
+true
+a > b
+true
+a >= b
+true
+a < b
+false
+a <= b
+false
+
+"abc" vs. "abc"
+
+a == b
+true
+a != b
+false

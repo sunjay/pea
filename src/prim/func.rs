@@ -6,7 +6,7 @@ use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 
 use crate::{gc, bytecode::{Bytecode, BytecodeCursor, OpCode}, source_files::SourceFiles};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Func {
     pub name: Arc<str>,
     pub arity: u8,
@@ -99,6 +99,13 @@ impl Func {
                 Mul => cwriteln!(out, "mul()"),
                 Div => cwriteln!(out, "div()"),
                 Rem => cwriteln!(out, "rem()"),
+
+                EqualsEquals => cwriteln!(out, "equals_equals()"),
+                NotEquals => cwriteln!(out, "not_equals"),
+                GreaterThan => cwriteln!(out, "greater_than()"),
+                GreaterThanEquals => cwriteln!(out, "greater_than_equals()"),
+                LessThan => cwriteln!(out, "less_than()"),
+                LessThanEquals => cwriteln!(out, "less_than_equals()"),
             }
         }
         cwriteln!(out);

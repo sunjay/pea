@@ -55,6 +55,13 @@ fn infix_binding_power(kind: TokenKind) -> Result<(TokenKind, InfixOp, (u8, u8))
         TokenKind::Slash => (InfixOp::BinaryOp(ast::BinaryOp::Div), (7, 8)),
         TokenKind::Percent => (InfixOp::BinaryOp(ast::BinaryOp::Rem), (7, 8)),
 
+        TokenKind::EqualsEquals => (InfixOp::BinaryOp(ast::BinaryOp::EqualsEquals), (3, 4)),
+        TokenKind::NotEquals => (InfixOp::BinaryOp(ast::BinaryOp::NotEquals), (3, 4)),
+        TokenKind::GreaterThan => (InfixOp::BinaryOp(ast::BinaryOp::GreaterThan), (3, 4)),
+        TokenKind::GreaterThanEquals => (InfixOp::BinaryOp(ast::BinaryOp::GreaterThanEquals), (3, 4)),
+        TokenKind::LessThan => (InfixOp::BinaryOp(ast::BinaryOp::LessThan), (3, 4)),
+        TokenKind::LessThanEquals => (InfixOp::BinaryOp(ast::BinaryOp::LessThanEquals), (3, 4)),
+
         _ => return Err(kind),
     };
 

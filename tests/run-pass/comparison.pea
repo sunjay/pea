@@ -1,0 +1,35 @@
+fn compare(a, b) {
+    println!(b"a == b");
+    println!(a == b);
+    println!(b"a != b");
+    println!(a != b);
+    println!(b"a > b");
+    println!(a > b);
+    println!(b"a >= b");
+    println!(a >= b);
+    println!(b"a < b");
+    println!(a < b);
+    println!(b"a <= b");
+    println!(a <= b);
+}
+
+fn main() {
+    println!(b"WOW LOOK AT THESE COMPARISONS");
+
+    println!(b"\n1 vs. 1\n");
+    compare(1, 1);
+
+    println!(b"\n1 vs. 2\n");
+    compare(1, 2);
+
+    println!(b"\n300 vs. -300\n");
+    compare(300, -300);
+
+    println!(b"\n\"abc\" vs. \"abc\"\n");
+    let a = b"abc";
+    let b = a;
+    println!(b"a == b");
+    println!(a == b);
+    println!(b"a != b");
+    println!(a != b);
+}

@@ -186,6 +186,13 @@ impl<'a> FunctionCompiler<'a> {
             nir::BinaryOp::Mul => OpCode::Mul,
             nir::BinaryOp::Div => OpCode::Div,
             nir::BinaryOp::Rem => OpCode::Rem,
+
+            nir::BinaryOp::EqualsEquals => OpCode::EqualsEquals,
+            nir::BinaryOp::NotEquals => OpCode::NotEquals,
+            nir::BinaryOp::GreaterThan => OpCode::GreaterThan,
+            nir::BinaryOp::GreaterThanEquals => OpCode::GreaterThanEquals,
+            nir::BinaryOp::LessThan => OpCode::LessThan,
+            nir::BinaryOp::LessThanEquals => OpCode::LessThanEquals,
         }, op_token.span);
     }
 

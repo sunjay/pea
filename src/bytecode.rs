@@ -15,7 +15,7 @@ pub struct Patch {
 }
 
 /// A compiled chunk of bytecode, including both opcodes and operand bytes
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Bytecode {
     bytes: Vec<u8>,
     /// Map of offset into `bytes` to the corresponding `Span`
@@ -341,4 +341,23 @@ pub enum OpCode {
     /// Pops the top two values from the stack, computes the remainder of the second popped value
     /// from the first popped value, and then pushes the result back onto the top of the stack.
     Rem,
+
+    /// Pops the top two values from the stack, applies the `==` operator, and then pushes the
+    /// result back onto the top of the stack.
+    EqualsEquals,
+    /// Pops the top two values from the stack, applies the `!=` operator, and then pushes the
+    /// result back onto the top of the stack.
+    NotEquals,
+    /// Pops the top two values from the stack, applies the `>` operator, and then pushes the
+    /// result back onto the top of the stack.
+    GreaterThan,
+    /// Pops the top two values from the stack, applies the `>=` operator, and then pushes the
+    /// result back onto the top of the stack.
+    GreaterThanEquals,
+    /// Pops the top two values from the stack, applies the `<` operator, and then pushes the
+    /// result back onto the top of the stack.
+    LessThan,
+    /// Pops the top two values from the stack, applies the `<=` operator, and then pushes the
+    /// result back onto the top of the stack.
+    LessThanEquals,
 }

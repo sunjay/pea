@@ -191,4 +191,78 @@ impl Value {
             _ => None,
         }
     }
+
+    /// Applies the binary `==` operator to this value and the given other value or returns `None`
+    /// if that operation is not supported for the types of values provided
+    pub fn equals_equals(self, other: Self) -> Option<Self> {
+        use Value::*;
+        match (self, other) {
+            (Unit, Unit) => Some(Value::Bool(true)),
+            (Bool(value1), Bool(value2)) => Some(Value::Bool(value1 == value2)),
+            (I64(value1), I64(value2)) => Some(Value::Bool(value1 == value2)),
+            (Bytes(value1), Bytes(value2)) => Some(Value::Bool(value1 == value2)),
+            (Func(value1), Func(value2)) => Some(Value::Bool(value1 == value2)),
+
+            _ => None,
+        }
+    }
+
+    /// Applies the binary `!=` operator to this value and the given other value or returns `None`
+    /// if that operation is not supported for the types of values provided
+    pub fn not_equals(self, other: Self) -> Option<Self> {
+        use Value::*;
+        match (self, other) {
+            (Unit, Unit) => Some(Value::Bool(false)),
+            (Bool(value1), Bool(value2)) => Some(Value::Bool(value1 != value2)),
+            (I64(value1), I64(value2)) => Some(Value::Bool(value1 != value2)),
+            (Bytes(value1), Bytes(value2)) => Some(Value::Bool(value1 != value2)),
+            (Func(value1), Func(value2)) => Some(Value::Bool(value1 != value2)),
+
+            _ => None,
+        }
+    }
+
+    /// Applies the binary `>` operator to this value and the given other value or returns `None`
+    /// if that operation is not supported for the types of values provided
+    pub fn greater_than(self, other: Self) -> Option<Self> {
+        use Value::*;
+        match (self, other) {
+            (I64(value1), I64(value2)) => Some(Value::Bool(value1 > value2)),
+
+            _ => None,
+        }
+    }
+
+    /// Applies the binary `>=` operator to this value and the given other value or returns `None`
+    /// if that operation is not supported for the types of values provided
+    pub fn greater_than_equals(self, other: Self) -> Option<Self> {
+        use Value::*;
+        match (self, other) {
+            (I64(value1), I64(value2)) => Some(Value::Bool(value1 >= value2)),
+
+            _ => None,
+        }
+    }
+
+    /// Applies the binary `<` operator to this value and the given other value or returns `None`
+    /// if that operation is not supported for the types of values provided
+    pub fn less_than(self, other: Self) -> Option<Self> {
+        use Value::*;
+        match (self, other) {
+            (I64(value1), I64(value2)) => Some(Value::Bool(value1 < value2)),
+
+            _ => None,
+        }
+    }
+
+    /// Applies the binary `<=` operator to this value and the given other value or returns `None`
+    /// if that operation is not supported for the types of values provided
+    pub fn less_than_equals(self, other: Self) -> Option<Self> {
+        use Value::*;
+        match (self, other) {
+            (I64(value1), I64(value2)) => Some(Value::Bool(value1 <= value2)),
+
+            _ => None,
+        }
+    }
 }
