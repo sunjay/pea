@@ -212,6 +212,20 @@ impl<'a> Parser<'a> {
             }
         }
 
+        // HACK: (mild) Any expressions that are also statements must be "pulled out" of the list of
+        // statements if they are the final statement in a block and there is no other final
+        // expression. Without this, those statements would never be matched as the final expression
+        // since the statement parser is run first.
+        if ret_expr.is_none() {
+            match stmts.last() {
+                Some(ast::Stmt::Cond(_)) => if let Some(ast::Stmt::Cond(cond)) = stmts.pop() {
+                    ret_expr = Some(ast::Expr::Cond(Box::new(cond)));
+                },
+
+                _ => {},
+            }
+        }
+
         let brace_close_token = self.input.match_kind(TokenKind::BraceClose)?.clone();
 
         Ok(ast::Block {brace_open_token, stmts, ret_expr, brace_close_token})
