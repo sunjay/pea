@@ -56,6 +56,12 @@ impl<T: Trace> iter::FromIterator<T> for Gc<[T]> {
     }
 }
 
+impl<T: Trace> From<T> for Gc<T> {
+    fn from(value: T) -> Self {
+        Self::new(value)
+    }
+}
+
 impl<'a, T: Trace + Clone> From<&'a [T]> for Gc<[T]> {
     #[inline]
     fn from(slice: &'a [T]) -> Self {
@@ -82,6 +88,14 @@ impl From<&str> for Gc<str> {
         let ptr = unsafe { NonNull::new_unchecked(ptr.as_ptr() as *mut str) };
 
         Self {ptr}
+    }
+}
+
+// This code is pretty much the same as the impl for Arc<str>
+impl From<String> for Gc<str> {
+    #[inline]
+    fn from(value: String) -> Gc<str> {
+        Gc::from(&value[..])
     }
 }
 
@@ -126,6 +140,52 @@ impl<T: ?Sized + fmt::Debug> fmt::Debug for Gc<T> {
 impl<T: ?Sized + fmt::Display> fmt::Display for Gc<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Display::fmt(&**self, f)
+    }
+}
+
+impl<T: ?Sized> fmt::Pointer for Gc<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Pointer::fmt(&self.ptr, f)
+    }
+}
+
+impl<T: ?Sized + PartialEq> PartialEq for Gc<T> {
+    fn eq(&self, other: &Self) -> bool {
+        (**self).eq(&**other)
+    }
+}
+
+impl<T: ?Sized + Eq> Eq for Gc<T> {}
+
+impl<T: ?Sized + PartialOrd> PartialOrd for Gc<T> {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        (**self).partial_cmp(&**other)
+    }
+}
+
+impl<T: ?Sized + Ord> Ord for Gc<T> {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        (**self).cmp(&**other)
+    }
+}
+
+impl<T: ?Sized + std::borrow::Borrow<T>> std::borrow::Borrow<T> for Gc<T> {
+    fn borrow(&self) -> &T {
+        &**self
+    }
+}
+
+impl<T: ?Sized> AsRef<T> for Gc<T> {
+    fn as_ref(&self) -> &T {
+        &**self
+    }
+}
+
+impl<T: ?Sized> Unpin for Gc<T> {}
+
+impl<T: ?Sized + std::hash::Hash> std::hash::Hash for Gc<T> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        (**self).hash(state)
     }
 }
 
