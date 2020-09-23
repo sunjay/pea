@@ -171,6 +171,8 @@ impl<'a> FunctionCompiler<'a> {
     fn walk_expr(&mut self, expr: &nir::Expr) {
         use nir::Expr::*;
         match expr {
+            Or(expr) => todo!(),
+            And(expr) => todo!(),
             Cond(cond) => self.walk_cond(cond),
             UnaryOp(expr) => self.walk_unary_op(expr),
             BinaryOp(expr) => self.walk_binary_op(expr),

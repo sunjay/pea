@@ -83,6 +83,8 @@ pub struct ExprStmt {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
+    Or(Box<OrExpr>),
+    And(Box<AndExpr>),
     Cond(Box<Cond>),
     UnaryOp(Box<UnaryOpExpr>),
     BinaryOp(Box<BinaryOpExpr>),
@@ -94,6 +96,22 @@ pub enum Expr {
     Integer(IntegerLiteral),
     Bool(BoolLiteral),
     BStr(BStrLiteral),
+}
+
+/// Short-circuiting `||` expression
+#[derive(Debug, Clone, PartialEq)]
+pub struct OrExpr {
+    pub lhs: Expr,
+    pub oror_token: Token,
+    pub rhs: Expr,
+}
+
+/// Short-circuiting `&&` expression
+#[derive(Debug, Clone, PartialEq)]
+pub struct AndExpr {
+    pub lhs: Expr,
+    pub andand_token: Token,
+    pub rhs: Expr,
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -164,8 +164,8 @@ impl<'a> NameResolver<'a> {
     fn resolve_expr(&mut self, expr: &ast::Expr) -> nir::Expr {
         use ast::Expr::*;
         match expr {
-            Or(expr) => todo!(),
-            And(expr) => todo!(),
+            Or(expr) => nir::Expr::Or(Box::new(self.resolve_or(expr))),
+            And(expr) => nir::Expr::And(Box::new(self.resolve_and(expr))),
             Cond(cond) => nir::Expr::Cond(Box::new(self.resolve_cond(cond))),
             UnaryOp(expr) => nir::Expr::UnaryOp(Box::new(self.resolve_unary_op(expr))),
             BinaryOp(expr) => nir::Expr::BinaryOp(Box::new(self.resolve_binary_op(expr))),
@@ -178,6 +178,26 @@ impl<'a> NameResolver<'a> {
             Bool(value) => nir::Expr::Bool(value.clone()),
             BStr(value) => nir::Expr::BStr(value.clone()),
         }
+    }
+
+    fn resolve_or(&mut self, expr: &ast::OrExpr) -> nir::OrExpr {
+        let ast::OrExpr {lhs, oror_token, rhs} = expr;
+
+        let lhs = self.resolve_expr(lhs);
+        let oror_token = oror_token.clone();
+        let rhs = self.resolve_expr(rhs);
+
+        nir::OrExpr {lhs, oror_token, rhs}
+    }
+
+    fn resolve_and(&mut self, expr: &ast::AndExpr) -> nir::AndExpr {
+        let ast::AndExpr {lhs, andand_token, rhs} = expr;
+
+        let lhs = self.resolve_expr(lhs);
+        let andand_token = andand_token.clone();
+        let rhs = self.resolve_expr(rhs);
+
+        nir::AndExpr {lhs, andand_token, rhs}
     }
 
     fn resolve_cond(&mut self, cond: &ast::Cond) -> nir::Cond {
