@@ -1,6 +1,18 @@
 //! Parser for expressions
 //!
 //! See: https://matklad.github.io/2020/04/13/simple-but-powerful-pratt-parsing.html
+//!
+//! # Precendence Table
+//!
+//! |  Prec  | Fixity  | Operators                          |
+//! |--------|---------|------------------------------------|
+//! | 11, _  | postfix | `(...)`                            |
+//! |  _, 9  | prefix  | `+`, `-`, `!`                      |
+//! |  7, 8  | infix   | `*`, `/`, `%`                      |
+//! |  5, 6  | infix   | `+`, `-`                           |
+//! |  3, 4  | infix   | `==`, `!=`, `>`, `>=`, `<`, `<=`   |
+//! |  2, 1  | infix   | `=`                                |
+//! |  _, 1  | prefix  | `return`                           |
 
 use crate::ast;
 
@@ -51,6 +63,7 @@ fn infix_binding_power(kind: TokenKind) -> Result<(TokenKind, InfixOp, (u8, u8))
 
         TokenKind::Plus => (InfixOp::BinaryOp(ast::BinaryOp::Add), (5, 6)),
         TokenKind::Minus => (InfixOp::BinaryOp(ast::BinaryOp::Sub), (5, 6)),
+
         TokenKind::Times => (InfixOp::BinaryOp(ast::BinaryOp::Mul), (7, 8)),
         TokenKind::Slash => (InfixOp::BinaryOp(ast::BinaryOp::Div), (7, 8)),
         TokenKind::Percent => (InfixOp::BinaryOp(ast::BinaryOp::Rem), (7, 8)),
