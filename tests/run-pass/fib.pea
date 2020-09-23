@@ -7,7 +7,7 @@ fn fib(n) {
 }
 
 fn main() {
-    println!(b"fib(35)");
-    let value = fib(35);
+    println!(b"fib(5)");
+    let value = fib(5);
     println!(value);
 }
