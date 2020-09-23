@@ -1,0 +1,14 @@
+fn main() {
+    let b = 44;
+    if true {
+        let a = 3;
+        let z = a * 2;
+    } else {
+        let a = -3;
+        // values from the other branch aren't available here
+        println!(z);
+    }
+
+    // values from within the blocks of an if aren't available here
+    println!(b + a);
+}

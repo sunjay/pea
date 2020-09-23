@@ -1,0 +1,6 @@
+[tests/ui/block_scope.pea:9:18] error: cannot find name `z` in this scope
+
+[tests/ui/block_scope.pea:13:18] error: cannot find name `a` in this scope
+
+error: aborting due to 2 previous errors
+

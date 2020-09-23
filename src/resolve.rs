@@ -109,7 +109,7 @@ impl<'a> NameResolver<'a> {
             Println(stmt) => nir::Stmt::Println(self.resolve_println_stmt(stmt)),
             VarDecl(stmt) => nir::Stmt::VarDecl(self.resolve_var_decl_stmt(stmt)),
             Expr(stmt) => nir::Stmt::Expr(self.resolve_expr_stmt(stmt)),
-            Cond(stmt) => todo!(),
+            Cond(stmt) => nir::Stmt::Cond(self.resolve_cond(stmt)),
         }
     }
 
@@ -164,7 +164,7 @@ impl<'a> NameResolver<'a> {
     fn resolve_expr(&mut self, expr: &ast::Expr) -> nir::Expr {
         use ast::Expr::*;
         match expr {
-            Cond(cond) => todo!(),
+            Cond(cond) => nir::Expr::Cond(Box::new(self.resolve_cond(cond))),
             UnaryOp(expr) => nir::Expr::UnaryOp(Box::new(self.resolve_unary_op(expr))),
             BinaryOp(expr) => nir::Expr::BinaryOp(Box::new(self.resolve_binary_op(expr))),
             Assign(expr) => nir::Expr::Assign(Box::new(self.resolve_assign(expr))),
@@ -175,6 +175,44 @@ impl<'a> NameResolver<'a> {
             Integer(value) => nir::Expr::Integer(value.clone()),
             Bool(value) => nir::Expr::Bool(value.clone()),
             BStr(value) => nir::Expr::BStr(value.clone()),
+        }
+    }
+
+    fn resolve_cond(&mut self, cond: &ast::Cond) -> nir::Cond {
+        let ast::Cond {
+            if_token,
+            if_cond,
+            if_body,
+            else_if_clauses,
+            else_clause,
+        } = cond;
+
+        let if_token = if_token.clone();
+        let if_cond = self.resolve_expr(if_cond);
+        let if_body = self.resolve_block(if_body);
+
+        let else_if_clauses = else_if_clauses.iter().map(|clause| {
+            let ast::ElseIfClause {else_token, if_token, cond, body} = clause;
+            let else_token = else_token.clone();
+            let if_token = if_token.clone();
+            let cond = self.resolve_expr(cond);
+            let body = self.resolve_block(body);
+            nir::ElseIfClause {else_token, if_token, cond, body}
+        }).collect();
+
+        let else_clause = else_clause.as_ref().map(|clause| {
+            let ast::ElseClause {else_token, body} = clause;
+            let else_token = else_token.clone();
+            let body = self.resolve_block(body);
+            nir::ElseClause {else_token, body}
+        });
+
+        nir::Cond {
+            if_token,
+            if_cond,
+            if_body,
+            else_if_clauses,
+            else_clause,
         }
     }
 

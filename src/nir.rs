@@ -53,6 +53,7 @@ pub enum Stmt {
     Println(PrintlnStmt),
     VarDecl(VarDeclStmt),
     Expr(ExprStmt),
+    Cond(Cond),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -82,6 +83,7 @@ pub struct ExprStmt {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
+    Cond(Box<Cond>),
     UnaryOp(Box<UnaryOpExpr>),
     BinaryOp(Box<BinaryOpExpr>),
     Assign(Box<AssignExpr>),
@@ -92,6 +94,29 @@ pub enum Expr {
     Integer(IntegerLiteral),
     Bool(BoolLiteral),
     BStr(BStrLiteral),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Cond {
+    pub if_token: Token,
+    pub if_cond: Expr,
+    pub if_body: Block,
+    pub else_if_clauses: Vec<ElseIfClause>,
+    pub else_clause: Option<ElseClause>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ElseIfClause {
+    pub else_token: Token,
+    pub if_token: Token,
+    pub cond: Expr,
+    pub body: Block,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ElseClause {
+    pub else_token: Token,
+    pub body: Block,
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -115,6 +115,7 @@ impl<'a> FunctionCompiler<'a> {
             Println(stmt) => self.walk_println_stmt(stmt),
             VarDecl(stmt) => self.walk_var_decl_stmt(stmt),
             Expr(stmt) => self.walk_expr_stmt(stmt),
+            Cond(stmt) => todo!(),
         }
     }
 
@@ -149,6 +150,7 @@ impl<'a> FunctionCompiler<'a> {
     fn walk_expr(&mut self, expr: &nir::Expr) {
         use nir::Expr::*;
         match expr {
+            Cond(cond) => todo!(),
             UnaryOp(expr) => self.walk_unary_op(expr),
             BinaryOp(expr) => self.walk_binary_op(expr),
             Assign(expr) => self.walk_assign(expr),
