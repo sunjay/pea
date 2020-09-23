@@ -60,6 +60,9 @@ pub enum RuntimeError {
         arity: u8,
         nargs: u8,
     },
+
+    #[error("conditions must evaluate to a value of type `bool`")]
+    ConditionMustBeBool,
 }
 
 pub type RuntimeResult = Result<Status, RuntimeError>;
@@ -166,6 +169,9 @@ impl Interpreter {
         match next_op {
             Call => instr::call.run(self),
             Return => instr::ret.run(self),
+
+            Jump => instr::jump.run(self),
+            JumpIfFalse => instr::jump_if_false.run(self),
 
             ConstUnit => instr::const_unit.run(self),
             ConstTrue => instr::const_true.run(self),

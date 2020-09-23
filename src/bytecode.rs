@@ -2,6 +2,7 @@ use std::fmt;
 use std::mem;
 use std::collections::HashMap;
 use std::slice::SliceIndex;
+use std::convert::TryInto;
 
 use crate::{gc::Trace, source_files::Span, value::Value};
 
@@ -9,7 +10,7 @@ use crate::{gc::Trace, source_files::Span, value::Value};
 /// into the bytecode
 #[derive(Debug)]
 #[must_use]
-pub struct Patch {
+pub struct PatchJump {
     /// The address of the `u16` value to overwrite
     addr: usize,
 }
@@ -46,21 +47,26 @@ impl Bytecode {
 
     /// Writes an instruction opcode into the bytecode chunk with a single u16 argument that is
     /// backpatched in later using `finish_patch`.
-    pub fn write_instr_u16_patch(&mut self, opcode: OpCode, span: Span) -> Patch {
+    pub fn write_jump_patch(&mut self, opcode: OpCode, span: Span) -> PatchJump {
         self.write_instr(opcode, span);
 
         let addr = self.bytes.len();
         // Put a placeholder value that will be backpatched later
         self.bytes.extend(&0u16.to_le_bytes());
 
-        Patch {addr}
+        PatchJump {addr}
     }
 
-    /// Completes a backpatch with the given value
-    pub fn finish_patch(&mut self, patch: Patch, value: u16) {
-        let Patch {addr} = patch;
+    /// Completes a backpatch at the current end of the bytecode
+    pub fn finish_jump_patch(&mut self, patch: PatchJump) {
+        let PatchJump {addr} = patch;
+        let value_end_addr = addr + mem::size_of::<u16>();
 
-        self.bytes[addr..addr+mem::size_of::<u16>()].copy_from_slice(&value.to_le_bytes());
+        let last_addr = self.len();
+        let jump_offset: u16 = (last_addr - value_end_addr).try_into()
+            .expect("bug: offset is greater than u16::MAX");
+
+        self.bytes[addr..value_end_addr].copy_from_slice(&jump_offset.to_le_bytes());
     }
 
     /// Returns true if this chunk of bytecode is empty
@@ -120,6 +126,28 @@ impl BytecodeCursor {
     /// using this cursor
     pub fn can_read_further(&self, code: &Bytecode) -> bool {
         self.next_pos < code.len()
+    }
+
+    /// Adds the given value to the cursor position
+    ///
+    /// # Safety
+    ///
+    /// No overflow checks are performed. The value after adding must end up at a valid index in the
+    /// bytecode for this to avoid UB.
+    pub unsafe fn add(&mut self, offset: usize) {
+        //TODO: Could use `unchecked_add` once that is stable
+        self.next_pos = self.next_pos.wrapping_add(offset);
+    }
+
+    /// Subtracts the given value from the cursor position
+    ///
+    /// # Safety
+    ///
+    /// No overflow checks are performed. The value after subtracting must end up at a valid index
+    /// in the bytecode for this to avoid UB.
+    pub unsafe fn sub(&mut self, offset: usize) {
+        //TODO: Could use `unchecked_sub` once that is stable
+        self.next_pos = self.next_pos.wrapping_sub(offset);
     }
 
     /// Advances the cursor to read a `u8` from the given bytecode and then interprets that value as
@@ -261,7 +289,6 @@ pub enum OpCode {
     ///   should be arranged such that popping the value stack first retrieves the arguments in
     ///   reverse order and then the function being called itself.
     Call,
-
     /// Return from the current function or exit the program if we are already at the bottom of the
     /// call stack.
     ///
@@ -269,6 +296,22 @@ pub enum OpCode {
     /// That will result in all local variables from the popped frame being removed. It will then
     /// push the returned value on to the top of the stack.
     Return,
+
+    /// Add the given address to the instruction pointer.
+    ///
+    /// # Arguments
+    ///
+    /// * `u16` - The amount to add to the instruction pointer
+    Jump,
+    /// Peek at the value at the top of the stack and add the given address to the instruction
+    /// pointer if the value is false.
+    ///
+    /// Note that the value at the top of the stack is not removed or modified in any way.
+    ///
+    /// # Arguments
+    ///
+    /// * `u16` - The amount to add to the instruction pointer if the value is false
+    JumpIfFalse,
 
     /// Push the unit value `()` onto the top of the stack.
     ConstUnit,

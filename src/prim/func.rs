@@ -78,6 +78,9 @@ impl Func {
                 Call => cwriteln!(out, "call(nargs={})", read_u8(&mut cursor)),
                 Return => cwriteln!(out, "return()"),
 
+                Jump => cwriteln!(out, "jump(offset={})", read_u16(&mut cursor)),
+                JumpIfFalse => cwriteln!(out, "jump_if_false(offset={})", read_u16(&mut cursor)),
+
                 ConstUnit => cwriteln!(out, "const_unit()"),
                 ConstTrue => cwriteln!(out, "const_true()"),
                 ConstFalse => cwriteln!(out, "const_false()"),

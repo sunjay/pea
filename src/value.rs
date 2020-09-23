@@ -79,6 +79,14 @@ impl Value {
         }
     }
 
+    pub fn to_bool(&self) -> Option<bool> {
+        use Value::*;
+        match self {
+            &Bool(value) => Some(value),
+            _ => None,
+        }
+    }
+
     pub fn unwrap_func(&self) -> &Gc<prim::Func> {
         use Value::*;
         match self {

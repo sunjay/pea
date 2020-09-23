@@ -1,0 +1,64 @@
+fn main() {
+    let a = 3;
+    println!(a);
+
+    let b = -400;
+
+    // conditional statement
+    if a > 2 {
+        println!(b"yes");
+        // This shadows the outer name but doesn't overwrite it
+        let b = 32;
+        a = b * 4 + a;
+    } else {
+        println!(b"no");
+        a = 5;
+    }
+    println!(a);
+
+    // conditional expression
+    if a != 32 * 4 + 3 {
+        println!(b"yes");
+        a = -33 + a;
+    } else if a > 0 {
+        println!(b"maybe");
+        a = a * -a;
+    } else {
+        println!(b"no");
+        a = -a;
+    }; // <--- trailing semicolon
+    println!(a);
+
+    // conditional expression assigned to a variable
+    a = a * if a > 0 { a } else { -a };
+    println!(a);
+
+    // no else block (runs if body)
+    if b < -300 {
+        println!(b"wooo that is cold!");
+    }
+
+    // no else block (runs else if body)
+    if b < -500 {
+        println!(b"aaaaahhhhhhh");
+    } else if a < 3 {
+        println!(b"wow a is less than 3??!!!!");
+    }
+
+    // no else block (runs implicit else body)
+    if a > 3 {
+        println!(b"a is NOT 3!!!");
+    }
+
+    println!(abs(b));
+    println!(abs(-b));
+}
+
+fn abs(x) {
+    // conditional expression used as return value
+    if x > 0 {
+        x
+    } else {
+        -x
+    }
+}

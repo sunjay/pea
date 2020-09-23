@@ -50,6 +50,28 @@ pub fn ret(ctx: &mut Interpreter) -> RuntimeResult {
 }
 
 #[inline]
+pub fn jump(ctx: &mut Interpreter, offset: u16) -> RuntimeResult {
+    // Must have at least one call frame to get to this point
+    let frame = unsafe { ctx.call_stack.top_unchecked_mut() };
+    // Safety: This jump should be valid if the bytecode is compiled correctly
+    unsafe { frame.cursor.add(offset as usize); }
+
+    Ok(Status::Running)
+}
+
+#[inline]
+pub fn jump_if_false(ctx: &mut Interpreter, offset: u16) -> RuntimeResult {
+    let cond_value = ctx.peek(0).to_bool()
+        .ok_or(RuntimeError::ConditionMustBeBool)?;
+
+    if !cond_value {
+        jump(ctx, offset)
+    } else {
+        Ok(Status::Running)
+    }
+}
+
+#[inline]
 pub fn const_unit(ctx: &mut Interpreter) -> RuntimeResult {
     ctx.value_stack.push(Value::Unit);
 
@@ -80,6 +102,7 @@ pub fn constant(ctx: &mut Interpreter, index: u16) -> RuntimeResult {
     Ok(Status::Running)
 }
 
+#[inline]
 pub fn get_local(ctx: &mut Interpreter, fp_offset: u8) -> RuntimeResult {
     // Must have at least one call frame to get to this point
     let frame = unsafe { ctx.call_stack.top_unchecked() };
@@ -90,6 +113,7 @@ pub fn get_local(ctx: &mut Interpreter, fp_offset: u8) -> RuntimeResult {
     Ok(Status::Running)
 }
 
+#[inline]
 pub fn set_local(ctx: &mut Interpreter, fp_offset: u8) -> RuntimeResult {
     let value = ctx.pop();
 

@@ -1,0 +1,3 @@
+stack backtrace:
+   0: main
+error: conditions must evaluate to a value of type `bool`
