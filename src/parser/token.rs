@@ -52,6 +52,11 @@ pub enum TokenKind {
     /// The `<=` symbol
     LessThanEquals,
 
+    /// The `||` symbol
+    OrOr,
+    /// The `&&` symbol
+    AndAnd,
+
     /// The `=` symbol
     Equals,
     /// The `!` symbol
@@ -100,6 +105,9 @@ impl fmt::Display for TokenKind {
             GreaterThanEquals => write!(f, "`>=`"),
             LessThan => write!(f, "`<`"),
             LessThanEquals => write!(f, "`<=`"),
+
+            OrOr => write!(f, "`||`"),
+            AndAnd => write!(f, "`&&`"),
 
             Equals => write!(f, "`=`"),
             Not => write!(f, "`!`"),

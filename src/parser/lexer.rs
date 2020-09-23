@@ -50,6 +50,9 @@ impl<'a> Lexer<'a> {
             (b'<', Some(b'=')) => self.next_token(start, LessThanEquals),
             (b'<', _) => self.byte_token(start, LessThan),
 
+            (b'|', Some(b'|')) => self.next_token(start, OrOr),
+            (b'&', Some(b'&')) => self.next_token(start, AndAnd),
+
             (b'=', _) => self.byte_token(start, Equals),
             (b'!', _) => self.byte_token(start, Not),
             (b',', _) => self.byte_token(start, Comma),
