@@ -164,6 +164,8 @@ impl<'a> NameResolver<'a> {
     fn resolve_expr(&mut self, expr: &ast::Expr) -> nir::Expr {
         use ast::Expr::*;
         match expr {
+            Or(expr) => todo!(),
+            And(expr) => todo!(),
             Cond(cond) => nir::Expr::Cond(Box::new(self.resolve_cond(cond))),
             UnaryOp(expr) => nir::Expr::UnaryOp(Box::new(self.resolve_unary_op(expr))),
             BinaryOp(expr) => nir::Expr::BinaryOp(Box::new(self.resolve_binary_op(expr))),

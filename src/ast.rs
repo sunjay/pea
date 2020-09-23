@@ -73,6 +73,8 @@ pub struct ExprStmt {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
+    Or(Box<OrExpr>),
+    And(Box<AndExpr>),
     Cond(Box<Cond>),
     UnaryOp(Box<UnaryOpExpr>),
     BinaryOp(Box<BinaryOpExpr>),
@@ -90,6 +92,8 @@ impl Expr {
     pub fn span(&self) -> Span {
         use Expr::*;
         match self {
+            Or(expr) => expr.span(),
+            And(expr) => expr.span(),
             Cond(expr) => expr.span(),
             UnaryOp(expr) => expr.span(),
             BinaryOp(expr) => expr.span(),
@@ -102,6 +106,34 @@ impl Expr {
             Bool(expr) => expr.span,
             BStr(expr) => expr.span,
         }
+    }
+}
+
+/// Short-circuiting `||` expression
+#[derive(Debug, Clone, PartialEq)]
+pub struct OrExpr {
+    pub lhs: Expr,
+    pub oror_token: Token,
+    pub rhs: Expr,
+}
+
+impl OrExpr {
+    pub fn span(&self) -> Span {
+        self.lhs.span().to(self.rhs.span())
+    }
+}
+
+/// Short-circuiting `&&` expression
+#[derive(Debug, Clone, PartialEq)]
+pub struct AndExpr {
+    pub lhs: Expr,
+    pub andand_token: Token,
+    pub rhs: Expr,
+}
+
+impl AndExpr {
+    pub fn span(&self) -> Span {
+        self.lhs.span().to(self.rhs.span())
     }
 }
 

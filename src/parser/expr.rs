@@ -6,11 +6,13 @@
 //!
 //! |  Prec  | Fixity  | Operators                          |
 //! |--------|---------|------------------------------------|
-//! | 11, _  | postfix | `(...)`                            |
-//! |  _, 9  | prefix  | `+`, `-`, `!`                      |
-//! |  7, 8  | infix   | `*`, `/`, `%`                      |
-//! |  5, 6  | infix   | `+`, `-`                           |
-//! |  3, 4  | infix   | `==`, `!=`, `>`, `>=`, `<`, `<=`   |
+//! | 29, _  | postfix | `(...)`                            |
+//! |  _, 25 | prefix  | `+`, `-`, `!`                      |
+//! | 21, 22 | infix   | `*`, `/`, `%`                      |
+//! | 19, 20 | infix   | `+`, `-`                           |
+//! |  9, 10 | infix   | `==`, `!=`, `>`, `>=`, `<`, `<=`   |
+//! |  7, 8  | infix   | `&&`                               |
+//! |  5, 6  | infix   | `||`                               |
 //! |  2, 1  | infix   | `=`                                |
 //! |  _, 1  | prefix  | `return`                           |
 
@@ -28,9 +30,9 @@ fn prefix_binding_power(kind: TokenKind) -> Result<(TokenKind, PrefixOp, ((), u8
     let (op, bp) = match kind {
         TokenKind::Keyword(Keyword::Return) => (PrefixOp::Return, ((), 1)),
 
-        TokenKind::Plus => (PrefixOp::UnaryOp(ast::UnaryOp::Pos), ((), 9)),
-        TokenKind::Minus => (PrefixOp::UnaryOp(ast::UnaryOp::Neg), ((), 9)),
-        TokenKind::Not => (PrefixOp::UnaryOp(ast::UnaryOp::Not), ((), 9)),
+        TokenKind::Plus => (PrefixOp::UnaryOp(ast::UnaryOp::Pos), ((), 25)),
+        TokenKind::Minus => (PrefixOp::UnaryOp(ast::UnaryOp::Neg), ((), 25)),
+        TokenKind::Not => (PrefixOp::UnaryOp(ast::UnaryOp::Not), ((), 25)),
         _ => return Err(kind),
     };
 
@@ -44,7 +46,7 @@ enum PostfixOp {
 
 fn postfix_binding_power(kind: TokenKind) -> Result<(TokenKind, PostfixOp, (u8, ())), TokenKind> {
     let (op, bp) = match kind {
-        TokenKind::ParenOpen => (PostfixOp::Call, (11, ())),
+        TokenKind::ParenOpen => (PostfixOp::Call, (29, ())),
         _ => return Err(kind),
     };
 
@@ -54,6 +56,8 @@ fn postfix_binding_power(kind: TokenKind) -> Result<(TokenKind, PostfixOp, (u8, 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum InfixOp {
     Assign,
+    Or,
+    And,
     BinaryOp(ast::BinaryOp),
 }
 
@@ -61,19 +65,22 @@ fn infix_binding_power(kind: TokenKind) -> Result<(TokenKind, InfixOp, (u8, u8))
     let (op, bp) = match kind {
         TokenKind::Equals => (InfixOp::Assign, (2, 1)),
 
-        TokenKind::Plus => (InfixOp::BinaryOp(ast::BinaryOp::Add), (5, 6)),
-        TokenKind::Minus => (InfixOp::BinaryOp(ast::BinaryOp::Sub), (5, 6)),
+        TokenKind::OrOr => (InfixOp::Or, (5, 6)),
+        TokenKind::AndAnd => (InfixOp::And, (7, 8)),
 
-        TokenKind::Times => (InfixOp::BinaryOp(ast::BinaryOp::Mul), (7, 8)),
-        TokenKind::Slash => (InfixOp::BinaryOp(ast::BinaryOp::Div), (7, 8)),
-        TokenKind::Percent => (InfixOp::BinaryOp(ast::BinaryOp::Rem), (7, 8)),
+        TokenKind::Plus => (InfixOp::BinaryOp(ast::BinaryOp::Add), (19, 20)),
+        TokenKind::Minus => (InfixOp::BinaryOp(ast::BinaryOp::Sub), (19, 20)),
 
-        TokenKind::EqualsEquals => (InfixOp::BinaryOp(ast::BinaryOp::EqualsEquals), (3, 4)),
-        TokenKind::NotEquals => (InfixOp::BinaryOp(ast::BinaryOp::NotEquals), (3, 4)),
-        TokenKind::GreaterThan => (InfixOp::BinaryOp(ast::BinaryOp::GreaterThan), (3, 4)),
-        TokenKind::GreaterThanEquals => (InfixOp::BinaryOp(ast::BinaryOp::GreaterThanEquals), (3, 4)),
-        TokenKind::LessThan => (InfixOp::BinaryOp(ast::BinaryOp::LessThan), (3, 4)),
-        TokenKind::LessThanEquals => (InfixOp::BinaryOp(ast::BinaryOp::LessThanEquals), (3, 4)),
+        TokenKind::Times => (InfixOp::BinaryOp(ast::BinaryOp::Mul), (21, 22)),
+        TokenKind::Slash => (InfixOp::BinaryOp(ast::BinaryOp::Div), (21, 22)),
+        TokenKind::Percent => (InfixOp::BinaryOp(ast::BinaryOp::Rem), (21, 22)),
+
+        TokenKind::EqualsEquals => (InfixOp::BinaryOp(ast::BinaryOp::EqualsEquals), (9, 10)),
+        TokenKind::NotEquals => (InfixOp::BinaryOp(ast::BinaryOp::NotEquals), (9, 10)),
+        TokenKind::GreaterThan => (InfixOp::BinaryOp(ast::BinaryOp::GreaterThan), (9, 10)),
+        TokenKind::GreaterThanEquals => (InfixOp::BinaryOp(ast::BinaryOp::GreaterThanEquals), (9, 10)),
+        TokenKind::LessThan => (InfixOp::BinaryOp(ast::BinaryOp::LessThan), (9, 10)),
+        TokenKind::LessThanEquals => (InfixOp::BinaryOp(ast::BinaryOp::LessThanEquals), (9, 10)),
 
         _ => return Err(kind),
     };
@@ -185,6 +192,18 @@ impl<'a> Parser<'a> {
                             rhs,
                         }))
                     },
+
+                    InfixOp::Or => ast::Expr::Or(Box::new(ast::OrExpr {
+                        lhs,
+                        oror_token: op_token,
+                        rhs,
+                    })),
+
+                    InfixOp::And => ast::Expr::And(Box::new(ast::AndExpr {
+                        lhs,
+                        andand_token: op_token,
+                        rhs,
+                    })),
 
                     InfixOp::BinaryOp(op) => ast::Expr::BinaryOp(Box::new(ast::BinaryOpExpr {
                         lhs,
