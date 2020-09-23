@@ -304,6 +304,15 @@ pub enum OpCode {
     /// * `u16` - The amount to add to the instruction pointer
     Jump,
     /// Peek at the value at the top of the stack and add the given address to the instruction
+    /// pointer if the value is true.
+    ///
+    /// Note that the value at the top of the stack is not removed or modified in any way.
+    ///
+    /// # Arguments
+    ///
+    /// * `u16` - The amount to add to the instruction pointer if the value is true
+    JumpIfTrue,
+    /// Peek at the value at the top of the stack and add the given address to the instruction
     /// pointer if the value is false.
     ///
     /// Note that the value at the top of the stack is not removed or modified in any way.

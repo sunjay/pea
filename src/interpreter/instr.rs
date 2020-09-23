@@ -60,6 +60,18 @@ pub fn jump(ctx: &mut Interpreter, offset: u16) -> RuntimeResult {
 }
 
 #[inline]
+pub fn jump_if_true(ctx: &mut Interpreter, offset: u16) -> RuntimeResult {
+    let cond_value = ctx.peek(0).to_bool()
+        .ok_or(RuntimeError::ConditionMustBeBool)?;
+
+    if cond_value {
+        jump(ctx, offset)
+    } else {
+        Ok(Status::Running)
+    }
+}
+
+#[inline]
 pub fn jump_if_false(ctx: &mut Interpreter, offset: u16) -> RuntimeResult {
     let cond_value = ctx.peek(0).to_bool()
         .ok_or(RuntimeError::ConditionMustBeBool)?;

@@ -171,8 +171,8 @@ impl<'a> FunctionCompiler<'a> {
     fn walk_expr(&mut self, expr: &nir::Expr) {
         use nir::Expr::*;
         match expr {
-            Or(expr) => todo!(),
-            And(expr) => todo!(),
+            Or(expr) => self.walk_or(expr),
+            And(expr) => self.walk_and(expr),
             Cond(cond) => self.walk_cond(cond),
             UnaryOp(expr) => self.walk_unary_op(expr),
             BinaryOp(expr) => self.walk_binary_op(expr),
@@ -185,6 +185,40 @@ impl<'a> FunctionCompiler<'a> {
             Bool(lit) => self.walk_bool_literal(lit),
             BStr(lit) => self.walk_bstr_literal(lit),
         }
+    }
+
+    fn walk_or(&mut self, expr: &nir::OrExpr) {
+        let nir::OrExpr {lhs, oror_token, rhs} = expr;
+
+        self.walk_expr(lhs);
+
+        // If lhs of `||` is true, immediately jump to the end and return that value (short-circuit)
+        let end_patch = self.code.write_jump_patch(OpCode::JumpIfTrue, oror_token.span);
+
+        // Pop off the lhs value
+        self.code.write_instr_u8(OpCode::Pop, 1, oror_token.span);
+
+        // Otherwise, evaluate rhs and return whatever its value is
+        self.walk_expr(rhs);
+
+        self.code.finish_jump_patch(end_patch);
+    }
+
+    fn walk_and(&mut self, expr: &nir::AndExpr) {
+        let nir::AndExpr {lhs, andand_token, rhs} = expr;
+
+        self.walk_expr(lhs);
+
+        // If lhs of `&&` is false, immediately jump to the end and return that value (short-circuit)
+        let end_patch = self.code.write_jump_patch(OpCode::JumpIfFalse, andand_token.span);
+
+        // Pop off the lhs value
+        self.code.write_instr_u8(OpCode::Pop, 1, andand_token.span);
+
+        // Otherwise, evaluate rhs and return whatever its value is
+        self.walk_expr(rhs);
+
+        self.code.finish_jump_patch(end_patch);
     }
 
     fn walk_cond(&mut self, cond: &nir::Cond) {

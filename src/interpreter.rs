@@ -171,6 +171,7 @@ impl Interpreter {
             Return => instr::ret.run(self),
 
             Jump => instr::jump.run(self),
+            JumpIfTrue => instr::jump_if_true.run(self),
             JumpIfFalse => instr::jump_if_false.run(self),
 
             ConstUnit => instr::const_unit.run(self),

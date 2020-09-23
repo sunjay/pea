@@ -79,6 +79,7 @@ impl Func {
                 Return => cwriteln!(out, "return()"),
 
                 Jump => cwriteln!(out, "jump(offset={})", read_u16(&mut cursor)),
+                JumpIfTrue => cwriteln!(out, "jump_if_true(offset={})", read_u16(&mut cursor)),
                 JumpIfFalse => cwriteln!(out, "jump_if_false(offset={})", read_u16(&mut cursor)),
 
                 ConstUnit => cwriteln!(out, "const_unit()"),

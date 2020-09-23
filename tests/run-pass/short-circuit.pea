@@ -1,0 +1,36 @@
+/// Prints the given operand and then returns true if it is greater than 3
+fn gt3(x) {
+    println!(x);
+    x > 3
+}
+
+fn main() {
+    // left runs, but right does not
+    if gt3(4) || gt3(5) {
+        println!(b"wow!");
+    }
+    if gt3(0) && gt3(16) {
+        println!(b"cool!");
+    }
+
+    // both left and right run, but the body does not
+    if gt3(2) || gt3(-1) {
+        println!(b"aww");
+    }
+    if gt3(55) && gt3(-1000) {
+        println!(b"bad");
+    }
+
+    // both left and right run, and the body runs too
+    if gt3(-2) || gt3(6) {
+        println!(b"awesome");
+    }
+    if gt3(99) && gt3(77) {
+        println!(b"love it");
+    }
+
+    // compound conditions
+    if gt3(-2) || gt3(4) && gt3(56) {
+        println!(b"big fan!");
+    }
+}
