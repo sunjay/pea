@@ -15,7 +15,7 @@ expr_stmt ::= expr ';'
 expr ::= expr bin_op expr | unary_op expr | assign | group | call | return
          integer_literal | bool_literal | byte_str | ident
 # The precendence of these operators is defined in the code
-bin_op ::= '+' | '-' | '*' | '/' | '%'
+bin_op ::= '+' | '-' | '*' | '/' | '%' | '==' | '!=' | '>' | '>=' | '<' | '<='
 unary_op ::= '+' | '-' | '!'
 assign ::= lvalue '=' expr
 lvalue ::= ident
