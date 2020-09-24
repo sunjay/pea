@@ -8,10 +8,18 @@ use crate::{gc::Trace, source_files::Span, value::Value};
 
 /// A unique token used to backpatch an argument of an instruction after it has already been written
 /// into the bytecode
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 #[must_use]
 pub struct PatchJump {
     /// The address of the `u16` value to overwrite
+    addr: usize,
+}
+
+/// A point in the bytecode that can be jumped back to later
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[must_use]
+pub struct LoopCheckpoint {
+    /// The point that will be jumped back to
     addr: usize,
 }
 
@@ -67,6 +75,26 @@ impl Bytecode {
             .expect("bug: offset is greater than u16::MAX");
 
         self.bytes[addr..value_end_addr].copy_from_slice(&jump_offset.to_le_bytes());
+    }
+
+    /// Creates a loop checkpoint at the current end of the bytecode
+    pub fn loop_checkpoint(&self) -> LoopCheckpoint {
+        LoopCheckpoint {
+            addr: self.len(),
+        }
+    }
+
+    /// Writes an instruction opcode into the bytecode chunk with a single u16 argument. The
+    /// argument is the computed jump from the end of the added instruction to the given checkpoint
+    /// which must be prior to the current offset.
+    pub fn write_loop(&mut self, opcode: OpCode, checkpt: LoopCheckpoint, span: Span) {
+        // Note that we add the size of the opcode and the argument since that's where the
+        // instruction pointer will be after it has read this instruction into memory. We then use
+        // that to compute the jump back to the checkpoint.
+        let end_offset = self.len() + mem::size_of::<OpCode>() + mem::size_of::<u16>();
+        let jump_back = (end_offset - checkpt.addr).try_into()
+            .expect("bug: offset is greater than u16::MAX");
+        self.write_instr_u16(opcode, jump_back, span);
     }
 
     /// Returns true if this chunk of bytecode is empty

@@ -1,4 +1,3 @@
-use std::mem;
 use std::iter;
 use std::convert::TryInto;
 use std::collections::HashMap;
@@ -173,8 +172,8 @@ impl<'a> FunctionCompiler<'a> {
     fn walk_while_loop_stmt(&mut self, stmt: &nir::WhileLoop) {
         let nir::WhileLoop {while_token: _, cond, body} = stmt;
 
-        // The offset to the first bytecode instruction of the condition
-        let start_offset = self.code.len();
+        // Record the address of the start of the loop
+        let loop_start = self.code.loop_checkpoint();
 
         self.walk_expr(cond);
 
@@ -189,11 +188,8 @@ impl<'a> FunctionCompiler<'a> {
         // Pop the return value of the block
         self.code.write_instr_u8(OpCode::Pop, 1, body.brace_close_token.span);
 
-        // Compute the amount we need to jump back to get to just before the condition
-        let end_offset = self.code.len() + mem::size_of::<u8>() + mem::size_of::<u16>();
-        let jump_back = (end_offset - start_offset).try_into()
-            .expect("bug: offset is greater than u16::MAX");
-        self.code.write_instr_u16(OpCode::Loop, jump_back, body.brace_close_token.span);
+        // Jump back to the start of the loop, just before the condition so it can run again
+        self.code.write_loop(OpCode::Loop, loop_start, body.brace_close_token.span);
 
         self.code.finish_jump_patch(end_patch);
 
