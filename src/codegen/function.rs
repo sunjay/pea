@@ -213,6 +213,8 @@ impl<'a> FunctionCompiler<'a> {
             Group(expr) => self.walk_group(expr),
             Call(call) => self.walk_call(call),
             Return(ret) => self.walk_return(ret),
+            Break(expr) => todo!(),
+            Continue(expr) => todo!(),
             Def(def_id) => self.walk_def(def_id),
             Integer(lit) => self.walk_integer_literal(lit),
             Bool(lit) => self.walk_bool_literal(lit),

@@ -100,6 +100,8 @@ pub enum Expr {
     Group(Box<GroupExpr>),
     Call(Box<CallExpr>),
     Return(Box<ReturnExpr>),
+    Break(BreakExpr),
+    Continue(ContinueExpr),
     Def(DefSpan),
     Integer(IntegerLiteral),
     Bool(BoolLiteral),
@@ -203,6 +205,8 @@ pub struct DefSpan {
 
 pub type UnaryOp = ast::UnaryOp;
 pub type BinaryOp = ast::BinaryOp;
+pub type BreakExpr = ast::BreakExpr;
+pub type ContinueExpr = ast::ContinueExpr;
 pub type IntegerLiteral = ast::IntegerLiteral;
 pub type BoolLiteral = ast::BoolLiteral;
 pub type BStrLiteral = ast::BStrLiteral;
