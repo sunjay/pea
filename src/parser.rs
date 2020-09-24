@@ -236,6 +236,7 @@ impl<'a> Parser<'a> {
             TokenKind::Keyword(Keyword::Println) => self.println_stmt().map(ast::Stmt::Println).map(Ok),
             TokenKind::Keyword(Keyword::Let) => self.var_decl_stmt().map(ast::Stmt::VarDecl).map(Ok),
             TokenKind::Keyword(Keyword::If) => self.cond_stmt().map(Ok),
+            TokenKind::Keyword(Keyword::While) => self.while_loop_stmt().map(ast::Stmt::WhileLoop).map(Ok),
             _ => self.expr_stmt().map(|res| res.map(ast::Stmt::Expr)),
         }
     }
@@ -284,6 +285,14 @@ impl<'a> Parser<'a> {
         } else {
             Ok(ast::Stmt::Cond(cond))
         }
+    }
+
+    fn while_loop_stmt(&mut self) -> ParseResult<ast::WhileLoop> {
+        let while_token = self.input.keyword(Keyword::While)?.clone();
+        let cond = self.expr()?;
+        let body = self.block()?;
+
+        Ok(ast::WhileLoop {while_token, cond, body})
     }
 
     /// Parses an expression statement or just expression depending on whether the following token

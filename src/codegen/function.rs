@@ -117,6 +117,7 @@ impl<'a> FunctionCompiler<'a> {
             VarDecl(stmt) => self.walk_var_decl_stmt(stmt),
             Expr(stmt) => self.walk_expr_stmt(stmt),
             Cond(stmt) => self.walk_cond_stmt(stmt),
+            WhileLoop(stmt) => todo!(),
         }
     }
 

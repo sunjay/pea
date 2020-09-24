@@ -110,6 +110,7 @@ impl<'a> NameResolver<'a> {
             VarDecl(stmt) => nir::Stmt::VarDecl(self.resolve_var_decl_stmt(stmt)),
             Expr(stmt) => nir::Stmt::Expr(self.resolve_expr_stmt(stmt)),
             Cond(stmt) => nir::Stmt::Cond(self.resolve_cond(stmt)),
+            WhileLoop(stmt) => nir::Stmt::WhileLoop(self.resolve_while_loop(stmt)),
         }
     }
 
@@ -159,6 +160,16 @@ impl<'a> NameResolver<'a> {
         let expr = self.resolve_expr(expr);
         let semicolon_token = semicolon_token.clone();
         nir::ExprStmt {expr, semicolon_token}
+    }
+
+    fn resolve_while_loop(&mut self, while_loop: &ast::WhileLoop) -> nir::WhileLoop {
+        let ast::WhileLoop {while_token, cond, body} = while_loop;
+
+        let while_token = while_token.clone();
+        let cond = self.resolve_expr(cond);
+        let body = self.resolve_block(body);
+
+        nir::WhileLoop {while_token, cond, body}
     }
 
     fn resolve_expr(&mut self, expr: &ast::Expr) -> nir::Expr {

@@ -54,6 +54,7 @@ pub enum Stmt {
     VarDecl(VarDeclStmt),
     Expr(ExprStmt),
     Cond(Cond),
+    WhileLoop(WhileLoop),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -79,6 +80,13 @@ pub struct VarDeclStmt {
 pub struct ExprStmt {
     pub expr: Expr,
     pub semicolon_token: Token,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct WhileLoop {
+    pub while_token: Token,
+    pub cond: Expr,
+    pub body: Block,
 }
 
 #[derive(Debug, Clone, PartialEq)]

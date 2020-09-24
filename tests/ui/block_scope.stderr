@@ -2,5 +2,7 @@
 
 [tests/ui/block_scope.pea:13:18] error: cannot find name `a` in this scope
 
-error: aborting due to 2 previous errors
+[tests/ui/block_scope.pea:18:14] error: cannot find name `q` in this scope
+
+error: aborting due to 3 previous errors
 

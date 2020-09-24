@@ -229,6 +229,7 @@ keywords! {
     False : "false"
     If : "if"
     Else : "else"
+    While : "while"
 
     //TODO: This should be removed when println stops being used as a keyword
     Println : "println"

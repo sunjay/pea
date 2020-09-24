@@ -11,4 +11,9 @@ fn main() {
 
     // values from within the blocks of an if aren't available here
     println!(b + a);
+
+    while false {
+        let q = 3;
+    }
+    println!(q);
 }
