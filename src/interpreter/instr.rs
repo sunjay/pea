@@ -60,6 +60,16 @@ pub fn jump(ctx: &mut Interpreter, offset: u16) -> RuntimeResult {
 }
 
 #[inline]
+pub fn jump_back(ctx: &mut Interpreter, offset: u16) -> RuntimeResult {
+    // Must have at least one call frame to get to this point
+    let frame = unsafe { ctx.call_stack.top_unchecked_mut() };
+    // Safety: This jump should be valid if the bytecode is compiled correctly
+    unsafe { frame.cursor.sub(offset as usize); }
+
+    Ok(Status::Running)
+}
+
+#[inline]
 pub fn jump_if_true(ctx: &mut Interpreter, offset: u16) -> RuntimeResult {
     let cond_value = ctx.peek(0).to_bool()
         .ok_or(RuntimeError::ConditionMustBeBool)?;

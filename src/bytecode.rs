@@ -297,12 +297,18 @@ pub enum OpCode {
     /// push the returned value on to the top of the stack.
     Return,
 
-    /// Add the given address to the instruction pointer.
+    /// Add the given address to the instruction pointer. (jump forward)
     ///
     /// # Arguments
     ///
     /// * `u16` - The amount to add to the instruction pointer
     Jump,
+    /// Subtract the given address from the instruction pointer. (jump backward)
+    ///
+    /// # Arguments
+    ///
+    /// * `u16` - The amount to subtract from the instruction pointer
+    Loop,
     /// Peek at the value at the top of the stack and add the given address to the instruction
     /// pointer if the value is true.
     ///

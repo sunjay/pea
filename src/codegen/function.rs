@@ -1,3 +1,4 @@
+use std::mem;
 use std::iter;
 use std::convert::TryInto;
 use std::collections::HashMap;
@@ -117,7 +118,7 @@ impl<'a> FunctionCompiler<'a> {
             VarDecl(stmt) => self.walk_var_decl_stmt(stmt),
             Expr(stmt) => self.walk_expr_stmt(stmt),
             Cond(stmt) => self.walk_cond_stmt(stmt),
-            WhileLoop(stmt) => todo!(),
+            WhileLoop(stmt) => self.walk_while_loop_stmt(stmt),
         }
     }
 
@@ -167,6 +168,37 @@ impl<'a> FunctionCompiler<'a> {
 
         // Discard the expression value
         self.code.write_instr_u8(OpCode::Pop, 1, span);
+    }
+
+    fn walk_while_loop_stmt(&mut self, stmt: &nir::WhileLoop) {
+        let nir::WhileLoop {while_token: _, cond, body} = stmt;
+
+        // The offset to the first bytecode instruction of the condition
+        let start_offset = self.code.len();
+
+        self.walk_expr(cond);
+
+        // If the condition is false, jump to the end
+        let end_patch = self.code.write_jump_patch(OpCode::JumpIfFalse, body.brace_open_token.span);
+
+        // Pop the condition value
+        self.code.write_instr_u8(OpCode::Pop, 1, body.brace_close_token.span);
+
+        self.walk_block(body);
+
+        // Pop the return value of the block
+        self.code.write_instr_u8(OpCode::Pop, 1, body.brace_close_token.span);
+
+        // Compute the amount we need to jump back to get to just before the condition
+        let end_offset = self.code.len() + mem::size_of::<u8>() + mem::size_of::<u16>();
+        let jump_back = (end_offset - start_offset).try_into()
+            .expect("bug: offset is greater than u16::MAX");
+        self.code.write_instr_u16(OpCode::Loop, jump_back, body.brace_close_token.span);
+
+        self.code.finish_jump_patch(end_patch);
+
+        // Pop the condition value
+        self.code.write_instr_u8(OpCode::Pop, 1, body.brace_close_token.span);
     }
 
     fn walk_expr(&mut self, expr: &nir::Expr) {

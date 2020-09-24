@@ -1,0 +1,8 @@
+fn main() {
+    let counter = 10;
+    while counter > 0 {
+        let count = counter;
+        println!(count);
+        counter = counter - 1;
+    }
+}
