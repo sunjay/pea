@@ -90,6 +90,8 @@ pub enum Expr {
     Group(Box<GroupExpr>),
     Call(Box<CallExpr>),
     Return(Box<ReturnExpr>),
+    Break(BreakExpr),
+    Continue(ContinueExpr),
     Ident(Ident),
     Integer(IntegerLiteral),
     Bool(BoolLiteral),
@@ -109,6 +111,8 @@ impl Expr {
             Group(expr) => expr.span(),
             Call(expr) => expr.span(),
             Return(expr) => expr.span(),
+            Break(expr) => expr.span(),
+            Continue(expr) => expr.span(),
             Ident(expr) => expr.span,
             Integer(expr) => expr.span,
             Bool(expr) => expr.span,
@@ -345,6 +349,28 @@ impl ReturnExpr {
             Some(expr) => self.return_token.span.to(expr.span()),
             None => self.return_token.span,
         }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct BreakExpr {
+    pub break_token: Token,
+}
+
+impl BreakExpr {
+    pub fn span(&self) -> Span {
+        self.break_token.span
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ContinueExpr {
+    pub continue_token: Token,
+}
+
+impl ContinueExpr {
+    pub fn span(&self) -> Span {
+        self.continue_token.span
     }
 }
 

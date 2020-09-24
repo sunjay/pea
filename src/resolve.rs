@@ -184,6 +184,8 @@ impl<'a> NameResolver<'a> {
             Group(expr) => nir::Expr::Group(Box::new(self.resolve_group(expr))),
             Call(call) => nir::Expr::Call(Box::new(self.resolve_call(call))),
             Return(ret) => nir::Expr::Return(Box::new(self.resolve_return(ret))),
+            Break(expr) => todo!(),
+            Continue(expr) => todo!(),
             Ident(name) => nir::Expr::Def(self.lookup(name)),
             Integer(value) => nir::Expr::Integer(value.clone()),
             Bool(value) => nir::Expr::Bool(value.clone()),

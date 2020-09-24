@@ -230,6 +230,8 @@ keywords! {
     If : "if"
     Else : "else"
     While : "while"
+    Break : "break"
+    Continue : "continue"
 
     //TODO: This should be removed when println stops being used as a keyword
     Println : "println"

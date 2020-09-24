@@ -14,7 +14,7 @@ expr_stmt ::= expr ';'
 while_loop ::= 'while' expr block
 
 expr ::= expr bin_op expr | unary_op expr | assign | group | call | return | cond
-         integer_literal | bool_literal | byte_str | ident
+         integer_literal | bool_literal | byte_str | 'break' | 'continue' | ident
 
 cond ::= 'if' expr block ('else' 'if' expr block)* ('else' block)?
 

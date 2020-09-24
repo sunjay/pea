@@ -14,7 +14,7 @@
 //! |  7, 8  | infix   | `&&`                               |
 //! |  5, 6  | infix   | `||`                               |
 //! |  2, 1  | infix   | `=`                                |
-//! |  _, 1  | prefix  | `return`                           |
+//! |  _, 1  | prefix  | `return`, `break`, `continue`      |
 
 use crate::ast;
 
@@ -23,16 +23,21 @@ use super::{Parser, ParseResult, ParseError, TokenKind, Literal, Keyword, MAX_AR
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum PrefixOp {
     Return,
+    Break,
+    Continue,
     UnaryOp(ast::UnaryOp),
 }
 
 fn prefix_binding_power(kind: TokenKind) -> Result<(TokenKind, PrefixOp, ((), u8)), TokenKind> {
     let (op, bp) = match kind {
         TokenKind::Keyword(Keyword::Return) => (PrefixOp::Return, ((), 1)),
+        TokenKind::Keyword(Keyword::Break) => (PrefixOp::Break, ((), 1)),
+        TokenKind::Keyword(Keyword::Continue) => (PrefixOp::Continue, ((), 1)),
 
         TokenKind::Plus => (PrefixOp::UnaryOp(ast::UnaryOp::Pos), ((), 25)),
         TokenKind::Minus => (PrefixOp::UnaryOp(ast::UnaryOp::Neg), ((), 25)),
         TokenKind::Not => (PrefixOp::UnaryOp(ast::UnaryOp::Not), ((), 25)),
+
         _ => return Err(kind),
     };
 
@@ -131,6 +136,18 @@ impl<'a> Parser<'a> {
                         };
 
                         ast::Expr::Return(Box::new(ast::ReturnExpr {return_token, expr}))
+                    },
+
+                    PrefixOp::Break => {
+                        let break_token = self.input.match_kind(TokenKind::Keyword(Keyword::Break))?.clone();
+
+                        ast::Expr::Break(ast::BreakExpr {break_token})
+                    },
+
+                    PrefixOp::Continue => {
+                        let continue_token = self.input.match_kind(TokenKind::Keyword(Keyword::Continue))?.clone();
+
+                        ast::Expr::Continue(ast::ContinueExpr {continue_token})
                     },
 
                     PrefixOp::UnaryOp(op) => {
