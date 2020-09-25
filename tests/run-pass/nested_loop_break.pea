@@ -29,7 +29,7 @@ fn print_pairs_until(a, b, target) {
             break;
         }
 
-        x = x + 1;
+        x += 1;
     }
 
     if found_target {

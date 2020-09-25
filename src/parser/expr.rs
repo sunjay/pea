@@ -13,7 +13,7 @@
 //! |  9, 10 | infix   | `==`, `!=`, `>`, `>=`, `<`, `<=`   |
 //! |  7, 8  | infix   | `&&`                               |
 //! |  5, 6  | infix   | `||`                               |
-//! |  2, 1  | infix   | `=`                                |
+//! |  2, 1  | infix   | `=`, `+=`, `-=`, `*=`, `/=`, `%=`  |
 //! |  _, 1  | prefix  | `return`, `break`, `continue`      |
 
 use crate::ast;
@@ -61,6 +61,8 @@ fn postfix_binding_power(kind: TokenKind) -> Result<(TokenKind, PostfixOp, (u8, 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum InfixOp {
     Assign,
+    /// Augmented assignment, e.g. `+=`, `-=`, etc.
+    AugAssign(ast::BinaryOp),
     Or,
     And,
     BinaryOp(ast::BinaryOp),
@@ -69,6 +71,11 @@ enum InfixOp {
 fn infix_binding_power(kind: TokenKind) -> Result<(TokenKind, InfixOp, (u8, u8)), TokenKind> {
     let (op, bp) = match kind {
         TokenKind::Equals => (InfixOp::Assign, (2, 1)),
+        TokenKind::PlusEquals => (InfixOp::AugAssign(ast::BinaryOp::Add), (2, 1)),
+        TokenKind::MinusEquals => (InfixOp::AugAssign(ast::BinaryOp::Sub), (2, 1)),
+        TokenKind::TimesEquals => (InfixOp::AugAssign(ast::BinaryOp::Mul), (2, 1)),
+        TokenKind::SlashEquals => (InfixOp::AugAssign(ast::BinaryOp::Div), (2, 1)),
+        TokenKind::PercentEquals => (InfixOp::AugAssign(ast::BinaryOp::Rem), (2, 1)),
 
         TokenKind::OrOr => (InfixOp::Or, (5, 6)),
         TokenKind::AndAnd => (InfixOp::And, (7, 8)),
@@ -91,6 +98,15 @@ fn infix_binding_power(kind: TokenKind) -> Result<(TokenKind, InfixOp, (u8, u8))
     };
 
     Ok((kind, op, bp))
+}
+
+fn extract_lvalue(expr: ast::Expr) -> ParseResult<ast::LValueExpr> {
+    use ast::Expr::*;
+    Ok(match expr {
+        Ident(ident) => ast::LValueExpr::Ident(ident),
+
+        _ => return Err(ParseError::UnsupportedLValue {span: expr.span()}),
+    })
 }
 
 impl<'a> Parser<'a> {
@@ -195,18 +211,29 @@ impl<'a> Parser<'a> {
 
                 lhs = match op {
                     InfixOp::Assign => {
-                        let lvalue = match lhs {
-                            ast::Expr::Ident(ident) => ast::LValueExpr::Ident(ident),
-
-                            _ => {
-                                return Err(ParseError::UnsupportedLValue {span: lhs.span()});
-                            },
-                        };
+                        let lvalue = extract_lvalue(lhs)?;
 
                         ast::Expr::Assign(Box::new(ast::AssignExpr {
                             lvalue,
                             equals_token: op_token,
                             rhs,
+                        }))
+                    },
+
+                    // Desugar `a += b` as `a = a + b`
+                    //TODO: This desugaring will NOT work if `a` has side-effects
+                    InfixOp::AugAssign(op) => {
+                        let lvalue = extract_lvalue(lhs.clone())?;
+
+                        ast::Expr::Assign(Box::new(ast::AssignExpr {
+                            lvalue,
+                            equals_token: op_token.clone(),
+                            rhs: ast::Expr::BinaryOp(Box::new(ast::BinaryOpExpr {
+                                lhs,
+                                op,
+                                op_token,
+                                rhs,
+                            })),
                         }))
                     },
 

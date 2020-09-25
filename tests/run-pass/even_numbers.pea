@@ -2,7 +2,7 @@ fn print_even(start, end, offset) {
     let i = start;
     while i <= end {
         let value = i;
-        i = i + offset;
+        i += offset;
 
         if value % 2 != 0 {
             continue;

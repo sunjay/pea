@@ -10,7 +10,7 @@ fn print_pairs_until(a, b, target, filter_value) {
             let product = x*y;
             if product == filter_value {
                 // still need to increase the loop counter, otherwise loop will run forever
-                y = y + 1;
+                y += 1;
                 continue;
             }
 
@@ -36,7 +36,7 @@ fn print_pairs_until(a, b, target, filter_value) {
             break;
         }
 
-        x = x + 1;
+        x += 1;
     }
 
     if found_target {

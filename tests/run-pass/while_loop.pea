@@ -3,6 +3,6 @@ fn main() {
     while counter > 0 {
         let count = counter;
         println!(count);
-        counter = counter - 1;
+        counter -= 1;
     }
 }
