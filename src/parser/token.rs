@@ -77,6 +77,17 @@ pub enum TokenKind {
     /// The `%` symbol
     Percent,
 
+    /// The `+=` symbol
+    PlusEquals,
+    /// The `-=` symbol
+    MinusEquals,
+    /// The `*=` symbol
+    TimesEquals,
+    /// The `/=` symbol
+    SlashEquals,
+    /// The `%=` symbol
+    PercentEquals,
+
     /// End-of-file
     Eof,
 
@@ -119,6 +130,12 @@ impl fmt::Display for TokenKind {
             Times => write!(f, "`*`"),
             Slash => write!(f, "`/`"),
             Percent => write!(f, "`%`"),
+
+            PlusEquals => write!(f, "`+=`"),
+            MinusEquals => write!(f, "`-=`"),
+            TimesEquals => write!(f, "`*=`"),
+            SlashEquals => write!(f, "`/=`"),
+            PercentEquals => write!(f, "`%=`"),
 
             Eof => write!(f, "end of file"),
 

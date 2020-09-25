@@ -58,15 +58,21 @@ impl<'a> Lexer<'a> {
             (b',', _) => self.byte_token(start, Comma),
             (b';', _) => self.byte_token(start, Semicolon),
 
-            (b'*', _) => self.byte_token(start, Times),
-            (b'/', _) => self.byte_token(start, Slash),
-            (b'%', _) => self.byte_token(start, Percent),
-
             (b'0' ..= b'9', _) |
             (b'+', Some(b'0' ..= b'9')) |
             (b'-', Some(b'0' ..= b'9')) => self.integer_lit(start, current_char),
+
+            (b'+', Some(b'=')) => self.next_token(start, PlusEquals),
+            (b'-', Some(b'=')) => self.next_token(start, MinusEquals),
+            (b'*', Some(b'=')) => self.next_token(start, TimesEquals),
+            (b'/', Some(b'=')) => self.next_token(start, SlashEquals),
+            (b'%', Some(b'=')) => self.next_token(start, PercentEquals),
+
             (b'+', _) => self.byte_token(start, Plus),
             (b'-', _) => self.byte_token(start, Minus),
+            (b'*', _) => self.byte_token(start, Times),
+            (b'/', _) => self.byte_token(start, Slash),
+            (b'%', _) => self.byte_token(start, Percent),
 
             (b'b', Some(b'"')) => self.byte_str(start),
 
@@ -611,6 +617,12 @@ mod tests {
         expect_token!(b"*", t!(Times));
         expect_token!(b"/", t!(Slash));
         expect_token!(b"%", t!(Percent));
+
+        expect_token!(b"+=", t!(PlusEquals));
+        expect_token!(b"-=", t!(MinusEquals));
+        expect_token!(b"*=", t!(TimesEquals));
+        expect_token!(b"/=", t!(SlashEquals));
+        expect_token!(b"%=", t!(PercentEquals));
 
         expect_token!(b"=", t!(Equals));
         expect_token!(b"==", t!(EqualsEquals));
