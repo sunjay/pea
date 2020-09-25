@@ -1,0 +1,36 @@
+Printing pairs for (3, 2) until x*y == 6
+1
+1
+1
+2
+2
+1
+2
+2
+3
+1
+3
+2
+Found target!
+Printing pairs for (2, 3) until x*y == 4
+1
+1
+1
+2
+1
+3
+2
+1
+2
+2
+Found target!
+Printing pairs for (2, 2) until x*y == 9
+1
+1
+1
+2
+2
+1
+2
+2
+Did not find target!

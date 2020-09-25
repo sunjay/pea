@@ -5,12 +5,32 @@ use std::collections::HashMap;
 use crate::{
     nir,
     diagnostics::Diagnostics,
-    bytecode::{self, OpCode},
+    bytecode::{self, OpCode, PatchJump, LoopCheckpoint},
     value::Value,
     gc::Gc,
 };
 
 use super::def_consts::DefConsts;
+
+#[derive(Debug)]
+struct LoopState {
+    /// The checkpoint at the start of the loop, before the loop condition has executed
+    loop_start: LoopCheckpoint,
+
+    /// Patches that need to be resolved to the offset of the next instruction after the loop has
+    /// completed (after ALL of the code for the loop)
+    after_loop_patches: Vec<PatchJump>,
+}
+
+#[derive(Debug)]
+struct BlockState {
+    /// The frame offset at the start of this block
+    start_frame_offset: u8,
+    /// The loop in this block that is currently being walked
+    ///
+    /// If this is None, we are not currently in any loop
+    current_loop: Option<LoopState>,
+}
 
 pub struct FunctionCompiler<'a> {
     consts: &'a mut bytecode::Constants,
@@ -18,6 +38,8 @@ pub struct FunctionCompiler<'a> {
     diag: &'a Diagnostics,
 
     code: bytecode::Bytecode,
+    /// A stack of the state of each block, pushed as we enter a block and popped as we leave
+    blocks: Vec<BlockState>,
     /// The frame offset of each local variable
     local_var_offsets: HashMap<nir::DefId, u8>,
     /// The offset from the frame pointer to be used for the next local variable that is defined
@@ -38,6 +60,7 @@ impl<'a> FunctionCompiler<'a> {
 
             code: Default::default(),
             local_var_offsets: Default::default(),
+            blocks: Default::default(),
             // The first value at the frame pointer is always the function itself
             next_frame_offset: 1,
         };
@@ -80,7 +103,10 @@ impl<'a> FunctionCompiler<'a> {
             scope: _,
         } = block;
 
-        let next_frame_offset = self.next_frame_offset;
+        self.blocks.push(BlockState {
+            start_frame_offset: self.next_frame_offset,
+            current_loop: None,
+        });
 
         for stmt in stmts {
             self.walk_stmt(stmt);
@@ -92,6 +118,10 @@ impl<'a> FunctionCompiler<'a> {
             None => self.code.write_instr(OpCode::ConstUnit, brace_close_token.span),
         }
 
+        // Finished with this block
+        let BlockState {start_frame_offset, current_loop} = self.blocks.pop().expect("bug: block mismatch");
+        assert!(current_loop.is_none(), "bug: should not have current loop at end of block");
+
         // Pop local variables but keep the return value
         //
         // Note that we have to generate the return expression before we do this because otherwise
@@ -101,13 +131,13 @@ impl<'a> FunctionCompiler<'a> {
         // offsets we compute need to be correct whether the interpreter executes a given sub-block
         // or not. It would be bad if not executing an `if` body resulted in all future indexes
         // being incorrect.
-        let nlocals = self.next_frame_offset - next_frame_offset;
+        let nlocals = self.next_frame_offset - start_frame_offset;
         if nlocals > 0 {
             self.code.write_instr_u8(OpCode::BlockEnd, nlocals, brace_close_token.span);
         }
 
         // Restore the next frame offset since all local variables are now popped
-        self.next_frame_offset = next_frame_offset;
+        self.next_frame_offset = start_frame_offset;
     }
 
     fn walk_stmt(&mut self, stmt: &nir::Stmt) {
@@ -172,8 +202,13 @@ impl<'a> FunctionCompiler<'a> {
     fn walk_while_loop_stmt(&mut self, stmt: &nir::WhileLoop) {
         let nir::WhileLoop {while_token: _, cond, body} = stmt;
 
-        // Record the address of the start of the loop
-        let loop_start = self.code.loop_checkpoint();
+        let top_block = self.blocks.last_mut().expect("bug: should be in a block");
+        assert!(top_block.current_loop.is_none(), "bug: overwrote loop");
+        top_block.current_loop = Some(LoopState {
+            // Record the address of the start of the loop
+            loop_start: self.code.loop_checkpoint(),
+            after_loop_patches: Vec::new(),
+        });
 
         self.walk_expr(cond);
 
@@ -188,6 +223,13 @@ impl<'a> FunctionCompiler<'a> {
         // Pop the return value of the block
         self.code.write_instr_u8(OpCode::Pop, 1, body.brace_close_token.span);
 
+        // The loop has completed
+        let top_block = self.blocks.last_mut().expect("bug: should be in a block");
+        let LoopState {
+            loop_start,
+            after_loop_patches,
+        } = top_block.current_loop.take().expect("bug: should have had a loop");
+
         // Jump back to the start of the loop, just before the condition so it can run again
         self.code.write_loop(OpCode::Loop, loop_start, body.brace_close_token.span);
 
@@ -195,6 +237,10 @@ impl<'a> FunctionCompiler<'a> {
 
         // Pop the condition value
         self.code.write_instr_u8(OpCode::Pop, 1, body.brace_close_token.span);
+
+        for patch in after_loop_patches {
+            self.code.finish_jump_patch(patch);
+        }
     }
 
     fn walk_expr(&mut self, expr: &nir::Expr) {
@@ -209,8 +255,8 @@ impl<'a> FunctionCompiler<'a> {
             Group(expr) => self.walk_group(expr),
             Call(call) => self.walk_call(call),
             Return(ret) => self.walk_return(ret),
-            Break(expr) => todo!(),
-            Continue(expr) => todo!(),
+            Break(expr) => self.walk_break(expr),
+            Continue(expr) => self.walk_continue(expr),
             Def(def_id) => self.walk_def(def_id),
             Integer(lit) => self.walk_integer_literal(lit),
             Bool(lit) => self.walk_bool_literal(lit),
@@ -441,6 +487,89 @@ impl<'a> FunctionCompiler<'a> {
 
         // Return the value
         self.code.write_instr(OpCode::Return, return_token.span);
+    }
+
+    fn walk_break(&mut self, expr: &nir::BreakExpr) {
+        let nir::BreakExpr {break_token} = expr;
+
+        // `break` needs to do two things:
+        // 1. pop all local variables up to the start of the **loop body**
+        // 2. jump to the point AFTER **all** of the generated code for the loop
+
+        // The loop body block is in the block stack just **after** the block that contains the loop
+        // state itself
+        let loop_state;
+        // This variable will get initialized to a different value, but we can't prove that to rustc
+        let mut loop_body_start_frame_offset = 0;
+        let mut block_stack = self.blocks.iter_mut().rev();
+        loop {
+            let block_state = match block_stack.next() {
+                Some(block) => block,
+                None => {
+                    self.diag.span_error(break_token.span, "`break` outside of a loop").emit();
+                    return;
+                },
+            };
+
+            if let Some(current_loop) = &mut block_state.current_loop {
+                loop_state = current_loop;
+                break;
+            }
+
+            loop_body_start_frame_offset = block_state.start_frame_offset;
+        }
+
+        // Pop local variables up to the loop body
+        let nlocals = self.next_frame_offset - loop_body_start_frame_offset;
+        if nlocals > 0 {
+            self.code.write_instr_u8(OpCode::Pop, nlocals, break_token.span);
+        }
+
+        // Jump to after the loop body
+        let after_loop_patch = self.code.write_jump_patch(OpCode::Jump, break_token.span);
+
+        loop_state.after_loop_patches.push(after_loop_patch);
+    }
+
+    fn walk_continue(&mut self, expr: &nir::ContinueExpr) {
+        let nir::ContinueExpr {continue_token} = expr;
+
+        // `continue` needs to do two things:
+        // 1. pop all local variables up to the start of the **loop body**
+        // 2. jump to the point just before the loop condition (same as if the end of the loop body
+        //    is reached)
+
+        // The loop body block is in the block stack just **after** the block that contains the loop
+        // state itself
+        let loop_state;
+        // This variable will get initialized to a different value, but we can't prove that to rustc
+        let mut loop_body_start_frame_offset = 0;
+        let mut block_stack = self.blocks.iter_mut().rev();
+        loop {
+            let block_state = match block_stack.next() {
+                Some(block) => block,
+                None => {
+                    self.diag.span_error(continue_token.span, "`continue` outside of a loop").emit();
+                    return;
+                },
+            };
+
+            if let Some(current_loop) = &mut block_state.current_loop {
+                loop_state = current_loop;
+                break;
+            }
+
+            loop_body_start_frame_offset = block_state.start_frame_offset;
+        }
+
+        // Pop local variables up to the loop body
+        let nlocals = self.next_frame_offset - loop_body_start_frame_offset;
+        if nlocals > 0 {
+            self.code.write_instr_u8(OpCode::Pop, nlocals, continue_token.span);
+        }
+
+        // Jump to start of loop before condition
+        self.code.write_loop(OpCode::Loop, loop_state.loop_start, continue_token.span);
     }
 
     fn walk_def(&mut self, def: &nir::DefSpan) {

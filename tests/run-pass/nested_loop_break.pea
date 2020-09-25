@@ -1,0 +1,49 @@
+/// Prints all pairs (x, y) such that 1 <= x <= a, 1 <= y <= b. Stops printing once x*y == target.
+fn print_pairs_until(a, b, target) {
+    let found_target = false;
+    let x = 1;
+    //TODO: This could be rewritten as a for...in loop once those are supported
+    while x <= a {
+        let y = 1;
+        while y <= b {
+            println!(x);
+            println!(y);
+
+            let product = x*y;
+            if product == target {
+                found_target = true;
+                break;
+
+                // These statements should never be reached
+                let _unreachable = 3;
+                println!(_unreachable);
+            }
+
+            // Creating extra locals that the break above should not count when figuring out how
+            // much to pop
+            let next_y = y + 1;
+            y = next_y;
+        }
+
+        if found_target {
+            break;
+        }
+
+        x = x + 1;
+    }
+
+    if found_target {
+        println!(b"Found target!");
+    } else {
+        println!(b"Did not find target!");
+    }
+}
+
+fn main() {
+    println!(b"Printing pairs for (3, 2) until x*y == 6");
+    print_pairs_until(3, 2, 6);
+    println!(b"Printing pairs for (2, 3) until x*y == 4");
+    print_pairs_until(2, 3, 4);
+    println!(b"Printing pairs for (2, 2) until x*y == 9");
+    print_pairs_until(2, 2, 9);
+}

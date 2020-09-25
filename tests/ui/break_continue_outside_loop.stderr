@@ -1,0 +1,6 @@
+[tests/ui/break_continue_outside_loop.pea:2:5-2:9] error: `break` outside of a loop
+
+[tests/ui/break_continue_outside_loop.pea:3:5-3:12] error: `continue` outside of a loop
+
+error: aborting due to 2 previous errors
+

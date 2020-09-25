@@ -1,0 +1,16 @@
+fn main() {
+    let x = 3;
+    while true {
+        let value = x;
+        println!(value);
+
+        if value > 10 {
+            break;
+        }
+
+        let next_value = value + 1;
+        x = next_value;
+    }
+
+    println!(b"done!");
+}
