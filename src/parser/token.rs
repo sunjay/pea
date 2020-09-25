@@ -230,6 +230,7 @@ keywords! {
     If : "if"
     Else : "else"
     While : "while"
+    Loop : "loop"
     Break : "break"
     Continue : "continue"
 

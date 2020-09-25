@@ -148,6 +148,7 @@ impl<'a> FunctionCompiler<'a> {
             Expr(stmt) => self.walk_expr_stmt(stmt),
             Cond(stmt) => self.walk_cond_stmt(stmt),
             WhileLoop(stmt) => self.walk_while_loop_stmt(stmt),
+            Loop(stmt) => todo!(),
         }
     }
 

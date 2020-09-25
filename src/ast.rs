@@ -45,6 +45,7 @@ pub enum Stmt {
     Expr(ExprStmt),
     Cond(Cond),
     WhileLoop(WhileLoop),
+    Loop(Loop),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -76,6 +77,13 @@ pub struct ExprStmt {
 pub struct WhileLoop {
     pub while_token: Token,
     pub cond: Expr,
+    pub body: Block,
+}
+
+/// An infinite loop
+#[derive(Debug, Clone, PartialEq)]
+pub struct Loop {
+    pub loop_token: Token,
     pub body: Block,
 }
 

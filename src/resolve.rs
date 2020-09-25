@@ -111,6 +111,7 @@ impl<'a> NameResolver<'a> {
             Expr(stmt) => nir::Stmt::Expr(self.resolve_expr_stmt(stmt)),
             Cond(stmt) => nir::Stmt::Cond(self.resolve_cond(stmt)),
             WhileLoop(stmt) => nir::Stmt::WhileLoop(self.resolve_while_loop(stmt)),
+            Loop(stmt) => nir::Stmt::Loop(self.resolve_loop(stmt)),
         }
     }
 
@@ -170,6 +171,15 @@ impl<'a> NameResolver<'a> {
         let body = self.resolve_block(body);
 
         nir::WhileLoop {while_token, cond, body}
+    }
+
+    fn resolve_loop(&mut self, stmt: &ast::Loop) -> nir::Loop {
+        let ast::Loop {loop_token, body} = stmt;
+
+        let loop_token = loop_token.clone();
+        let body = self.resolve_block(body);
+
+        nir::Loop {loop_token, body}
     }
 
     fn resolve_expr(&mut self, expr: &ast::Expr) -> nir::Expr {
