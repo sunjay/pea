@@ -1,0 +1,43 @@
+fn main() {
+    let empty = [];
+    println!(empty);
+
+    // Copy between lists using a loop
+    let a1 = [1, 2, 3, 4, 5];
+    let len = 5;
+    let a2 = [0; a1.len()];
+
+    println!(a1);
+    println!(a2);
+
+    let i = 0;
+    while i < len {
+        a2[i] = a1[i];
+
+        i += 1;
+    }
+
+    println!(a1);
+    println!(a2);
+
+    let i = 0;
+    while i < len {
+        a1[i] *= 2;
+
+        i += 1;
+    }
+
+    println!(a1);
+    println!(a2);
+
+    a1.push(6);
+    a2.push(33);
+
+    println!(a1);
+    println!(a2);
+
+    // List iteration
+    for item in a1 {
+        println!(item);
+    }
+}
