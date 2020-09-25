@@ -148,7 +148,7 @@ impl<'a> FunctionCompiler<'a> {
             Expr(stmt) => self.walk_expr_stmt(stmt),
             Cond(stmt) => self.walk_cond_stmt(stmt),
             WhileLoop(stmt) => self.walk_while_loop_stmt(stmt),
-            Loop(stmt) => todo!(),
+            Loop(stmt) => self.walk_loop_stmt(stmt),
         }
     }
 
@@ -238,6 +238,37 @@ impl<'a> FunctionCompiler<'a> {
 
         // Pop the condition value
         self.code.write_instr_u8(OpCode::Pop, 1, body.brace_close_token.span);
+
+        for patch in after_loop_patches {
+            self.code.finish_jump_patch(patch);
+        }
+    }
+
+    fn walk_loop_stmt(&mut self, stmt: &nir::Loop) {
+        let nir::Loop {loop_token: _, body} = stmt;
+
+        let top_block = self.blocks.last_mut().expect("bug: should be in a block");
+        assert!(top_block.current_loop.is_none(), "bug: overwrote loop");
+        top_block.current_loop = Some(LoopState {
+            // Record the address of the start of the loop
+            loop_start: self.code.loop_checkpoint(),
+            after_loop_patches: Vec::new(),
+        });
+
+        self.walk_block(body);
+
+        // Pop the return value of the block
+        self.code.write_instr_u8(OpCode::Pop, 1, body.brace_close_token.span);
+
+        // The loop has completed
+        let top_block = self.blocks.last_mut().expect("bug: should be in a block");
+        let LoopState {
+            loop_start,
+            after_loop_patches,
+        } = top_block.current_loop.take().expect("bug: should have had a loop");
+
+        // Jump back to the start of the loop so it can run again
+        self.code.write_loop(OpCode::Loop, loop_start, body.brace_close_token.span);
 
         for patch in after_loop_patches {
             self.code.finish_jump_patch(patch);
