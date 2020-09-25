@@ -39,6 +39,13 @@ pub struct FilePos<'a> {
     pub end_offset: usize,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FileLine<'a> {
+    pub path: &'a Path,
+    pub line: usize,
+    pub bytes: &'a [u8],
+}
+
 #[derive(Debug, Default)]
 pub struct SourceFiles {
     /// The source code of all files concatenated together.
@@ -103,6 +110,16 @@ impl SourceFiles {
         let (end_line, end_offset) = line_numbers.number_offset(span.end - 1);
 
         FilePos {path, start_line, start_offset, end_line, end_offset}
+    }
+
+    /// Returns resolved file and line info for the line containing the given index
+    pub fn line(&self, index: usize) -> FileLine {
+        let File {path, line_numbers, handle, ..} = self.file(index);
+        let (line, _) = line_numbers.number_offset(index);
+        let (start, end) = line_numbers.line_indexes(line);
+        let bytes = &self.source(*handle).bytes[start..end];
+
+        FileLine {path, line, bytes}
     }
 
     /// Returns the path of the file whose source contains the given index

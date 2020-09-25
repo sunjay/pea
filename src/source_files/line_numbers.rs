@@ -54,4 +54,9 @@ impl LineNumbers {
 
         (line, offset)
     }
+
+    /// Returns the (start index, end index) of this line
+    pub fn line_indexes(&self, line: usize) -> (usize, usize) {
+        (self.offsets[line-1], self.offsets[line])
+    }
 }
