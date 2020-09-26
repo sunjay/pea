@@ -34,6 +34,11 @@ pub enum TokenKind {
     /// The `)` symbol
     ParenClose,
 
+    /// The `[` symbol
+    BracketOpen,
+    /// The `]` symbol
+    BracketClose,
+
     /// The `{` symbol
     BraceOpen,
     /// The `}` symbol
@@ -106,6 +111,9 @@ impl fmt::Display for TokenKind {
 
             ParenOpen => write!(f, "`(`"),
             ParenClose => write!(f, "`)`"),
+
+            BracketOpen => write!(f, "`[`"),
+            BracketClose => write!(f, "`]`"),
 
             BraceOpen => write!(f, "`{{`"),
             BraceClose => write!(f, "`}}`"),

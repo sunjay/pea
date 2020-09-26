@@ -40,6 +40,8 @@ impl<'a> Lexer<'a> {
         match (current_char, self.scanner.peek()) {
             (b'(', _) => self.byte_token(start, ParenOpen),
             (b')', _) => self.byte_token(start, ParenClose),
+            (b'[', _) => self.byte_token(start, BracketOpen),
+            (b']', _) => self.byte_token(start, BracketClose),
             (b'{', _) => self.byte_token(start, BraceOpen),
             (b'}', _) => self.byte_token(start, BraceClose),
 
