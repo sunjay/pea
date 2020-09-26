@@ -10,6 +10,7 @@ pub enum Type {
     Unit,
     Bool,
     I64,
+    List,
     Bytes,
     Func,
 }
@@ -21,6 +22,7 @@ impl fmt::Display for Type {
             Unit => write!(f, "()"),
             Bool => write!(f, "bool"),
             I64 => write!(f, "i64"),
+            List => write!(f, "list"),
             Bytes => write!(f, "[u8]"),
             Func => write!(f, "fn"),
         }
@@ -28,12 +30,13 @@ impl fmt::Display for Type {
 }
 
 /// The representation of a value in bytecode
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Value {
     /// The `()` value
     Unit,
     Bool(bool),
     I64(i64),
+    List(Gc<prim::List>),
     Bytes(Gc<prim::Bytes>),
     Func(Gc<prim::Func>),
 }
@@ -48,6 +51,7 @@ impl Trace for Value {
             Unit |
             Bool(_) |
             I64(_) => {},
+            List(value) => value.trace(),
             Bytes(value) => value.trace(),
             Func(value) => value.trace(),
         }
@@ -61,8 +65,9 @@ impl fmt::Display for Value {
             Unit => write!(f, "()"),
             Bool(value) => write!(f, "{}", value),
             I64(value) => write!(f, "{}", value),
-            Bytes(value) => write!(f, "{}", *value),
-            Func(value) => write!(f, "{}", **value),
+            List(value) => write!(f, "{}", value),
+            Bytes(value) => write!(f, "{}", value),
+            Func(value) => write!(f, "{}", value),
         }
     }
 }
@@ -74,6 +79,7 @@ impl Value {
             Unit => Type::Unit,
             Bool(_) => Type::Bool,
             I64(_) => Type::I64,
+            List(_) => Type::List,
             Bytes(_) => Type::Bytes,
             Func(_) => Type::Func,
         }
@@ -104,6 +110,7 @@ impl Value {
 
             Unit |
             Bool(_) |
+            List(_) |
             Bytes(_) |
             Func(_) => None,
         }
@@ -119,6 +126,7 @@ impl Value {
 
             Unit |
             Bool(_) |
+            List(_) |
             Bytes(_) |
             Func(_) => None,
         }
@@ -133,6 +141,7 @@ impl Value {
 
             Unit |
             I64(_) |
+            List(_) |
             Bytes(_) |
             Func(_) => None,
         }
