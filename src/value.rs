@@ -1,3 +1,7 @@
+mod deep_clone;
+
+pub use deep_clone::*;
+
 use std::{fmt, mem};
 
 use static_assertions::const_assert_eq;
@@ -72,6 +76,21 @@ impl fmt::Display for Value {
     }
 }
 
+impl DeepClone for Value {
+    fn deep_clone(&self) -> Self {
+        use Value::*;
+        match self {
+            Unit => Unit,
+            Bool(value) => Bool(value.deep_clone()),
+            I64(value) => I64(value.deep_clone()),
+            List(value) => List(value.deep_clone()),
+            Bytes(value) => Bytes(value.deep_clone()),
+            // Functions are immutable, so we can short-circuit the deep clone here
+            Func(value) => Func(value.clone()),
+        }
+    }
+}
+
 impl Value {
     pub fn typ(&self) -> Type {
         use Value::*;
@@ -90,6 +109,22 @@ impl Value {
         match self {
             &Bool(value) => Some(value),
             _ => None,
+        }
+    }
+
+    pub fn to_i64(&self) -> Option<i64> {
+        use Value::*;
+        match self {
+            &I64(value) => Some(value),
+            _ => None,
+        }
+    }
+
+    pub fn unwrap_i64(&self) -> i64 {
+        use Value::*;
+        match self {
+            &I64(value) => value,
+            _ => panic!("expected an `i64` value"),
         }
     }
 

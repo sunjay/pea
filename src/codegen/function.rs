@@ -292,8 +292,8 @@ impl<'a> FunctionCompiler<'a> {
             Def(def_id) => self.walk_def(def_id),
             Integer(lit) => self.walk_integer_literal(lit),
             Bool(lit) => self.walk_bool_literal(lit),
-            List(list) => todo!(),
-            ListRepeat(list) => todo!(),
+            List(list) => self.walk_list(list),
+            ListRepeat(list) => self.walk_list_repeat(list),
             BStr(lit) => self.walk_bstr_literal(lit),
         }
     }
@@ -639,6 +639,39 @@ impl<'a> FunctionCompiler<'a> {
         } else {
             self.code.write_instr(OpCode::ConstFalse, span);
         }
+    }
+
+    fn walk_list(&mut self, lit: &nir::ListLiteral) {
+        let nir::ListLiteral {bracket_open_token: _, items, bracket_close_token} = lit;
+
+        // Push each item onto the stack in order
+        for item in items {
+            self.walk_expr(item);
+        }
+
+        // Push the length onto the stack
+        let len = items.len().try_into()
+            .expect("bug: values out of the 64-bit range are not currently supported");
+        let const_id = self.consts.push(Value::I64(len));
+        self.code.write_instr_u16(OpCode::Constant, const_id.into_u16(), bracket_close_token.span);
+
+        // Create the list
+        self.code.write_instr(OpCode::List, bracket_close_token.span);
+    }
+
+    fn walk_list_repeat(&mut self, lit: &nir::ListRepeatLiteral) {
+        let nir::ListRepeatLiteral {
+            bracket_open_token: _,
+            item,
+            semicolon_token: _,
+            len,
+            bracket_close_token,
+        } = lit;
+
+        self.walk_expr(item);
+        self.walk_expr(len);
+
+        self.code.write_instr(OpCode::ListRepeat, bracket_close_token.span);
     }
 
     fn walk_bstr_literal(&mut self, lit: &nir::BStrLiteral) {

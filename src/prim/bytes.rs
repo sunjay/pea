@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::gc::{self, Gc};
+use crate::{gc::{self, Gc}, value::DeepClone};
 
 /// A growable ASCII byte string
 #[derive(Debug, PartialEq, Eq)]
@@ -32,6 +32,12 @@ impl gc::Trace for Bytes {
     fn trace(&self) {
         let Bytes(bytes) = self;
         bytes.trace();
+    }
+}
+
+impl DeepClone for Bytes {
+    fn deep_clone(&self) -> Self {
+        Bytes(self.0.deep_clone())
     }
 }
 

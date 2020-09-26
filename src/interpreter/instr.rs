@@ -1,4 +1,6 @@
-use crate::{ast, bytecode::ConstId, value::Value};
+use std::iter;
+
+use crate::{ast, bytecode::ConstId, value::{Value, DeepClone}, gc::Gc};
 
 use super::{CallFrame, Interpreter, RuntimeError, RuntimeResult, Status};
 
@@ -120,6 +122,36 @@ pub fn constant(ctx: &mut Interpreter, index: u16) -> RuntimeResult {
     // constant ID
     let id = unsafe { ConstId::new_unchecked(index) };
     ctx.value_stack.push(ctx.consts.get(id).clone());
+
+    Ok(Status::Running)
+}
+
+#[inline]
+pub fn list(ctx: &mut Interpreter) -> RuntimeResult {
+    // Compiler should guarantee that this argument is a non-negative number
+    let len = ctx.pop().unwrap_i64() as usize;
+
+    let list = ctx.value_stack.drain(ctx.value_stack.len()-len..).collect();
+    ctx.value_stack.push(Value::List(Gc::new(list)));
+
+    Ok(Status::Running)
+}
+
+#[inline]
+pub fn list_repeat(ctx: &mut Interpreter) -> RuntimeResult {
+    let len = ctx.pop();
+    let len = len.to_i64()
+        .ok_or_else(|| RuntimeError::ListRepeatLenMismatchedTypes {typ: len.typ()})?;
+
+    let len = match len {
+        0 ..= i64::MAX => len as usize,
+        _ => return Err(RuntimeError::ListRepeatLenNegative),
+    };
+
+    let item = ctx.pop();
+
+    let list = iter::repeat_with(|| item.deep_clone()).take(len).collect();
+    ctx.value_stack.push(Value::List(Gc::new(list)));
 
     Ok(Status::Running)
 }

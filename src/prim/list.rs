@@ -1,6 +1,6 @@
 use std::{fmt, iter};
 
-use crate::{value::Value, gc};
+use crate::{value::{Value, DeepClone}, gc};
 
 /// A dynamically-sized list of values
 #[derive(Debug, Default, PartialEq)]
@@ -36,5 +36,16 @@ impl fmt::Display for List {
         }
 
         write!(f, "]")
+    }
+}
+
+
+impl DeepClone for List {
+    fn deep_clone(&self) -> Self {
+        let Self {items} = self;
+
+        Self {
+            items: items.deep_clone(),
+        }
     }
 }

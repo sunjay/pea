@@ -63,6 +63,13 @@ pub enum RuntimeError {
 
     #[error("conditions must evaluate to a value of type `bool`")]
     ConditionMustBeBool,
+
+    #[error("list repeat length argument must be a number, found `{typ}`")]
+    ListRepeatLenMismatchedTypes {
+        typ: value::Type,
+    },
+    #[error("list repeat length argument must be a non-negative number")]
+    ListRepeatLenNegative,
 }
 
 pub type RuntimeResult = Result<Status, RuntimeError>;
@@ -179,6 +186,9 @@ impl Interpreter {
             ConstTrue => instr::const_true.run(self),
             ConstFalse => instr::const_false.run(self),
             Constant => instr::constant.run(self),
+
+            List => instr::list.run(self),
+            ListRepeat => instr::list_repeat.run(self),
 
             GetLocal => instr::get_local.run(self),
             SetLocal => instr::set_local.run(self),

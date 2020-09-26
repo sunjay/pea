@@ -105,6 +105,9 @@ impl Func {
                 ConstFalse => cwriteln!(out, "const_false()"),
                 Constant => cwriteln!(out, "const(const_id={})", read_u16(&mut cursor)),
 
+                List => cwriteln!(out, "list()"),
+                ListRepeat => cwriteln!(out, "list_repeat()"),
+
                 GetLocal => cwriteln!(out, "get_local(fp_offset={})", read_u8(&mut cursor)),
                 SetLocal => cwriteln!(out, "set_local(fp_offset={})", read_u8(&mut cursor)),
 

@@ -1,0 +1,18 @@
+fn foo(a) {
+    println!(a);
+}
+
+fn main() {
+    let a = [];
+    foo(a);
+
+    let a = [1];
+    foo(a);
+
+    let a = [1, 2, 3,];
+    foo(a);
+
+    let z = 30;
+    let a = [a; z];
+    foo(a);
+}

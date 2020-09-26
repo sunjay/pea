@@ -356,19 +356,26 @@ pub enum OpCode {
     /// * `u16` - The amount to add to the instruction pointer if the value is false
     JumpIfFalse,
 
-    /// Push the unit value `()` onto the top of the stack.
+    /// Pushes the unit value `()` onto the top of the stack.
     ConstUnit,
-    /// Push the bool value `true` onto the top of the stack.
+    /// Pushes the bool value `true` onto the top of the stack.
     ConstTrue,
-    /// Push the bool value `false` onto the top of the stack.
+    /// Pushes the bool value `false` onto the top of the stack.
     ConstFalse,
-
-    /// Load a constant value from the constants table and push it onto the top of the stack.
+    /// Loads a constant value from the constants table and push it onto the top of the stack.
     ///
     /// # Arguments
     ///
     /// * `u16` - The ID of the constant to read.
     Constant,
+
+    /// Pushes a list value onto the stack by first popping the length of the list from the stack,
+    /// then popping that number of items from the stack to initialize the list (in reverse order).
+    List,
+    /// Pushes a list value onto the stack by first popping the length of the list from the stack,
+    /// then popping another value which will be deep copied repeatedly to produce each item in the
+    /// list.
+    ListRepeat,
 
     /// Loads a value from the stack and pushes a copy of it onto the top of the stack.
     ///
