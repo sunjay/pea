@@ -49,6 +49,16 @@ impl<T: Trace> Gc<T> {
     }
 }
 
+impl<T: ?Sized> Gc<T> {
+    /// Returns `true` if the two `Gc` values point to the same allocation
+    /// (in a vein similar to [`ptr::eq`]).
+    ///
+    /// [`ptr::eq`]: core::ptr::eq
+    pub fn ptr_eq(this: &Self, other: &Self) -> bool {
+        this.ptr.as_ptr() == other.ptr.as_ptr()
+    }
+}
+
 impl<T: Trace> iter::FromIterator<T> for Gc<[T]> {
     fn from_iter<I: iter::IntoIterator<Item = T>>(iter: I) -> Self {
         let items: Vec<T> = Vec::from_iter(iter);
@@ -151,7 +161,7 @@ impl<T: ?Sized> fmt::Pointer for Gc<T> {
 
 impl<T: ?Sized + PartialEq> PartialEq for Gc<T> {
     fn eq(&self, other: &Self) -> bool {
-        (**self).eq(&**other)
+        Self::ptr_eq(self, other) || (**self).eq(&**other)
     }
 }
 
