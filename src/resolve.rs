@@ -199,6 +199,8 @@ impl<'a> NameResolver<'a> {
             Ident(name) => nir::Expr::Def(self.lookup(name)),
             Integer(value) => nir::Expr::Integer(value.clone()),
             Bool(value) => nir::Expr::Bool(value.clone()),
+            List(list) => nir::Expr::List(self.resolve_list(list)),
+            ListRepeat(list) => nir::Expr::ListRepeat(Box::new(self.resolve_list_repeat(list))),
             BStr(value) => nir::Expr::BStr(value.clone()),
         }
     }
@@ -327,6 +329,28 @@ impl<'a> NameResolver<'a> {
         let expr = expr.as_ref().map(|expr| self.resolve_expr(expr));
 
         nir::ReturnExpr {return_token, expr}
+    }
+
+    fn resolve_list(&mut self, list: &ast::ListLiteral) -> nir::ListLiteral {
+        let ast::ListLiteral {bracket_open_token, items, bracket_close_token} = list;
+
+        let bracket_open_token = bracket_open_token.clone();
+        let items = items.iter().map(|item| self.resolve_expr(item)).collect();
+        let bracket_close_token = bracket_close_token.clone();
+
+        nir::ListLiteral {bracket_open_token, items, bracket_close_token}
+    }
+
+    fn resolve_list_repeat(&mut self, list: &ast::ListRepeatLiteral) -> nir::ListRepeatLiteral {
+        let ast::ListRepeatLiteral {bracket_open_token, item, semicolon_token, len, bracket_close_token} = list;
+
+        let bracket_open_token = bracket_open_token.clone();
+        let item = self.resolve_expr(item);
+        let semicolon_token = semicolon_token.clone();
+        let len = self.resolve_expr(len);
+        let bracket_close_token = bracket_close_token.clone();
+
+        nir::ListRepeatLiteral {bracket_open_token, item, semicolon_token, len, bracket_close_token}
     }
 
     fn declare_func(&mut self, name: &ast::Ident) -> nir::DefSpan {

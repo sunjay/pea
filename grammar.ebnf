@@ -15,7 +15,7 @@ while_loop ::= 'while' expr block
 loop_loop ::= 'loop' block
 
 expr ::= expr bin_op expr | unary_op expr | assign | group | call | return | cond
-         integer_literal | bool_literal | byte_str | 'break' | 'continue' | ident
+         integer_literal | bool_literal | list_literal | byte_str | 'break' | 'continue' | ident
 
 cond ::= 'if' expr block ('else' 'if' expr block)* ('else' block)?
 
@@ -30,3 +30,6 @@ call ::= expr '(' func_args ')'
 func_args ::= (expr ',')* expr?
 return ::= 'return' expr
 bool_literal ::= 'true' | 'false'
+list_literal ::= '[' (list_items | list_repeat) ']'
+list_items ::= (expr ',')* expr?
+list_repeat ::= expr ';' expr

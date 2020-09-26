@@ -292,6 +292,8 @@ impl<'a> FunctionCompiler<'a> {
             Def(def_id) => self.walk_def(def_id),
             Integer(lit) => self.walk_integer_literal(lit),
             Bool(lit) => self.walk_bool_literal(lit),
+            List(list) => todo!(),
+            ListRepeat(list) => todo!(),
             BStr(lit) => self.walk_bstr_literal(lit),
         }
     }

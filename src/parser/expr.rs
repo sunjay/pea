@@ -338,6 +338,8 @@ impl<'a> Parser<'a> {
             TokenKind::Keyword(Keyword::True) |
             TokenKind::Keyword(Keyword::False) => self.bool_literal().map(ast::Expr::Bool),
 
+            TokenKind::BracketOpen => self.list_literal(),
+
             _ => self.bstr_literal().map(ast::Expr::BStr),
         }
     }
@@ -360,6 +362,50 @@ impl<'a> Parser<'a> {
             value,
             span: token.span,
         })
+    }
+
+    fn list_literal(&mut self) -> ParseResult<ast::Expr> {
+        let bracket_open_token = self.input.match_kind(TokenKind::BracketOpen)?.clone();
+
+        let mut items = Vec::new();
+        if self.input.peek().kind != TokenKind::BracketClose {
+            let item = self.expr()?;
+
+            // Check if this is in fact a list repeat literal
+            if self.input.peek().kind == TokenKind::Semicolon {
+                let semicolon_token = self.input.match_kind(TokenKind::Semicolon)?.clone();
+                let len = self.expr()?;
+                let bracket_close_token = self.input.match_kind(TokenKind::BracketClose)?.clone();
+
+                return Ok(ast::Expr::ListRepeat(Box::new(ast::ListRepeatLiteral {
+                    bracket_open_token,
+                    item,
+                    semicolon_token,
+                    len,
+                    bracket_close_token,
+                })));
+            }
+
+            items.push(item);
+            if self.input.peek().kind == TokenKind::Comma {
+                self.input.match_kind(TokenKind::Comma)?;
+
+                while self.input.peek().kind != TokenKind::BracketClose {
+                    let item = self.expr()?;
+                    items.push(item);
+
+                    if self.input.peek().kind != TokenKind::Comma {
+                        break;
+                    }
+
+                    self.input.match_kind(TokenKind::Comma)?;
+                }
+            }
+        }
+
+        let bracket_close_token = self.input.match_kind(TokenKind::BracketClose)?.clone();
+
+        Ok(ast::Expr::List(ast::ListLiteral {bracket_open_token, items, bracket_close_token}))
     }
 
     fn bstr_literal(&mut self) -> ParseResult<ast::BStrLiteral> {

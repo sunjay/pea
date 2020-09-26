@@ -103,6 +103,8 @@ pub enum Expr {
     Ident(Ident),
     Integer(IntegerLiteral),
     Bool(BoolLiteral),
+    List(ListLiteral),
+    ListRepeat(Box<ListRepeatLiteral>),
     BStr(BStrLiteral),
 }
 
@@ -124,6 +126,8 @@ impl Expr {
             Ident(expr) => expr.span,
             Integer(expr) => expr.span,
             Bool(expr) => expr.span,
+            List(expr) => expr.span(),
+            ListRepeat(expr) => expr.span(),
             BStr(expr) => expr.span,
         }
     }
@@ -404,4 +408,32 @@ pub struct IntegerLiteral {
 pub struct BoolLiteral {
     pub value: bool,
     pub span: Span,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ListLiteral {
+    pub bracket_open_token: Token,
+    pub items: Vec<Expr>,
+    pub bracket_close_token: Token,
+}
+
+impl ListLiteral {
+    pub fn span(&self) -> Span {
+        self.bracket_open_token.span.to(self.bracket_close_token.span)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ListRepeatLiteral {
+    pub bracket_open_token: Token,
+    pub item: Expr,
+    pub semicolon_token: Token,
+    pub len: Expr,
+    pub bracket_close_token: Token,
+}
+
+impl ListRepeatLiteral {
+    pub fn span(&self) -> Span {
+        self.bracket_open_token.span.to(self.bracket_close_token.span)
+    }
 }

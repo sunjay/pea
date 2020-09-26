@@ -112,6 +112,8 @@ pub enum Expr {
     Def(DefSpan),
     Integer(IntegerLiteral),
     Bool(BoolLiteral),
+    List(ListLiteral),
+    ListRepeat(Box<ListRepeatLiteral>),
     BStr(BStrLiteral),
 }
 
@@ -208,6 +210,22 @@ pub struct ReturnExpr {
 pub struct DefSpan {
     pub id: DefId,
     pub span: Span,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ListLiteral {
+    pub bracket_open_token: Token,
+    pub items: Vec<Expr>,
+    pub bracket_close_token: Token,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ListRepeatLiteral {
+    pub bracket_open_token: Token,
+    pub item: Expr,
+    pub semicolon_token: Token,
+    pub len: Expr,
+    pub bracket_close_token: Token,
 }
 
 pub type UnaryOp = ast::UnaryOp;
