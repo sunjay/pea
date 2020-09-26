@@ -114,7 +114,7 @@ impl Func {
                 Pop => cwriteln!(out, "pop(n={})", read_u8(&mut cursor)),
                 BlockEnd => cwriteln!(out, "block_end(n={})", read_u8(&mut cursor)),
 
-                Print => cwriteln!(out, "print()"),
+                Println => cwriteln!(out, "println()"),
 
                 Neg => cwriteln!(out, "neg()"),
                 Pos => cwriteln!(out, "pos()"),

@@ -205,7 +205,7 @@ pub fn block_end(ctx: &mut Interpreter, n: u8) -> RuntimeResult {
 }
 
 #[inline]
-pub fn print(ctx: &mut Interpreter) -> RuntimeResult {
+pub fn println(ctx: &mut Interpreter) -> RuntimeResult {
     println!("{}", ctx.pop());
 
     Ok(Status::Running)

@@ -157,7 +157,7 @@ impl<'a> FunctionCompiler<'a> {
 
         self.walk_expr(expr);
 
-        self.code.write_instr(OpCode::Print, println_token.span);
+        self.code.write_instr(OpCode::Println, println_token.span);
     }
 
     fn walk_var_decl_stmt(&mut self, stmt: &nir::VarDeclStmt) {

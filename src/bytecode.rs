@@ -407,7 +407,7 @@ pub enum OpCode {
 
     /// Pops and prints the value at the top of the stack.
     //TODO: Get rid of this and make printing an ordinary function call
-    Print,
+    Println,
 
     /// Pops the top value from the stack, negates it, and then pushes the result back onto the
     /// stack.
