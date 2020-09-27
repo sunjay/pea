@@ -255,6 +255,7 @@ pub enum Ty {
     Func(Box<FuncTy>),
     Bool,
     I64,
+    U8,
 }
 
 #[derive(Debug, Clone, PartialEq)]

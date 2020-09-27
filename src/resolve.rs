@@ -469,6 +469,7 @@ impl<'a> NameResolver<'a> {
         match &*name.value {
             "bool" => nir::Ty::Bool,
             "i64" => nir::Ty::I64,
+            "u8" => nir::Ty::U8,
             _ => {
                 //TODO: user-defined types
                 let _def = self.lookup(name);
