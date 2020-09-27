@@ -233,12 +233,6 @@ pub struct ReturnExpr {
     pub expr: Option<Expr>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct DefSpan {
-    pub id: DefId,
-    pub span: Span,
-}
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct ListLiteral {
     pub bracket_open_token: Token,
@@ -285,6 +279,12 @@ pub struct FuncTy {
 pub struct ReturnTy {
     pub right_arrow_token: Token,
     pub ty: Ty,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DefSpan {
+    pub id: DefId,
+    pub span: Span,
 }
 
 pub type UnaryOp = ast::UnaryOp;
