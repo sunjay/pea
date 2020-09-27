@@ -425,6 +425,16 @@ impl<'a> NameResolver<'a> {
         use ast::Ty::*;
         match ty {
             Unit(ty) => nir::Ty::Unit(ty.clone()),
+            Named(name) => match &*name.value {
+                "bool" => nir::Ty::Bool,
+                "i64" => nir::Ty::I64,
+                _ => {
+                    //TODO: user-defined types
+                    let _def = self.lookup(name);
+                    //TODO: This is not the right error recovery, we should use `_def`
+                    nir::Ty::I64
+                },
+            },
         }
     }
 

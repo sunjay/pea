@@ -487,6 +487,7 @@ impl UnitLiteral {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Ty {
     Unit(UnitTy),
+    Named(Ident),
 }
 
 impl Ty {
@@ -494,6 +495,7 @@ impl Ty {
         use Ty::*;
         match self {
             Unit(ty) => ty.span(),
+            Named(ty) => ty.span,
         }
     }
 }

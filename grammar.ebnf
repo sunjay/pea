@@ -38,5 +38,5 @@ list_items ::= (expr ',')* expr?
 list_repeat ::= expr ';' expr
 unit_literal ::= '(' ')'
 
-ty ::= unit_ty
+ty ::= unit_ty | ident
 unit_ty ::= '(' ')'

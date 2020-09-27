@@ -359,7 +359,10 @@ impl<'a> Parser<'a> {
     }
 
     fn ty(&mut self) -> ParseResult<ast::Ty> {
-        self.unit_ty().map(ast::Ty::Unit)
+        match self.input.peek().kind {
+            TokenKind::ParenOpen => self.unit_ty().map(ast::Ty::Unit),
+            _ => self.ident().map(ast::Ty::Named),
+        }
     }
 
     fn unit_ty(&mut self) -> ParseResult<ast::UnitTy> {
