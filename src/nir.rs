@@ -257,8 +257,16 @@ pub struct ListRepeatLiteral {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Ty {
     Unit(UnitTy),
+    List(Box<ListTy>),
     Bool,
     I64,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ListTy {
+    pub bracket_open_token: Token,
+    pub item_ty: Ty,
+    pub bracket_close_token: Token,
 }
 
 pub type UnaryOp = ast::UnaryOp;

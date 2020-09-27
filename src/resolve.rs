@@ -425,15 +425,30 @@ impl<'a> NameResolver<'a> {
         use ast::Ty::*;
         match ty {
             Unit(ty) => nir::Ty::Unit(ty.clone()),
-            Named(name) => match &*name.value {
-                "bool" => nir::Ty::Bool,
-                "i64" => nir::Ty::I64,
-                _ => {
-                    //TODO: user-defined types
-                    let _def = self.lookup(name);
-                    //TODO: This is not the right error recovery, we should use `_def`
-                    nir::Ty::I64
-                },
+            List(ty) => nir::Ty::List(Box::new(self.resolve_list_ty(ty))),
+            Named(name) => self.resolve_named_ty(name),
+        }
+    }
+
+    fn resolve_list_ty(&mut self, list_ty: &ast::ListTy) -> nir::ListTy {
+        let ast::ListTy {bracket_open_token, item_ty, bracket_close_token} = list_ty;
+
+        let bracket_open_token = bracket_open_token.clone();
+        let item_ty = self.resolve_ty(item_ty);
+        let bracket_close_token = bracket_close_token.clone();
+
+        nir::ListTy {bracket_open_token, item_ty, bracket_close_token}
+    }
+
+    fn resolve_named_ty(&mut self, name: &ast::Ident) -> nir::Ty {
+        match &*name.value {
+            "bool" => nir::Ty::Bool,
+            "i64" => nir::Ty::I64,
+            _ => {
+                //TODO: user-defined types
+                let _def = self.lookup(name);
+                //TODO: This is not the right error recovery, we should use `_def`
+                nir::Ty::I64
             },
         }
     }

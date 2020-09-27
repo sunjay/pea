@@ -487,6 +487,7 @@ impl UnitLiteral {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Ty {
     Unit(UnitTy),
+    List(Box<ListTy>),
     Named(Ident),
 }
 
@@ -495,12 +496,27 @@ impl Ty {
         use Ty::*;
         match self {
             Unit(ty) => ty.span(),
+            List(ty) => ty.span(),
             Named(ty) => ty.span,
         }
     }
 }
 
-/// The `()` literal
+/// The `[a]` types
+#[derive(Debug, Clone, PartialEq)]
+pub struct ListTy {
+    pub bracket_open_token: Token,
+    pub item_ty: Ty,
+    pub bracket_close_token: Token,
+}
+
+impl ListTy {
+    pub fn span(&self) -> Span {
+        self.bracket_open_token.span.to(self.bracket_close_token.span)
+    }
+}
+
+/// The `()` type
 #[derive(Debug, Clone, PartialEq)]
 pub struct UnitTy {
     pub paren_open_token: Token,

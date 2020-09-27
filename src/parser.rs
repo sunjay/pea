@@ -361,6 +361,7 @@ impl<'a> Parser<'a> {
     fn ty(&mut self) -> ParseResult<ast::Ty> {
         match self.input.peek().kind {
             TokenKind::ParenOpen => self.unit_ty().map(ast::Ty::Unit),
+            TokenKind::BracketOpen => self.list_ty().map(|ty| ast::Ty::List(Box::new(ty))),
             _ => self.ident().map(ast::Ty::Named),
         }
     }
@@ -370,6 +371,14 @@ impl<'a> Parser<'a> {
         let paren_close_token = self.input.match_kind(TokenKind::ParenClose)?.clone();
 
         Ok(ast::UnitTy {paren_open_token, paren_close_token})
+    }
+
+    fn list_ty(&mut self) -> ParseResult<ast::ListTy> {
+        let bracket_open_token = self.input.match_kind(TokenKind::BracketOpen)?.clone();
+        let item_ty = self.ty()?;
+        let bracket_close_token = self.input.match_kind(TokenKind::BracketClose)?.clone();
+
+        Ok(ast::ListTy {bracket_open_token, item_ty, bracket_close_token})
     }
 
     fn ident(&mut self) -> ParseResult<ast::Ident> {
