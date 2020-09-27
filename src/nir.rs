@@ -252,11 +252,11 @@ pub struct ListRepeatLiteral {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Ty {
     Unit(UnitTy),
+    Bool(Span),
+    I64(Span),
+    U8(Span),
     List(Box<ListTy>),
     Func(Box<FuncTy>),
-    Bool,
-    I64,
-    U8,
 }
 
 #[derive(Debug, Clone, PartialEq)]

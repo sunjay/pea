@@ -477,14 +477,14 @@ impl<'a> NameResolver<'a> {
 
     fn resolve_named_ty(&mut self, name: &ast::Ident) -> nir::Ty {
         match &*name.value {
-            "bool" => nir::Ty::Bool,
-            "i64" => nir::Ty::I64,
-            "u8" => nir::Ty::U8,
+            "bool" => nir::Ty::Bool(name.span),
+            "i64" => nir::Ty::I64(name.span),
+            "u8" => nir::Ty::U8(name.span),
             _ => {
                 //TODO: user-defined types
                 let _def = self.lookup(name);
                 //TODO: This is not the right error recovery, we should use `_def`
-                nir::Ty::I64
+                nir::Ty::I64(name.span)
             },
         }
     }
