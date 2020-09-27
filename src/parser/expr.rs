@@ -119,14 +119,21 @@ impl<'a> Parser<'a> {
         let mut lhs = match prefix_binding_power(self.input.peek().kind) {
             Err(TokenKind::ParenOpen) => {
                 let paren_open_token = self.input.match_kind(TokenKind::ParenOpen)?.clone();
-                let expr = self.expr_bp(0)?;
-                let paren_close_token = self.input.match_kind(TokenKind::ParenClose)?.clone();
+                if self.input.peek().kind == TokenKind::ParenClose {
+                    let paren_close_token = self.input.match_kind(TokenKind::ParenClose)?.clone();
 
-                ast::Expr::Group(Box::new(ast::GroupExpr {
-                    paren_open_token,
-                    expr,
-                    paren_close_token,
-                }))
+                    ast::Expr::Unit(ast::UnitLiteral {paren_open_token, paren_close_token})
+
+                } else {
+                    let expr = self.expr_bp(0)?;
+                    let paren_close_token = self.input.match_kind(TokenKind::ParenClose)?.clone();
+
+                    ast::Expr::Group(Box::new(ast::GroupExpr {
+                        paren_open_token,
+                        expr,
+                        paren_close_token,
+                    }))
+                }
             },
 
             Err(TokenKind::Keyword(Keyword::If)) => {

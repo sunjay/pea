@@ -1,0 +1,7 @@
+fn main() {
+    let a = ();
+    let b = ( /*WOOOOO*/   );
+    println!(a);
+    println!(b);
+    println!(a == b);
+}

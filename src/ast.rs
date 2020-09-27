@@ -117,6 +117,7 @@ pub enum Expr {
     List(ListLiteral),
     ListRepeat(Box<ListRepeatLiteral>),
     BStr(BStrLiteral),
+    Unit(UnitLiteral),
 }
 
 impl Expr {
@@ -140,6 +141,7 @@ impl Expr {
             List(expr) => expr.span(),
             ListRepeat(expr) => expr.span(),
             BStr(expr) => expr.span,
+            Unit(expr) => expr.span(),
         }
     }
 }
@@ -446,5 +448,18 @@ pub struct ListRepeatLiteral {
 impl ListRepeatLiteral {
     pub fn span(&self) -> Span {
         self.bracket_open_token.span.to(self.bracket_close_token.span)
+    }
+}
+
+/// The `()` literal
+#[derive(Debug, Clone, PartialEq)]
+pub struct UnitLiteral {
+    pub paren_open_token: Token,
+    pub paren_close_token: Token,
+}
+
+impl UnitLiteral {
+    pub fn span(&self) -> Span {
+        self.paren_open_token.span.to(self.paren_close_token.span)
     }
 }

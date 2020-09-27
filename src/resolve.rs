@@ -230,6 +230,7 @@ impl<'a> NameResolver<'a> {
             List(list) => nir::Expr::List(self.resolve_list(list)),
             ListRepeat(list) => nir::Expr::ListRepeat(Box::new(self.resolve_list_repeat(list))),
             BStr(value) => nir::Expr::BStr(value.clone()),
+            Unit(value) => nir::Expr::Unit(value.clone()),
         }
     }
 

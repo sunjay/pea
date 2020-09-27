@@ -304,6 +304,7 @@ impl<'a> FunctionCompiler<'a> {
             List(list) => self.walk_list(list),
             ListRepeat(list) => self.walk_list_repeat(list),
             BStr(lit) => self.walk_bstr_literal(lit),
+            Unit(lit) => self.walk_unit_literal(lit),
         }
     }
 
@@ -688,6 +689,12 @@ impl<'a> FunctionCompiler<'a> {
 
         let const_id = self.consts.push(Value::Bytes(Gc::new((**value).into())));
         self.code.write_instr_u16(OpCode::Constant, const_id.into_u16(), *span);
+    }
+
+    fn walk_unit_literal(&mut self, lit: &nir::UnitLiteral) {
+        let nir::UnitLiteral {paren_open_token, paren_close_token} = lit;
+
+        self.code.write_instr(OpCode::ConstUnit, paren_open_token.span.to(paren_close_token.span));
     }
 
     fn declare_local(&mut self, name: &nir::DefSpan) {

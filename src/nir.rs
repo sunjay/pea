@@ -126,6 +126,7 @@ pub enum Expr {
     List(ListLiteral),
     ListRepeat(Box<ListRepeatLiteral>),
     BStr(BStrLiteral),
+    Unit(UnitLiteral),
 }
 
 /// Short-circuiting `||` expression
@@ -246,3 +247,4 @@ pub type ContinueExpr = ast::ContinueExpr;
 pub type IntegerLiteral = ast::IntegerLiteral;
 pub type BoolLiteral = ast::BoolLiteral;
 pub type BStrLiteral = ast::BStrLiteral;
+pub type UnitLiteral = ast::UnitLiteral;
