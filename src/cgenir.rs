@@ -1,6 +1,6 @@
 //! Code Generation IR - An IR with all names and types fully resolved, ready for code generation
 
-use crate::{ast, nir::{self, Scope}, ty::Ty, parser::Token, source_files::Span};
+use crate::{nir::{self, Scope}, ty::Ty, parser::Token, source_files::Span};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Program {
@@ -249,13 +249,13 @@ pub struct TySpan {
     pub span: Span,
 }
 
-pub type UnaryOp = ast::UnaryOp;
-pub type BinaryOp = ast::BinaryOp;
-pub type BreakExpr = ast::BreakExpr;
-pub type ContinueExpr = ast::ContinueExpr;
-pub type IntegerLiteral = ast::IntegerLiteral;
-pub type BoolLiteral = ast::BoolLiteral;
-pub type BStrLiteral = ast::BStrLiteral;
-pub type UnitLiteral = ast::UnitLiteral;
-pub type UnitTy = ast::UnitTy;
+pub type UnaryOp = nir::UnaryOp;
+pub type BinaryOp = nir::BinaryOp;
+pub type BreakExpr = nir::BreakExpr;
+pub type ContinueExpr = nir::ContinueExpr;
+pub type IntegerLiteral = nir::IntegerLiteral;
+pub type BoolLiteral = nir::BoolLiteral;
+pub type BStrLiteral = nir::BStrLiteral;
+pub type UnitLiteral = nir::UnitLiteral;
+pub type UnitTy = nir::UnitTy;
 pub type DefSpan = nir::DefSpan;
