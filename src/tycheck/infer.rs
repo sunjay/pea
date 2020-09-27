@@ -44,6 +44,11 @@ impl<'a> Context<'a> {
     pub fn ty_vars_unify(&mut self, ty_var1: TyVar, ty_var2: TyVar) {
         todo!()
     }
+
+    /// Allows the given type variable to default to `()` if ambiguous
+    pub fn ty_var_default_unit(&mut self, ty_var: TyVar) {
+        self.constraints.ty_var_default_unit(ty_var);
+    }
 }
 
 pub fn infer_program(ctx: &mut Context, program: &nir::Program) -> tyir::Program {
@@ -495,17 +500,17 @@ fn infer_call(ctx: &mut Context, call: &nir::CallExpr, return_ty_var: TyVar) -> 
     // tyir::CallExpr {lhs, paren_open_token, args, paren_close_token}
 }
 
-fn infer_return(ctx: &mut Context, ret: &nir::ReturnExpr, _return_ty_var: TyVar) -> tyir::ReturnExpr {
+fn infer_return(ctx: &mut Context, ret: &nir::ReturnExpr, return_ty_var: TyVar) -> tyir::ReturnExpr {
     let nir::ReturnExpr {return_token, expr} = ret;
 
     let return_token = return_token.clone();
 
     // `return` can evaluate to any type, but we default to `()` in case there is nothing else to
     // constrain the type
+    ctx.ty_var_default_unit(return_ty_var);
 
-    //TODO: Allow the type to default to `()`
-
-    //TODO: let expr = match expr {
+    //TODO: assert that return expression type is the same as the return type of the function we're in
+    // let expr = match expr {
     //     Some(expr) => infer_expr()
     // }
     //
@@ -513,20 +518,18 @@ fn infer_return(ctx: &mut Context, ret: &nir::ReturnExpr, _return_ty_var: TyVar)
     todo!()
 }
 
-fn infer_break(_ctx: &mut Context, expr: &nir::BreakExpr, _return_ty_var: TyVar) -> tyir::BreakExpr {
+fn infer_break(ctx: &mut Context, expr: &nir::BreakExpr, return_ty_var: TyVar) -> tyir::BreakExpr {
     // `break` can evaluate to any type, but we default to `()` in case there is nothing else to
     // constrain the type
-
-    //TODO: Allow the type to default to `()`
+    ctx.ty_var_default_unit(return_ty_var);
 
     expr.clone()
 }
 
-fn infer_continue(_ctx: &mut Context, expr: &nir::ContinueExpr, _return_ty_var: TyVar) -> tyir::ContinueExpr {
+fn infer_continue(ctx: &mut Context, expr: &nir::ContinueExpr, return_ty_var: TyVar) -> tyir::ContinueExpr {
     // `continue` can evaluate to any type, but we default to `()` in case there is nothing else to
     // constrain the type
-
-    //TODO: Allow the type to default to `()`
+    ctx.ty_var_default_unit(return_ty_var);
 
     expr.clone()
 }

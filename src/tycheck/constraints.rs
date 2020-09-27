@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use ena::unify::{UnifyKey, InPlaceUnificationTable};
 
 use crate::{diagnostics::Diagnostics, ty::Ty};
@@ -32,12 +34,19 @@ pub struct ConstraintSet {
     /// A union-find implementation keeps track of which type variables are equal to each other
     /// and maintains that equivalence as values are updated.
     ty_var_table: InPlaceUnificationTable<TyVar>,
+    /// The set of type variables which are allowed to default to `()` if ambiguous
+    default_unit: HashSet<TyVar>,
 }
 
 impl ConstraintSet {
     /// Generates a fresh type variable and returns it
     pub fn fresh_type_var(&mut self) -> TyVar {
         self.ty_var_table.new_key(None)
+    }
+
+    /// Allows the given type variable to default to `()` if ambiguous
+    pub fn ty_var_default_unit(&mut self, ty_var: TyVar) {
+        self.default_unit.insert(ty_var);
     }
 
     /// Solves this constraint set, and returns a substitution that can be used to map all type
