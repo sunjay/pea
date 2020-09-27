@@ -45,12 +45,20 @@ impl<'a> Context<'a> {
 
     /// Adds a constraint that asserts that the given type variable is the given type
     pub fn ty_var_is_ty(&mut self, ty_var: TyVar, ty: Ty) {
-        todo!()
+        match self.constraints.ty_var_is_ty(ty_var, ty) {
+            Ok(()) => (),
+
+            Err(err) => todo!(),
+        }
     }
 
     /// Adds a constraint that asserts that the given type variables unify
     pub fn ty_vars_unify(&mut self, ty_var1: TyVar, ty_var2: TyVar) {
-        todo!()
+        match self.constraints.ty_vars_unify(ty_var1, ty_var2) {
+            Ok(()) => (),
+
+            Err(err) => todo!(),
+        }
     }
 
     /// Allows the given type variable to default to `()` if ambiguous

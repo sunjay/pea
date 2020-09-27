@@ -1,9 +1,9 @@
 use thiserror::Error;
-use ena::unify::UnifyValue;
+use ena::unify::{NoError, UnifyValue};
 
 use crate::nir;
 
-use super::constraints::TyVar;
+use super::constraints::{ConstraintSet, TyVar};
 
 #[derive(Debug, Clone, Error)]
 pub enum UnifyError {
@@ -41,10 +41,42 @@ impl From<&nir::Ty> for Ty {
 }
 
 impl UnifyValue for Ty {
-    type Error = UnifyError;
+    type Error = NoError;
 
     fn unify_values(ty1: &Self, ty2: &Self) -> Result<Self, Self::Error> {
-        todo!()
+        assert_eq!(ty1, ty2, "bug: values should already be unified");
+        Ok(ty1.clone())
+    }
+}
+
+impl Ty {
+    /// Recursively unify this type with the given other type. The constraints set will be updated
+    /// whenever type variables are equated with other types or variables.
+    pub fn unify(self, other: Self, constraints: &mut ConstraintSet) -> Result<Self, UnifyError> {
+        use Ty::*;
+        Ok(match (self, other) {
+            (Unit, Unit) => Unit,
+            (Bool, Bool) => Bool,
+            (I64, I64) => I64,
+            (U8, U8) => U8,
+
+            (List(ty1), List(ty2)) => List(Box::new(ty1.unify(*ty2, constraints)?)),
+            (Func(ty1), Func(ty2)) => Func(Box::new(ty1.unify(*ty2, constraints)?)),
+
+            (TyVar(ty_var1), TyVar(ty_var2)) => {
+                constraints.ty_vars_unify(ty_var1, ty_var2)?;
+                // Could return either one
+                TyVar(ty_var1)
+            },
+            (TyVar(ty_var), ty) |
+            (ty, TyVar(ty_var)) => {
+                constraints.ty_var_is_ty(ty_var, ty.clone())?;
+                ty
+            },
+
+            // Mismatched types
+            _ => todo!(),
+        })
     }
 }
 
@@ -73,5 +105,24 @@ impl From<&nir::FuncTy> for FuncTy {
         }).unwrap_or(Ty::Unit);
 
         Self {param_tys, return_ty}
+    }
+}
+
+impl FuncTy {
+    /// Recursively unify this type with the given other type. The constraints set will be updated
+    /// whenever type variables are equated with other types or variables.
+    pub fn unify(self, other: Self, constraints: &mut ConstraintSet) -> Result<Self, UnifyError> {
+        if self.param_tys.len() != other.param_tys.len() {
+            todo!()
+        }
+
+        let param_tys = self.param_tys.into_iter()
+            .zip(other.param_tys)
+            .map(|(ty1, ty2)| ty1.unify(ty2, constraints))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        let return_ty = self.return_ty.unify(other.return_ty, constraints)?;
+
+        Ok(Self {param_tys, return_ty})
     }
 }

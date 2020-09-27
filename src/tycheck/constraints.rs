@@ -4,7 +4,7 @@ use ena::unify::{UnifyKey, InPlaceUnificationTable};
 
 use crate::diagnostics::Diagnostics;
 
-use super::{subst::Subst, ty::Ty};
+use super::{subst::Subst, ty::{Ty, UnifyError}};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TyVar(u32);
@@ -42,6 +42,38 @@ impl ConstraintSet {
     /// Generates a fresh type variable and returns it
     pub fn fresh_type_var(&mut self) -> TyVar {
         self.ty_var_table.new_key(None)
+    }
+
+    /// Adds a constraint that asserts that the given type variable is the given type
+    pub fn ty_var_is_ty(&mut self, ty_var: TyVar, ty: Ty) -> Result<(), UnifyError> {
+        // HACK: We are actually unifying twice here, once for real, and once to please the API of ena
+        let other_ty = self.ty_var_table.probe_value(ty_var);
+        let ty = match other_ty {
+            Some(other_ty) => ty.unify(other_ty, self)?,
+            None => ty,
+        };
+
+        self.ty_var_table.union_value(ty_var, Some(ty));
+
+        Ok(())
+    }
+
+    /// Adds a constraint that asserts that the given type variables unify
+    pub fn ty_vars_unify(&mut self, ty_var1: TyVar, ty_var2: TyVar) -> Result<(), UnifyError> {
+        // HACK: We are actually unifying twice here, once for real, and once to please the API of ena
+        let ty1 = self.ty_var_table.probe_value(ty_var1);
+        let ty2 = self.ty_var_table.probe_value(ty_var2);
+        let ty = match (ty1, ty2) {
+            (Some(ty1), Some(ty2)) => Some(ty1.unify(ty2, self)?),
+            (Some(ty1), None) => Some(ty1),
+            (None, Some(ty2)) => Some(ty2),
+            (None, None) => None,
+        };
+
+        self.ty_var_table.union_value(ty_var1, ty);
+        self.ty_var_table.union(ty_var1, ty_var2);
+
+        Ok(())
     }
 
     /// Allows the given type variable to default to `()` if ambiguous
