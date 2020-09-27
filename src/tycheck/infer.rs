@@ -2,9 +2,9 @@
 
 use std::collections::HashMap;
 
-use crate::{diagnostics::Diagnostics, nir::{self, DefId}, ty::Ty};
+use crate::{diagnostics::Diagnostics, nir::{self, DefId}};
 
-use super::{constraints::{ConstraintSet, TyVar}, tyir};
+use super::{constraints::{ConstraintSet, TyVar}, ty::Ty, tyir};
 
 pub struct Context<'a> {
     pub diag: &'a Diagnostics,
@@ -563,15 +563,60 @@ fn infer_bool(ctx: &mut Context, expr: &nir::BoolLiteral, return_ty_var: TyVar) 
 }
 
 fn infer_list(ctx: &mut Context, expr: &nir::ListLiteral, return_ty_var: TyVar) -> tyir::ListLiteral {
-    todo!()
+    let nir::ListLiteral {bracket_open_token, items, bracket_close_token} = expr;
+
+    let item_ty_var = ctx.fresh_type_var();
+    // The list type with a currently unknown item type
+    ctx.ty_var_is_ty(return_ty_var, Ty::List(Box::new(Ty::TyVar(item_ty_var))));
+
+    let bracket_open_token = bracket_open_token.clone();
+    // Every item must be the same type
+    let items = items.iter().map(|item| infer_expr(ctx, item, item_ty_var)).collect();
+    let bracket_close_token = bracket_close_token.clone();
+
+    tyir::ListLiteral {bracket_open_token, items, bracket_close_token}
 }
 
 fn infer_list_repeat(ctx: &mut Context, expr: &nir::ListRepeatLiteral, return_ty_var: TyVar) -> tyir::ListRepeatLiteral {
-    todo!()
+    let nir::ListRepeatLiteral {
+        bracket_open_token,
+        item,
+        semicolon_token,
+        len,
+        bracket_close_token,
+    } = expr;
+
+    let bracket_open_token = bracket_open_token.clone();
+    let semicolon_token = semicolon_token.clone();
+    let bracket_close_token = bracket_close_token.clone();
+
+    // Every item must be the same type
+    let item_ty_var = ctx.fresh_type_var();
+    // The list type with a currently unknown item type
+    ctx.ty_var_is_ty(return_ty_var, Ty::List(Box::new(Ty::TyVar(item_ty_var))));
+
+    let item = infer_expr(ctx, item, item_ty_var);
+
+    // The length must be an integer
+    //TODO: Probably want this to be `uint` eventually
+    let len_ty_var = ctx.fresh_type_var();
+    ctx.ty_var_is_ty(len_ty_var, Ty::I64);
+    let len = infer_expr(ctx, len, len_ty_var);
+
+    tyir::ListRepeatLiteral {
+        bracket_open_token,
+        item,
+        semicolon_token,
+        len,
+        bracket_close_token,
+    }
 }
 
 fn infer_bstr(ctx: &mut Context, expr: &nir::BStrLiteral, return_ty_var: TyVar) -> tyir::BStrLiteral {
-    todo!()
+    // A bstr is of type `[u8]`
+    ctx.ty_var_is_ty(return_ty_var, Ty::List(Box::new(Ty::U8)));
+
+    expr.clone()
 }
 
 fn infer_unit(ctx: &mut Context, expr: &nir::UnitLiteral, return_ty_var: TyVar) -> tyir::UnitLiteral {

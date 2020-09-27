@@ -2,9 +2,9 @@ use std::collections::HashSet;
 
 use ena::unify::{UnifyKey, InPlaceUnificationTable};
 
-use crate::{diagnostics::Diagnostics, ty::Ty};
+use crate::diagnostics::Diagnostics;
 
-use super::subst::Subst;
+use super::{subst::Subst, ty::Ty};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TyVar(u32);
