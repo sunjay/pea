@@ -10,6 +10,8 @@ pub struct Context<'a> {
     pub diag: &'a Diagnostics,
     pub constraints: ConstraintSet,
     pub def_vars: HashMap<DefId, TyVar>,
+    /// The type variable for the return type of the function currently being checked
+    pub func_return_ty_var: Option<TyVar>,
 }
 
 impl<'a> Context<'a> {
@@ -18,6 +20,7 @@ impl<'a> Context<'a> {
             diag,
             constraints: Default::default(),
             def_vars: Default::default(),
+            func_return_ty_var: None,
         }
     }
 
@@ -103,8 +106,15 @@ fn infer_func_decl(ctx: &mut Context, func: &nir::FuncDecl) -> tyir::FuncDecl {
     };
     ctx.ty_var_is_ty(return_ty_var, return_ty);
 
+    // Allow `return` expressions to assert their type against this function's return type
+    assert!(ctx.func_return_ty_var.is_none(), "bug: did not pop function return type variable");
+    ctx.func_return_ty_var = Some(return_ty_var);
+
     let body = infer_block(ctx, body, return_ty_var);
     let scope = scope.clone();
+
+    // Reset the return type variable so it can't be used elsewhere
+    ctx.func_return_ty_var = None;
 
     tyir::FuncDecl {
         fn_token,
@@ -528,13 +538,22 @@ fn infer_return(ctx: &mut Context, ret: &nir::ReturnExpr, return_ty_var: TyVar) 
     // constrain the type
     ctx.ty_var_default_unit(return_ty_var);
 
-    //TODO: assert that return expression type is the same as the return type of the function we're in
-    // let expr = match expr {
-    //     Some(expr) => infer_expr()
-    // }
-    //
-    // tyir::ReturnExpr {return_token, expr}
-    todo!()
+    let func_return_ty_var = ctx.func_return_ty_var
+        .expect("bug: should be inside a function");
+
+    let expr = match expr {
+        // Assert that return expression type is the same as the return type of this function
+        Some(expr) => Some(infer_expr(ctx, expr, func_return_ty_var)),
+
+        // If there is no expression, we return `()`
+        None => {
+            ctx.ty_var_is_ty(func_return_ty_var, Ty::Unit);
+
+            None
+        },
+    };
+
+    tyir::ReturnExpr {return_token, expr}
 }
 
 fn infer_break(ctx: &mut Context, expr: &nir::BreakExpr, return_ty_var: TyVar) -> tyir::BreakExpr {
