@@ -1,4 +1,4 @@
-fn foo(a) {
+fn foo(a: [i64]) {
     println!(a);
 }
 

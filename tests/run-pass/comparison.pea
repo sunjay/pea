@@ -1,4 +1,4 @@
-fn compare(a, b) {
+fn compare(a: i64, b: i64) {
     println!(b"a == b");
     println!(a == b);
     println!(b"a != b");

@@ -2,7 +2,7 @@ fn foo() {
     println!(b"foo");
 }
 
-fn foo2(a, b) {
+fn foo2(a: i64, b: [u8]) {
     println!(b"foo2");
     println!(a);
     println!(b);
@@ -16,9 +16,9 @@ fn foo2(a, b) {
 }
 
 fn foo3(
-    a,
-    b,
-    c,
+    a: [u8],
+    b: [u8],
+    c: i64,
 ) {
     println!(b"foo3");
     println!(a);

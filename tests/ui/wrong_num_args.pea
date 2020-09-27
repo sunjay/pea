@@ -1,4 +1,4 @@
-fn foo(a, b) {
+fn foo(a: i64, b: i64) {
     let q = a * 3 - b;
     println!(q);
     println!(b);

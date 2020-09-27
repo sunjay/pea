@@ -1,4 +1,4 @@
-fn foo(b) {
+fn foo(b: i64) {
     let a = b % 3;
     a
     println!(a);

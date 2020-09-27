@@ -1,0 +1,36 @@
+fn print_fn0(f: fn()) {
+    println!(f);
+}
+
+fn print_fn1(f: fn(i64) -> i64) {
+    println!(f);
+}
+
+fn print_fn2(f: fn(i64, ()) -> i64) {
+    println!(f);
+}
+
+fn print_fn3(f: fn(i64, (), [[i64]]) -> i64) {
+    println!(f);
+}
+
+fn foo() {}
+
+fn bar(x: i64) -> i64 {
+    x * 2
+}
+
+fn spam(x: i64, y: ()) -> i64 {
+    x * 2
+}
+
+fn ok(x: i64, y: (), z: [[i64]]) -> i64 {
+    x * 2
+}
+
+fn main() {
+    print_fn0(foo);
+    print_fn1(bar);
+    print_fn2(spam);
+    print_fn3(ok);
+}

@@ -1,6 +1,6 @@
 /// Prints all pairs (x, y) such that 1 <= x <= a, 1 <= y <= b. Stops printing once x*y == target.
 /// Skips printing if x*y == filter_value.
-fn print_pairs_until(a, b, target, filter_value) {
+fn print_pairs_until(a: i64, b: i64, target: i64, filter_value: i64) {
     let found_target = false;
     let x = 1;
     //TODO: This could be rewritten as a for...in loop once those are supported

@@ -1,4 +1,4 @@
-fn print_even(start, end, offset) {
+fn print_even(start: i64, end: i64, offset: i64) {
     let i = start;
     while i <= end {
         let value = i;

@@ -1,5 +1,5 @@
 error: identifier `value` is bound more than once in this parameter list
-[tests/ui/duplicate_params.pea:1:15-1:19] error: used as parameter more than once
+[tests/ui/duplicate_params.pea:1:20-1:24] error: used as parameter more than once
 
 error: aborting due to 1 previous error
 

@@ -3,5 +3,19 @@ fn main() {
     let b = ( /*WOOOOO*/   );
     println!(a);
     println!(b);
+    b = returns_nothing(returns_unit(takes_unit(b)));
     println!(a == b);
+}
+
+// `-> ()` is optional
+fn takes_unit(x: ()) {
+    x
+}
+
+fn returns_unit(x: ()) -> () {
+    ()
+}
+
+// Not necessary to return `()` explicitly
+fn returns_nothing(x: ()) -> () {
 }

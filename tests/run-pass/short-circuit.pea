@@ -1,5 +1,5 @@
 /// Prints the given operand and then returns true if it is greater than 3
-fn gt3(x) {
+fn gt3(x: i64) -> bool {
     println!(x);
     x > 3
 }

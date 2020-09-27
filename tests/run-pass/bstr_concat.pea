@@ -1,8 +1,8 @@
-fn say_hello(name) {
+fn say_hello(name: [u8]) {
     println!(b"Hello, " + name + b".");
 }
 
-fn full_name(first, last) {
+fn full_name(first: [u8], last: [u8]) -> [u8] {
     return first + b" " + last;
 }
 

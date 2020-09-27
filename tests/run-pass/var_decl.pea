@@ -1,4 +1,5 @@
 fn main() {
-    let message = b"hello, world!";
+    // Type annotation is optional
+    let message: [u8] = b"hello, world!";
     println!(message);
 }

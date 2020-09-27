@@ -1,9 +1,9 @@
-fn foo(b) {
+fn foo(b: i64) -> i64 {
     let a = 3 - b;
     return a;
 }
 
-fn bar(a, b, c) {
+fn bar(a: i64, b: i64, c: i64) {
     println!(a * b - c / a + b * 33);
     return;
 }

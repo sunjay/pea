@@ -54,7 +54,7 @@ fn main() {
     println!(abs(-b));
 }
 
-fn abs(x) {
+fn abs(x: i64) -> i64 {
     // conditional expression used as return value
     if x > 0 {
         x
