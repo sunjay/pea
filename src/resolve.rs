@@ -107,6 +107,7 @@ impl<'a> NameResolver<'a> {
         use ast::Stmt::*;
         match stmt {
             Println(stmt) => nir::Stmt::Println(self.resolve_println_stmt(stmt)),
+            Print(stmt) => nir::Stmt::Print(self.resolve_print_stmt(stmt)),
             VarDecl(stmt) => nir::Stmt::VarDecl(self.resolve_var_decl_stmt(stmt)),
             Expr(stmt) => nir::Stmt::Expr(self.resolve_expr_stmt(stmt)),
             Cond(stmt) => nir::Stmt::Cond(self.resolve_cond(stmt)),
@@ -134,6 +135,33 @@ impl<'a> NameResolver<'a> {
 
         nir::PrintlnStmt {
             println_token,
+            not_token,
+            paren_open_token,
+            expr,
+            paren_close_token,
+            semicolon_token,
+        }
+    }
+
+    fn resolve_print_stmt(&mut self, stmt: &ast::PrintStmt) -> nir::PrintStmt {
+        let ast::PrintStmt {
+            print_token,
+            not_token,
+            paren_open_token,
+            expr,
+            paren_close_token,
+            semicolon_token,
+        } = stmt;
+
+        let print_token = print_token.clone();
+        let not_token = not_token.clone();
+        let paren_open_token = paren_open_token.clone();
+        let expr = self.resolve_expr(expr);
+        let paren_close_token = paren_close_token.clone();
+        let semicolon_token = semicolon_token.clone();
+
+        nir::PrintStmt {
+            print_token,
             not_token,
             paren_open_token,
             expr,

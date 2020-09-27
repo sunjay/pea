@@ -144,6 +144,7 @@ impl<'a> FunctionCompiler<'a> {
         use nir::Stmt::*;
         match stmt {
             Println(stmt) => self.walk_println_stmt(stmt),
+            Print(stmt) => self.walk_print_stmt(stmt),
             VarDecl(stmt) => self.walk_var_decl_stmt(stmt),
             Expr(stmt) => self.walk_expr_stmt(stmt),
             Cond(stmt) => self.walk_cond_stmt(stmt),
@@ -158,6 +159,14 @@ impl<'a> FunctionCompiler<'a> {
         self.walk_expr(expr);
 
         self.code.write_instr(OpCode::Println, println_token.span);
+    }
+
+    fn walk_print_stmt(&mut self, stmt: &nir::PrintStmt) {
+        let nir::PrintStmt {print_token, expr, ..} = stmt;
+
+        self.walk_expr(expr);
+
+        self.code.write_instr(OpCode::Print, print_token.span);
     }
 
     fn walk_var_decl_stmt(&mut self, stmt: &nir::VarDeclStmt) {

@@ -41,6 +41,7 @@ impl Block {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Stmt {
     Println(PrintlnStmt),
+    Print(PrintStmt),
     VarDecl(VarDeclStmt),
     Expr(ExprStmt),
     Cond(Cond),
@@ -51,6 +52,16 @@ pub enum Stmt {
 #[derive(Debug, Clone, PartialEq)]
 pub struct PrintlnStmt {
     pub println_token: Token,
+    pub not_token: Token,
+    pub paren_open_token: Token,
+    pub expr: Expr,
+    pub paren_close_token: Token,
+    pub semicolon_token: Token,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct PrintStmt {
+    pub print_token: Token,
     pub not_token: Token,
     pub paren_open_token: Token,
     pub expr: Expr,

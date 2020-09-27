@@ -212,6 +212,13 @@ pub fn println(ctx: &mut Interpreter) -> RuntimeResult {
 }
 
 #[inline]
+pub fn print(ctx: &mut Interpreter) -> RuntimeResult {
+    print!("{}", ctx.pop());
+
+    Ok(Status::Running)
+}
+
+#[inline]
 pub fn neg(ctx: &mut Interpreter) -> RuntimeResult {
     unary_op(ctx, Value::neg, ast::UnaryOp::Neg)
 }

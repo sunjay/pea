@@ -7,8 +7,9 @@ func_params ::= (ident ',')* ident?
 
 block ::= '{' stmt* '}'
 
-stmt ::= println_stmt | var_decl_stmt | expr_stmt | cond | while_loop | loop_loop
+stmt ::= println_stmt | print_stmt | var_decl_stmt | expr_stmt | cond | while_loop | loop_loop
 println_stmt ::= 'println' '!' '(' expr ')' ';'
+print_stmt ::= 'print' '!' '(' expr ')' ';'
 var_decl_stmt ::= 'let' ident '=' expr ';'
 expr_stmt ::= expr ';'
 while_loop ::= 'while' expr block

@@ -261,4 +261,6 @@ keywords! {
 
     //TODO: This should be removed when println stops being used as a keyword
     Println : "println"
+    //TODO: This should be removed when print stops being used as a keyword
+    Print : "print"
 }

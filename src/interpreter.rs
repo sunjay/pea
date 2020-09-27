@@ -197,6 +197,7 @@ impl Interpreter {
             BlockEnd => instr::block_end.run(self),
 
             Println => instr::println(self),
+            Print => instr::print(self),
 
             Neg => instr::neg.run(self),
             Pos => instr::pos.run(self),

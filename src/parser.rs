@@ -234,6 +234,7 @@ impl<'a> Parser<'a> {
     fn stmt(&mut self) -> ParseResult<Result<ast::Stmt, ast::Expr>> {
         match self.input.peek().kind {
             TokenKind::Keyword(Keyword::Println) => self.println_stmt().map(ast::Stmt::Println).map(Ok),
+            TokenKind::Keyword(Keyword::Print) => self.print_stmt().map(ast::Stmt::Print).map(Ok),
             TokenKind::Keyword(Keyword::Let) => self.var_decl_stmt().map(ast::Stmt::VarDecl).map(Ok),
             TokenKind::Keyword(Keyword::If) => self.cond_stmt().map(Ok),
             TokenKind::Keyword(Keyword::While) => self.while_loop_stmt().map(ast::Stmt::WhileLoop).map(Ok),
@@ -254,6 +255,26 @@ impl<'a> Parser<'a> {
 
         Ok(ast::PrintlnStmt {
             println_token,
+            not_token,
+            paren_open_token,
+            expr,
+            paren_close_token,
+            semicolon_token,
+        })
+    }
+
+    fn print_stmt(&mut self) -> ParseResult<ast::PrintStmt> {
+        let print_token = self.input.keyword(Keyword::Print)?.clone();
+        let not_token = self.input.match_kind(TokenKind::Not)?.clone();
+
+        let paren_open_token = self.input.match_kind(TokenKind::ParenOpen)?.clone();
+        let expr = self.expr()?;
+        let paren_close_token = self.input.match_kind(TokenKind::ParenClose)?.clone();
+
+        let semicolon_token = self.input.match_kind(TokenKind::Semicolon)?.clone();
+
+        Ok(ast::PrintStmt {
+            print_token,
             not_token,
             paren_open_token,
             expr,

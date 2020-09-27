@@ -3,6 +3,10 @@ fn main() {
     while x <= 3 {
         let y = 1;
         while y <= 4 {
+            print!(x);
+            print!(b" * ");
+            print!(y);
+            print!(b" = ");
             println!(x*y);
 
             y += 1;
