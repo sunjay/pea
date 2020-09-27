@@ -21,6 +21,11 @@ impl<'a> Context<'a> {
         }
     }
 
+    pub fn def_type_var(&self, def_id: DefId) -> TyVar {
+        self.def_vars.get(&def_id).copied()
+            .expect("bug: DefId did not have an associated type variable")
+    }
+
     pub fn fresh_type_var(&mut self) -> TyVar {
         self.constraints.fresh_type_var()
     }
@@ -534,16 +539,27 @@ fn infer_continue(ctx: &mut Context, expr: &nir::ContinueExpr, return_ty_var: Ty
     expr.clone()
 }
 
-fn infer_def(ctx: &mut Context, expr: &nir::DefSpan, return_ty_var: TyVar) -> tyir::DefSpan {
-    todo!()
+fn infer_def(ctx: &mut Context, def: &nir::DefSpan, return_ty_var: TyVar) -> tyir::DefSpan {
+    // The type of this variable must match the type we are expected to return from the expr
+    let ty_var = ctx.def_type_var(def.id);
+    ctx.ty_vars_unify(ty_var, return_ty_var);
+
+    *def
 }
 
 fn infer_integer(ctx: &mut Context, expr: &nir::IntegerLiteral, return_ty_var: TyVar) -> tyir::IntegerLiteral {
-    todo!()
+    // Assert that the type must be an integer
+    //TODO: May want to do something more complicated when multiple integral types are supported
+    ctx.ty_var_is_ty(return_ty_var, Ty::I64);
+
+    expr.clone()
 }
 
 fn infer_bool(ctx: &mut Context, expr: &nir::BoolLiteral, return_ty_var: TyVar) -> tyir::BoolLiteral {
-    todo!()
+    // Assert that the type must be a bool
+    ctx.ty_var_is_ty(return_ty_var, Ty::Bool);
+
+    expr.clone()
 }
 
 fn infer_list(ctx: &mut Context, expr: &nir::ListLiteral, return_ty_var: TyVar) -> tyir::ListLiteral {
@@ -559,5 +575,8 @@ fn infer_bstr(ctx: &mut Context, expr: &nir::BStrLiteral, return_ty_var: TyVar) 
 }
 
 fn infer_unit(ctx: &mut Context, expr: &nir::UnitLiteral, return_ty_var: TyVar) -> tyir::UnitLiteral {
-    todo!()
+    // Assert that the type must be `()`
+    ctx.ty_var_is_ty(return_ty_var, Ty::Unit);
+
+    expr.clone()
 }
