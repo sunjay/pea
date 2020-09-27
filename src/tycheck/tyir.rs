@@ -236,10 +236,6 @@ pub struct ListRepeatLiteral {
     pub bracket_close_token: Token,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct ReturnTy {
-}
-
 pub type UnaryOp = nir::UnaryOp;
 pub type BinaryOp = nir::BinaryOp;
 pub type BreakExpr = nir::BreakExpr;
@@ -248,6 +244,5 @@ pub type IntegerLiteral = nir::IntegerLiteral;
 pub type BoolLiteral = nir::BoolLiteral;
 pub type BStrLiteral = nir::BStrLiteral;
 pub type UnitLiteral = nir::UnitLiteral;
-pub type UnitTy = nir::UnitTy;
 
 pub type DefSpan = nir::DefSpan;
