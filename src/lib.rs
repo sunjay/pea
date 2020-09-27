@@ -8,6 +8,9 @@ pub mod ast;
 pub mod parser;
 pub mod nir;
 pub mod resolve;
+pub mod ty;
+pub mod cgenir;
+pub mod tycheck;
 
 pub mod gc;
 pub mod prim;
@@ -91,6 +94,9 @@ pub fn compile(
     check_errors!(diag);
 
     let (program, def_table) = resolve::NameResolver::resolve(&program, diag);
+    check_errors!(diag);
+
+    let _program = tycheck::check_types(&program, diag);
     check_errors!(diag);
 
     let interpreter = codegen::Compiler::compile(&program, &def_table, diag);
