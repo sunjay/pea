@@ -1,0 +1,4 @@
+[tests/ui/unresolved_type.pea:1:11-1:24] error: cannot find name `does_not_exist` in this scope
+
+error: aborting due to 1 previous error
+
