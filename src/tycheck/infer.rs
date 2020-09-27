@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use crate::{diagnostics::Diagnostics, nir::{self, DefId}};
 
-use super::{constraints::{ConstraintSet, TyVar}, ty::Ty, tyir};
+use super::{constraints::{ConstraintSet, TyVar}, ty::{Ty, FuncTy}, tyir};
 
 pub struct Context<'a> {
     pub diag: &'a Diagnostics,
@@ -495,14 +495,28 @@ fn infer_group(ctx: &mut Context, expr: &nir::GroupExpr, return_ty_var: TyVar) -
 
 fn infer_call(ctx: &mut Context, call: &nir::CallExpr, return_ty_var: TyVar) -> tyir::CallExpr {
     let nir::CallExpr {lhs, paren_open_token, args, paren_close_token} = call;
+    let paren_open_token = paren_open_token.clone();
+    let paren_close_token = paren_close_token.clone();
 
-    todo!() //TODO: Generate function type with type variables
-    // let lhs = infer_expr(ctx, lhs);
-    // let paren_open_token = paren_open_token.clone();
-    // let args = args.iter().map(|expr| self.resolve_expr(expr)).collect();
-    // let paren_close_token = paren_close_token.clone();
+    // Generate a function type for the lhs expression
+    let mut param_tys = Vec::new();
 
-    // tyir::CallExpr {lhs, paren_open_token, args, paren_close_token}
+    let args = args.iter().map(|arg| {
+        let arg_ty_var = ctx.fresh_type_var();
+        param_tys.push(Ty::TyVar(arg_ty_var));
+
+        infer_expr(ctx, arg, arg_ty_var)
+    }).collect();
+
+    let lhs_ty_var = ctx.fresh_type_var();
+    // lhs must be a function type that returns the same type as `return_ty_var` given the parameters
+    ctx.ty_var_is_ty(lhs_ty_var, Ty::Func(Box::new(FuncTy {
+        param_tys,
+        return_ty: Ty::TyVar(return_ty_var),
+    })));
+    let lhs = infer_expr(ctx, lhs, lhs_ty_var);
+
+    tyir::CallExpr {lhs, paren_open_token, args, paren_close_token}
 }
 
 fn infer_return(ctx: &mut Context, ret: &nir::ReturnExpr, return_ty_var: TyVar) -> tyir::ReturnExpr {
