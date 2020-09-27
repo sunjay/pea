@@ -201,7 +201,7 @@ impl<'a> NameResolver<'a> {
     }
 
     fn resolve_var_decl_stmt(&mut self, stmt: &ast::VarDeclStmt) -> nir::VarDeclStmt {
-        let ast::VarDeclStmt {let_token, name, equals_token, expr, semicolon_token} = stmt;
+        let ast::VarDeclStmt {let_token, name, ty, equals_token, expr, semicolon_token} = stmt;
         let let_token = let_token.clone();
         let equals_token = equals_token.clone();
         let semicolon_token = semicolon_token.clone();
@@ -210,8 +210,18 @@ impl<'a> NameResolver<'a> {
         // because otherwise we would allow `let a = a;` to slip through.
         let expr = self.resolve_expr(expr);
         let name = self.declare(name);
+        let ty = ty.as_ref().map(|ty| self.resolve_var_decl_ty(ty));
 
-        nir::VarDeclStmt {let_token, name, equals_token, expr, semicolon_token}
+        nir::VarDeclStmt {let_token, name, ty, equals_token, expr, semicolon_token}
+    }
+
+    fn resolve_var_decl_ty(&mut self, ty: &ast::VarDeclTy) -> nir::VarDeclTy {
+        let ast::VarDeclTy {colon_token, ty} = ty;
+
+        let colon_token = colon_token.clone();
+        let ty = self.resolve_ty(ty);
+
+        nir::VarDeclTy {colon_token, ty}
     }
 
     fn resolve_expr_stmt(&mut self, stmt: &ast::ExprStmt) -> nir::ExprStmt {

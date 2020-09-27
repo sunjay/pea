@@ -91,9 +91,16 @@ pub struct PrintStmt {
 pub struct VarDeclStmt {
     pub let_token: Token,
     pub name: DefSpan,
+    pub ty: Option<VarDeclTy>,
     pub equals_token: Token,
     pub expr: Expr,
     pub semicolon_token: Token,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct VarDeclTy {
+    pub colon_token: Token,
+    pub ty: Ty,
 }
 
 #[derive(Debug, Clone, PartialEq)]

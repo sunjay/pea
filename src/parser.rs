@@ -300,13 +300,26 @@ impl<'a> Parser<'a> {
     fn var_decl_stmt(&mut self) -> ParseResult<ast::VarDeclStmt> {
         let let_token = self.input.keyword(Keyword::Let)?.clone();
         let name = self.ident()?;
+
+        let ty = match self.input.peek().kind {
+            TokenKind::Colon => Some(self.var_decl_ty()?),
+            _ => None,
+        };
+
         let equals_token = self.input.match_kind(TokenKind::Equals)?.clone();
 
         let expr = self.expr()?;
 
         let semicolon_token = self.input.match_kind(TokenKind::Semicolon)?.clone();
 
-        Ok(ast::VarDeclStmt {let_token, name, equals_token, expr, semicolon_token})
+        Ok(ast::VarDeclStmt {let_token, name, ty, equals_token, expr, semicolon_token})
+    }
+
+    fn var_decl_ty(&mut self) -> ParseResult<ast::VarDeclTy> {
+        let colon_token = self.input.match_kind(TokenKind::Colon)?.clone();
+        let ty = self.ty()?;
+
+        Ok(ast::VarDeclTy {colon_token, ty})
     }
 
     /// Parses a conditional statement but allows it to be an expression statement if it ends with a
