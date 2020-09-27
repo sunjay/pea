@@ -32,12 +32,6 @@ pub struct FuncParam {
     pub ty: Ty,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct ReturnTy {
-    pub right_arrow_token: Token,
-    pub ty: Ty,
-}
-
 impl FuncParam {
     pub fn span(&self) -> Span {
         self.name.span.to(self.ty.span())
@@ -488,6 +482,7 @@ impl UnitLiteral {
 pub enum Ty {
     Unit(UnitTy),
     List(Box<ListTy>),
+    Func(Box<FuncTy>),
     Named(Ident),
 }
 
@@ -497,8 +492,22 @@ impl Ty {
         match self {
             Unit(ty) => ty.span(),
             List(ty) => ty.span(),
+            Func(ty) => ty.span(),
             Named(ty) => ty.span,
         }
+    }
+}
+
+/// The `()` type
+#[derive(Debug, Clone, PartialEq)]
+pub struct UnitTy {
+    pub paren_open_token: Token,
+    pub paren_close_token: Token,
+}
+
+impl UnitTy {
+    pub fn span(&self) -> Span {
+        self.paren_open_token.span.to(self.paren_close_token.span)
     }
 }
 
@@ -516,15 +525,33 @@ impl ListTy {
     }
 }
 
-/// The `()` type
 #[derive(Debug, Clone, PartialEq)]
-pub struct UnitTy {
+pub struct FuncTy {
+    pub fn_token: Token,
     pub paren_open_token: Token,
+    pub param_tys: Vec<Ty>,
     pub paren_close_token: Token,
+    pub return_ty: Option<ReturnTy>,
 }
 
-impl UnitTy {
+impl FuncTy {
     pub fn span(&self) -> Span {
-        self.paren_open_token.span.to(self.paren_close_token.span)
+        let end_span = self.return_ty.as_ref()
+            .map(|ty| ty.span())
+            .unwrap_or(self.paren_close_token.span);
+
+        self.fn_token.span.to(end_span)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ReturnTy {
+    pub right_arrow_token: Token,
+    pub ty: Ty,
+}
+
+impl ReturnTy {
+    pub fn span(&self) -> Span {
+        self.right_arrow_token.span.to(self.ty.span())
     }
 }

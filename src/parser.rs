@@ -203,13 +203,6 @@ impl<'a> Parser<'a> {
         Ok(ast::FuncParam {name, colon_token, ty})
     }
 
-    fn return_ty(&mut self) -> ParseResult<ast::ReturnTy> {
-        let right_arrow_token = self.input.match_kind(TokenKind::RightArrow)?.clone();
-        let ty = self.ty()?;
-
-        Ok(ast::ReturnTy {right_arrow_token, ty})
-    }
-
     fn block(&mut self) -> ParseResult<ast::Block> {
         let brace_open_token = self.input.match_kind(TokenKind::BraceOpen)?.clone();
 
@@ -362,6 +355,7 @@ impl<'a> Parser<'a> {
         match self.input.peek().kind {
             TokenKind::ParenOpen => self.unit_ty().map(ast::Ty::Unit),
             TokenKind::BracketOpen => self.list_ty().map(|ty| ast::Ty::List(Box::new(ty))),
+            TokenKind::Keyword(Keyword::Fn) => self.func_ty().map(|ty| ast::Ty::Func(Box::new(ty))),
             _ => self.ident().map(ast::Ty::Named),
         }
     }
@@ -379,6 +373,50 @@ impl<'a> Parser<'a> {
         let bracket_close_token = self.input.match_kind(TokenKind::BracketClose)?.clone();
 
         Ok(ast::ListTy {bracket_open_token, item_ty, bracket_close_token})
+    }
+
+    fn func_ty(&mut self) -> ParseResult<ast::FuncTy> {
+        let fn_token = self.input.match_kind(TokenKind::Keyword(Keyword::Fn))?.clone();
+        let paren_open_token = self.input.match_kind(TokenKind::ParenOpen)?.clone();
+        let param_tys = self.func_ty_params()?;
+        let paren_close_token = self.input.match_kind(TokenKind::ParenClose)?.clone();
+
+        let return_ty = match self.input.peek().kind {
+            TokenKind::RightArrow => Some(self.return_ty()?),
+            _ => None,
+        };
+
+        Ok(ast::FuncTy {fn_token, paren_open_token, param_tys, paren_close_token, return_ty})
+    }
+
+    fn func_ty_params(&mut self) -> ParseResult<Vec<ast::Ty>> {
+        let mut params = Vec::new();
+
+        while self.input.peek().kind != TokenKind::ParenClose {
+            let param = self.ty()?;
+            params.push(param);
+
+            if self.input.peek().kind != TokenKind::Comma {
+                break;
+            }
+
+            self.input.match_kind(TokenKind::Comma)?;
+        }
+
+        let nparams = params.len();
+        if nparams > MAX_PARAMS {
+            let span = params[0].span().to(params[nparams-1].span());
+            return Err(ParseError::TooManyParams {span, nparams});
+        }
+
+        Ok(params)
+    }
+
+    fn return_ty(&mut self) -> ParseResult<ast::ReturnTy> {
+        let right_arrow_token = self.input.match_kind(TokenKind::RightArrow)?.clone();
+        let ty = self.ty()?;
+
+        Ok(ast::ReturnTy {right_arrow_token, ty})
     }
 
     fn ident(&mut self) -> ParseResult<ast::Ident> {

@@ -47,12 +47,6 @@ pub struct FuncParam {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct ReturnTy {
-    pub right_arrow_token: Token,
-    pub ty: Ty,
-}
-
-#[derive(Debug, Clone, PartialEq)]
 pub struct Block {
     pub brace_open_token: Token,
     pub stmts: Vec<Stmt>,
@@ -258,6 +252,7 @@ pub struct ListRepeatLiteral {
 pub enum Ty {
     Unit(UnitTy),
     List(Box<ListTy>),
+    Func(Box<FuncTy>),
     Bool,
     I64,
 }
@@ -267,6 +262,21 @@ pub struct ListTy {
     pub bracket_open_token: Token,
     pub item_ty: Ty,
     pub bracket_close_token: Token,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct FuncTy {
+    pub fn_token: Token,
+    pub paren_open_token: Token,
+    pub param_tys: Vec<Ty>,
+    pub paren_close_token: Token,
+    pub return_ty: Option<ReturnTy>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ReturnTy {
+    pub right_arrow_token: Token,
+    pub ty: Ty,
 }
 
 pub type UnaryOp = ast::UnaryOp;

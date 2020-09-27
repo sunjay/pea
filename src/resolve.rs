@@ -115,15 +115,6 @@ impl<'a> NameResolver<'a> {
         nir::FuncParam {name, colon_token, ty}
     }
 
-    fn resolve_return_ty(&mut self, return_ty: &ast::ReturnTy) -> nir::ReturnTy {
-        let ast::ReturnTy {right_arrow_token, ty} = return_ty;
-
-        let right_arrow_token = right_arrow_token.clone();
-        let ty = self.resolve_ty(ty);
-
-        nir::ReturnTy {right_arrow_token, ty}
-    }
-
     fn resolve_block(&mut self, block: &ast::Block) -> nir::Block {
         let ast::Block {brace_open_token, stmts, ret_expr, brace_close_token} = block;
         let brace_open_token = brace_open_token.clone();
@@ -426,6 +417,7 @@ impl<'a> NameResolver<'a> {
         match ty {
             Unit(ty) => nir::Ty::Unit(ty.clone()),
             List(ty) => nir::Ty::List(Box::new(self.resolve_list_ty(ty))),
+            Func(ty) => nir::Ty::Func(Box::new(self.resolve_func_ty(ty))),
             Named(name) => self.resolve_named_ty(name),
         }
     }
@@ -438,6 +430,39 @@ impl<'a> NameResolver<'a> {
         let bracket_close_token = bracket_close_token.clone();
 
         nir::ListTy {bracket_open_token, item_ty, bracket_close_token}
+    }
+
+    fn resolve_func_ty(&mut self, func_ty: &ast::FuncTy) -> nir::FuncTy {
+        let ast::FuncTy {
+            fn_token,
+            paren_open_token,
+            param_tys,
+            paren_close_token,
+            return_ty,
+        } = func_ty;
+
+        let fn_token = fn_token.clone();
+        let paren_open_token = paren_open_token.clone();
+        let param_tys = param_tys.iter().map(|ty| self.resolve_ty(ty)).collect();
+        let paren_close_token = paren_close_token.clone();
+        let return_ty = return_ty.as_ref().map(|ty| self.resolve_return_ty(ty));
+
+        nir::FuncTy {
+            fn_token,
+            paren_open_token,
+            param_tys,
+            paren_close_token,
+            return_ty,
+        }
+    }
+
+    fn resolve_return_ty(&mut self, return_ty: &ast::ReturnTy) -> nir::ReturnTy {
+        let ast::ReturnTy {right_arrow_token, ty} = return_ty;
+
+        let right_arrow_token = right_arrow_token.clone();
+        let ty = self.resolve_ty(ty);
+
+        nir::ReturnTy {right_arrow_token, ty}
     }
 
     fn resolve_named_ty(&mut self, name: &ast::Ident) -> nir::Ty {
