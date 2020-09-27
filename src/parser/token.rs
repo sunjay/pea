@@ -70,6 +70,10 @@ pub enum TokenKind {
     Comma,
     /// The `;` symbol
     Semicolon,
+    /// The `:` symbol
+    Colon,
+    /// The `->` symbol
+    RightArrow,
 
     /// The `+` symbol
     Plus,
@@ -132,6 +136,8 @@ impl fmt::Display for TokenKind {
             Not => write!(f, "`!`"),
             Comma => write!(f, "`,`"),
             Semicolon => write!(f, "`;`"),
+            Colon => write!(f, "`:`"),
+            RightArrow => write!(f, "`->`"),
 
             Plus => write!(f, "`+`"),
             Minus => write!(f, "`-`"),

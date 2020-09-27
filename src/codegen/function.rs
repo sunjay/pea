@@ -76,6 +76,7 @@ impl<'a> FunctionCompiler<'a> {
             paren_open_token: _,
             params,
             paren_close_token: _,
+            return_ty: _,
             body,
             scope: _,
         } = func;
@@ -84,7 +85,8 @@ impl<'a> FunctionCompiler<'a> {
         // is generated for the parameters since they are implicitly provided thanks to our calling
         // convention.
         for param in params {
-            self.declare_local(param);
+            let nir::FuncParam {name, ..} = param;
+            self.declare_local(name);
         }
 
         self.walk_block(body);

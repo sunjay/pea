@@ -152,23 +152,29 @@ impl<'a> Parser<'a> {
         let paren_open_token = self.input.match_kind(TokenKind::ParenOpen)?.clone();
         let params = self.func_params()?;
         let paren_close_token = self.input.match_kind(TokenKind::ParenClose)?.clone();
+
+        let return_ty = match self.input.peek().kind {
+            TokenKind::RightArrow => Some(self.return_ty()?),
+            _ => None,
+        };
+
         let body = self.block()?;
 
-        Ok(ast::FuncDecl {fn_token, name, paren_open_token, params, paren_close_token, body})
+        Ok(ast::FuncDecl {fn_token, name, paren_open_token, params, paren_close_token, return_ty, body})
     }
 
     /// Parses comma separated function parameters until the `)` token
     ///
     /// Trailing comma is allowed but optional. The `)` token is not consumed.
-    fn func_params(&mut self) -> ParseResult<Vec<ast::Ident>> {
+    fn func_params(&mut self) -> ParseResult<Vec<ast::FuncParam>> {
         let mut params = Vec::new();
 
         while self.input.peek().kind != TokenKind::ParenClose {
-            let param = self.ident()?;
+            let param = self.func_param()?;
 
             // Function parameters are not allowed to shadow each other
-            if params.iter().any(|p: &ast::Ident| p.value == param.value) {
-                return Err(ParseError::DuplicateFuncParam {param});
+            if params.iter().any(|p: &ast::FuncParam| p.name.value == param.name.value) {
+                return Err(ParseError::DuplicateFuncParam {param: param.name});
             }
 
             params.push(param);
@@ -182,11 +188,26 @@ impl<'a> Parser<'a> {
 
         let nparams = params.len();
         if nparams > MAX_PARAMS {
-            let span = params[0].span.to(params[nparams-1].span);
+            let span = params[0].span().to(params[nparams-1].span());
             return Err(ParseError::TooManyParams {span, nparams});
         }
 
         Ok(params)
+    }
+
+    fn func_param(&mut self) -> ParseResult<ast::FuncParam> {
+        let name = self.ident()?;
+        let colon_token = self.input.match_kind(TokenKind::Colon)?.clone();
+        let ty = self.ty()?;
+
+        Ok(ast::FuncParam {name, colon_token, ty})
+    }
+
+    fn return_ty(&mut self) -> ParseResult<ast::ReturnTy> {
+        let right_arrow_token = self.input.match_kind(TokenKind::RightArrow)?.clone();
+        let ty = self.ty()?;
+
+        Ok(ast::ReturnTy {right_arrow_token, ty})
     }
 
     fn block(&mut self) -> ParseResult<ast::Block> {
@@ -335,6 +356,17 @@ impl<'a> Parser<'a> {
         } else {
             Ok(Err(expr))
         }
+    }
+
+    fn ty(&mut self) -> ParseResult<ast::Ty> {
+        self.unit_ty().map(ast::Ty::Unit)
+    }
+
+    fn unit_ty(&mut self) -> ParseResult<ast::UnitTy> {
+        let paren_open_token = self.input.match_kind(TokenKind::ParenOpen)?.clone();
+        let paren_close_token = self.input.match_kind(TokenKind::ParenClose)?.clone();
+
+        Ok(ast::UnitTy {paren_open_token, paren_close_token})
     }
 
     fn ident(&mut self) -> ParseResult<ast::Ident> {

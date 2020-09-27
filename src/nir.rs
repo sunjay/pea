@@ -31,11 +31,25 @@ pub struct FuncDecl {
     pub fn_token: Token,
     pub name: DefSpan,
     pub paren_open_token: Token,
-    pub params: Vec<DefSpan>,
+    pub params: Vec<FuncParam>,
     pub paren_close_token: Token,
+    pub return_ty: Option<ReturnTy>,
     pub body: Block,
     /// The scope containing the function parameters
     pub scope: Scope,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct FuncParam {
+    pub name: DefSpan,
+    pub colon_token: Token,
+    pub ty: Ty,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ReturnTy {
+    pub right_arrow_token: Token,
+    pub ty: Ty,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -240,6 +254,11 @@ pub struct ListRepeatLiteral {
     pub bracket_close_token: Token,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum Ty {
+    Unit(UnitTy),
+}
+
 pub type UnaryOp = ast::UnaryOp;
 pub type BinaryOp = ast::BinaryOp;
 pub type BreakExpr = ast::BreakExpr;
@@ -248,3 +267,4 @@ pub type IntegerLiteral = ast::IntegerLiteral;
 pub type BoolLiteral = ast::BoolLiteral;
 pub type BStrLiteral = ast::BStrLiteral;
 pub type UnitLiteral = ast::UnitLiteral;
+pub type UnitTy = ast::UnitTy;

@@ -59,6 +59,8 @@ impl<'a> Lexer<'a> {
             (b'!', _) => self.byte_token(start, Not),
             (b',', _) => self.byte_token(start, Comma),
             (b';', _) => self.byte_token(start, Semicolon),
+            (b':', _) => self.byte_token(start, Colon),
+            (b'-', Some(b'>')) => self.next_token(start, RightArrow),
 
             (b'0' ..= b'9', _) |
             (b'+', Some(b'0' ..= b'9')) |

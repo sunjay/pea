@@ -19,9 +19,29 @@ pub struct FuncDecl {
     pub name: Ident,
     pub paren_open_token: Token,
     /// Guaranteed to not contain duplicate names (if no diagnostics were produced)
-    pub params: Vec<Ident>,
+    pub params: Vec<FuncParam>,
     pub paren_close_token: Token,
+    pub return_ty: Option<ReturnTy>,
     pub body: Block,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct FuncParam {
+    pub name: Ident,
+    pub colon_token: Token,
+    pub ty: Ty,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ReturnTy {
+    pub right_arrow_token: Token,
+    pub ty: Ty,
+}
+
+impl FuncParam {
+    pub fn span(&self) -> Span {
+        self.name.span.to(self.ty.span())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -459,6 +479,33 @@ pub struct UnitLiteral {
 }
 
 impl UnitLiteral {
+    pub fn span(&self) -> Span {
+        self.paren_open_token.span.to(self.paren_close_token.span)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Ty {
+    Unit(UnitTy),
+}
+
+impl Ty {
+    pub fn span(&self) -> Span {
+        use Ty::*;
+        match self {
+            Unit(ty) => ty.span(),
+        }
+    }
+}
+
+/// The `()` literal
+#[derive(Debug, Clone, PartialEq)]
+pub struct UnitTy {
+    pub paren_open_token: Token,
+    pub paren_close_token: Token,
+}
+
+impl UnitTy {
     pub fn span(&self) -> Span {
         self.paren_open_token.span.to(self.paren_close_token.span)
     }

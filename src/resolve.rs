@@ -60,7 +60,16 @@ impl<'a> NameResolver<'a> {
     }
 
     fn resolve_func_decl(&mut self, func: &ast::FuncDecl) -> nir::FuncDecl {
-        let ast::FuncDecl {fn_token, name, paren_open_token, params, paren_close_token, body} = func;
+        let ast::FuncDecl {
+            fn_token,
+            name,
+            paren_open_token,
+            params,
+            paren_close_token,
+            return_ty,
+            body,
+        } = func;
+
         let fn_token = fn_token.clone();
         let paren_open_token = paren_open_token.clone();
         let paren_close_token = paren_close_token.clone();
@@ -76,13 +85,43 @@ impl<'a> NameResolver<'a> {
 
         // Since we check at parse time to make sure there aren't any duplicate function parameters,
         // we don't have to do any additional checking here
-        let params = params.iter().map(|name| self.declare(name)).collect();
+        let params = params.iter().map(|param| self.resolve_param(param)).collect();
+
+        let return_ty = return_ty.as_ref().map(|ret_ty| self.resolve_return_ty(ret_ty));
 
         let body = self.resolve_block(body);
 
         let scope = self.scope_stack.pop(token);
 
-        nir::FuncDecl {fn_token, name, paren_open_token, params, paren_close_token, body, scope}
+        nir::FuncDecl {
+            fn_token,
+            name,
+            paren_open_token,
+            params,
+            paren_close_token,
+            return_ty,
+            body,
+            scope,
+        }
+    }
+
+    fn resolve_param(&mut self, param: &ast::FuncParam) -> nir::FuncParam {
+        let ast::FuncParam {name, colon_token, ty} = param;
+
+        let name = self.declare(name);
+        let colon_token = colon_token.clone();
+        let ty = self.resolve_ty(ty);
+
+        nir::FuncParam {name, colon_token, ty}
+    }
+
+    fn resolve_return_ty(&mut self, return_ty: &ast::ReturnTy) -> nir::ReturnTy {
+        let ast::ReturnTy {right_arrow_token, ty} = return_ty;
+
+        let right_arrow_token = right_arrow_token.clone();
+        let ty = self.resolve_ty(ty);
+
+        nir::ReturnTy {right_arrow_token, ty}
     }
 
     fn resolve_block(&mut self, block: &ast::Block) -> nir::Block {
@@ -380,6 +419,13 @@ impl<'a> NameResolver<'a> {
         let bracket_close_token = bracket_close_token.clone();
 
         nir::ListRepeatLiteral {bracket_open_token, item, semicolon_token, len, bracket_close_token}
+    }
+
+    fn resolve_ty(&mut self, ty: &ast::Ty) -> nir::Ty {
+        use ast::Ty::*;
+        match ty {
+            Unit(ty) => nir::Ty::Unit(ty.clone()),
+        }
     }
 
     fn declare_func(&mut self, name: &ast::Ident) -> nir::DefSpan {

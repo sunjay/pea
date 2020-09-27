@@ -2,8 +2,10 @@ program ::= decl*
 
 decl ::= func_decl
 
-func_decl ::= 'fn' ident '(' func_params ')' block
-func_params ::= (ident ',')* ident?
+func_decl ::= 'fn' ident '(' func_params ')' return_ty? block
+func_params ::= (func_param ',')* func_param?
+func_param ::= ident ':' ty
+return_ty ::= '->' ty
 
 block ::= '{' stmt* '}'
 
@@ -35,3 +37,6 @@ list_literal ::= '[' (list_items | list_repeat) ']'
 list_items ::= (expr ',')* expr?
 list_repeat ::= expr ';' expr
 unit_literal ::= '(' ')'
+
+ty ::= unit_ty
+unit_ty ::= '(' ')'
