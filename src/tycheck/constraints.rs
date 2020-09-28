@@ -84,7 +84,14 @@ impl ConstraintSet {
     /// Solves this constraint set, and returns a substitution that can be used to map all type
     /// variables to concrete types
     pub fn solve(self, _diag: &Diagnostics) -> Subst {
-        //TODO: Call functions in a separate `solve` module
-        todo!()
+        let Self {mut ty_var_table, default_unit: _} = self;
+        //TODO: Call functions in a separate `solve` module to resolve remaining constraints
+
+        (0..ty_var_table.len() as u32).map(|id| {
+            let ty_var = TyVar(id);
+            let ty = ty_var_table.probe_value(ty_var)
+                .expect("bug: not all types were inferred into concrete types");
+            (ty_var, ty)
+        }).collect()
     }
 }

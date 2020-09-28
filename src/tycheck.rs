@@ -11,7 +11,7 @@ pub fn check_types(program: &nir::Program, diag: &Diagnostics) -> cgenir::Progra
     let mut ctx = infer::Context::new(diag);
 
     let program = infer::infer_program(&mut ctx, program);
-    let subst = ctx.constraints.solve(diag);
+    let mut subst = ctx.constraints.solve(diag);
 
     subst.apply(program)
 }

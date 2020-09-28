@@ -1,6 +1,6 @@
 //! Code Generation IR - An IR with all names and types fully resolved, ready for code generation
 
-use crate::{nir::{self, Scope}, ty::Ty, parser::Token, source_files::Span};
+use crate::{nir::{self, Scope}, ty::Ty, parser::Token};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Program {
@@ -21,7 +21,8 @@ pub struct FuncDecl {
     pub paren_open_token: Token,
     pub params: Vec<FuncParam>,
     pub paren_close_token: Token,
-    pub return_ty: Option<ReturnTy>,
+    pub right_arrow_token: Option<Token>,
+    pub return_ty: Ty,
     pub body: Block,
     /// The scope containing the function parameters
     pub scope: Scope,
@@ -31,7 +32,7 @@ pub struct FuncDecl {
 pub struct FuncParam {
     pub name: DefSpan,
     pub colon_token: Token,
-    pub ty: TySpan,
+    pub ty: Ty,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -79,16 +80,11 @@ pub struct PrintStmt {
 pub struct VarDeclStmt {
     pub let_token: Token,
     pub name: DefSpan,
-    pub ty: Option<VarDeclTy>,
+    pub colon_token: Option<Token>,
+    pub ty: Ty,
     pub equals_token: Token,
     pub expr: Expr,
     pub semicolon_token: Token,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct VarDeclTy {
-    pub colon_token: Token,
-    pub ty: TySpan,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -235,18 +231,6 @@ pub struct ListRepeatLiteral {
     pub semicolon_token: Token,
     pub len: Expr,
     pub bracket_close_token: Token,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct ReturnTy {
-    pub right_arrow_token: Token,
-    pub ty: TySpan,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct TySpan {
-    pub id: Ty,
-    pub span: Span,
 }
 
 pub type UnaryOp = nir::UnaryOp;
