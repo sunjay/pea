@@ -70,10 +70,25 @@ impl<'a> Context<'a> {
 pub fn infer_program(ctx: &mut Context, program: &nir::Program) -> tyir::Program {
     let nir::Program {decls, scope} = program;
 
-    let decls = decls.iter().map(|decl| infer_decl(ctx, decl)).collect();
+    let decls = infer_decls(ctx, decls);
     let scope = scope.clone();
 
     tyir::Program {decls, scope}
+}
+
+fn infer_decls(ctx: &mut Context, decls: &[nir::Decl]) -> Vec<tyir::Decl> {
+    // Insert the type of every decl so it can be used throughout the rest of the inference
+    for decl in decls {
+        use nir::Decl::*;
+        match decl {
+            Func(func) => {
+                let func_ty_var = ctx.fresh_def_type_var(func.name.id);
+                ctx.ty_var_is_ty(func_ty_var, func.into());
+            },
+        }
+    }
+
+    decls.iter().map(|decl| infer_decl(ctx, decl)).collect()
 }
 
 fn infer_decl(ctx: &mut Context, decl: &nir::Decl) -> tyir::Decl {

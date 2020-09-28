@@ -40,6 +40,12 @@ impl From<&nir::Ty> for Ty {
     }
 }
 
+impl From<&nir::FuncDecl> for Ty {
+    fn from(ty: &nir::FuncDecl) -> Self {
+        Ty::Func(Box::new(ty.into()))
+    }
+}
+
 impl UnifyValue for Ty {
     type Error = NoError;
 
@@ -97,6 +103,33 @@ impl From<&nir::FuncTy> for FuncTy {
         } = ty;
 
         let param_tys = param_tys.iter().map(|param| param.into()).collect();
+
+        // Default return type when not specified is `()`
+        let return_ty = return_ty.as_ref().map(|ty| {
+            let nir::ReturnTy {right_arrow_token: _, ty} = ty;
+            ty.into()
+        }).unwrap_or(Ty::Unit);
+
+        Self {param_tys, return_ty}
+    }
+}
+
+impl From<&nir::FuncDecl> for FuncTy {
+    fn from(ty: &nir::FuncDecl) -> Self {
+        let nir::FuncDecl {
+            fn_token: _,
+            name: _,
+            paren_open_token: _,
+            params,
+            paren_close_token: _,
+            return_ty,
+            body: _,
+            scope: _,
+        } = ty;
+
+        let param_tys = params.iter()
+            .map(|param| (&param.ty).into())
+            .collect();
 
         // Default return type when not specified is `()`
         let return_ty = return_ty.as_ref().map(|ty| {
