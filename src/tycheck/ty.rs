@@ -50,8 +50,29 @@ impl UnifyValue for Ty {
     type Error = NoError;
 
     fn unify_values(ty1: &Self, ty2: &Self) -> Result<Self, Self::Error> {
-        assert_eq!(ty1, ty2, "bug: values should already be unified");
-        Ok(ty1.clone())
+        use Ty::*;
+        Ok(match (ty1, ty2) {
+            (Unit, Unit) => Unit,
+            (Bool, Bool) => Bool,
+            (I64, I64) => I64,
+            (U8, U8) => U8,
+
+            (List(ty1), List(ty2)) => List(Box::new(Ty::unify_values(ty1, ty2)?)),
+            (Func(ty1), Func(ty2)) => Func(Box::new(FuncTy::unify_values(ty1, ty2)?)),
+
+            // Could return either one
+            (&TyVar(ty_var), TyVar(_)) => {
+                TyVar(ty_var)
+            },
+
+            (TyVar(_), ty) |
+            (ty, TyVar(_)) => {
+                ty.clone()
+            },
+
+            // Mismatched types
+            _ => unreachable!("bug: mismatched types should already have been caught"),
+        })
     }
 }
 
@@ -138,6 +159,24 @@ impl From<&nir::FuncDecl> for FuncTy {
         }).unwrap_or(Ty::Unit);
 
         Self {param_tys, return_ty}
+    }
+}
+
+impl UnifyValue for FuncTy {
+    type Error = NoError;
+
+    fn unify_values(ty1: &Self, ty2: &Self) -> Result<Self, Self::Error> {
+        assert_eq!(ty1.param_tys.len(), ty2.param_tys.len(),
+            "bug: should have already checked arity");
+
+        let param_tys = ty1.param_tys.iter()
+            .zip(ty2.param_tys.iter())
+            .map(|(ty1, ty2)| Ty::unify_values(ty1, ty2))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        let return_ty = Ty::unify_values(&ty1.return_ty, &ty2.return_ty)?;
+
+        Ok(Self {param_tys, return_ty})
     }
 }
 
