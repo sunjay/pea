@@ -189,7 +189,7 @@ fn infer_block(ctx: &mut Context, block: &nir::Block, return_ty_var: TyVar) -> t
             //TODO: This is kind of a hack. A more precise way to do this is to do control flow
             // analysis and look at the control flow graph to see if every control path returns the
             // same type.
-            let reaches_end_of_block = block.stmts.iter().any(|stmt| match stmt {
+            let reaches_end_of_block = block.stmts.iter().all(|stmt| match stmt {
                 nir::Stmt::Expr(nir::ExprStmt {expr: nir::Expr::Return(_), ..}) |
                 nir::Stmt::Expr(nir::ExprStmt {expr: nir::Expr::Break(_), ..}) |
                 nir::Stmt::Expr(nir::ExprStmt {expr: nir::Expr::Continue(_), ..}) => false,
