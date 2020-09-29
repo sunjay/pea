@@ -102,6 +102,8 @@ impl Ty {
             },
 
             // Mismatched types
+            //TODO: Collect the types on the way back up so we print the message for the outer-most type
+            // e.g. if [i64] != [u8], we want to print that and not just i64 != u8
             (ty1, ty2) => todo!("{:?} {:?}", ty1, ty2),
         })
     }

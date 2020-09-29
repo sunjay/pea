@@ -14,5 +14,5 @@ fn main() {
 
     let z = 30;
     let a = [a; z];
-    foo(a);
+    println!(a);
 }
