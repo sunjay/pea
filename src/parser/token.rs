@@ -7,7 +7,7 @@ use crate::source_files::Span;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Literal {
     Integer,
-    Bytes,
+    BStr,
 }
 
 impl fmt::Display for Literal {
@@ -15,7 +15,7 @@ impl fmt::Display for Literal {
         use Literal::*;
         match self {
             Integer => write!(f, "an integer"),
-            Bytes => write!(f, "a byte string"),
+            BStr => write!(f, "a byte string literal"),
         }
     }
 }
@@ -163,7 +163,7 @@ pub enum TokenValue {
     Ident(Arc<str>),
     Integer(i128),
     /// The unescaped characters of the byte string (without the surrounding double quotes)
-    Bytes(Arc<[u8]>),
+    BStr(Arc<[u8]>),
 }
 
 impl From<i128> for TokenValue {
@@ -180,7 +180,7 @@ impl From<Arc<str>> for TokenValue {
 
 impl From<Arc<[u8]>> for TokenValue {
     fn from(value: Arc<[u8]>) -> Self {
-        TokenValue::Bytes(value)
+        TokenValue::BStr(value)
     }
 }
 
@@ -209,9 +209,9 @@ impl Token {
     }
 
     /// Returns the data as a byte string or panics
-    pub fn unwrap_bytes(&self) -> &Arc<[u8]> {
+    pub fn unwrap_bstr(&self) -> &Arc<[u8]> {
         match &self.value {
-            Some(TokenValue::Bytes(value)) => value,
+            Some(TokenValue::BStr(value)) => value,
             _ => panic!("bug: expected a byte string"),
         }
     }

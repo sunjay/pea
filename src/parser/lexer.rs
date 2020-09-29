@@ -340,7 +340,7 @@ impl<'a> Lexer<'a> {
 
         // Note that the token span contains the quotes but the value does not
         let value: Arc<[u8]> = value.into();
-        self.token_to_current(start, TokenKind::Literal(token::Literal::Bytes), TokenValue::Bytes(value))
+        self.token_to_current(start, TokenKind::Literal(token::Literal::BStr), TokenValue::BStr(value))
     }
 
     /// Parses a byte string escape sequence, assuming that the starting backslash has already been
@@ -534,7 +534,7 @@ mod tests {
 
     macro_rules! bstr {
         ($value:expr) => (
-            t!(Literal(token::Literal::Bytes), TokenValue::Bytes((&$value[..]).into()))
+            t!(Literal(token::Literal::BStr), TokenValue::BStr((&$value[..]).into()))
         );
     }
 

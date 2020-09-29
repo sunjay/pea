@@ -416,8 +416,8 @@ impl<'a> Parser<'a> {
     }
 
     fn bstr_literal(&mut self) -> ParseResult<ast::BStrLiteral> {
-        self.input.match_kind(TokenKind::Literal(Literal::Bytes)).map(|token| ast::BStrLiteral {
-            value: token.unwrap_bytes().clone(),
+        self.input.match_kind(TokenKind::Literal(Literal::BStr)).map(|token| ast::BStrLiteral {
+            value: token.unwrap_bstr().clone(),
             span: token.span,
         })
     }
