@@ -56,6 +56,12 @@ pub struct Block {
     pub scope: Scope,
 }
 
+impl Block {
+    pub fn span(&self) -> Span {
+        self.brace_open_token.span.to(self.brace_close_token.span)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Stmt {
     Println(PrintlnStmt),
@@ -144,6 +150,32 @@ pub enum Expr {
     Unit(UnitLiteral),
 }
 
+impl Expr {
+    pub fn span(&self) -> Span {
+        use Expr::*;
+        match self {
+            Or(expr) => expr.span(),
+            And(expr) => expr.span(),
+            Cond(expr) => expr.span(),
+            UnaryOp(expr) => expr.span(),
+            BinaryOp(expr) => expr.span(),
+            Assign(expr) => expr.span(),
+            Group(expr) => expr.span(),
+            Call(expr) => expr.span(),
+            Return(expr) => expr.span(),
+            Break(expr) => expr.span(),
+            Continue(expr) => expr.span(),
+            Def(expr) => expr.span,
+            Integer(expr) => expr.span,
+            Bool(expr) => expr.span,
+            List(expr) => expr.span(),
+            ListRepeat(expr) => expr.span(),
+            BStr(expr) => expr.span,
+            Unit(expr) => expr.span(),
+        }
+    }
+}
+
 /// Short-circuiting `||` expression
 #[derive(Debug, Clone, PartialEq)]
 pub struct OrExpr {
@@ -152,12 +184,24 @@ pub struct OrExpr {
     pub rhs: Expr,
 }
 
+impl OrExpr {
+    pub fn span(&self) -> Span {
+        self.lhs.span().to(self.rhs.span())
+    }
+}
+
 /// Short-circuiting `&&` expression
 #[derive(Debug, Clone, PartialEq)]
 pub struct AndExpr {
     pub lhs: Expr,
     pub andand_token: Token,
     pub rhs: Expr,
+}
+
+impl AndExpr {
+    pub fn span(&self) -> Span {
+        self.lhs.span().to(self.rhs.span())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -169,6 +213,22 @@ pub struct Cond {
     pub else_clause: Option<ElseClause>,
 }
 
+impl Cond {
+    pub fn span(&self) -> Span {
+        match (&self.else_clause, self.else_if_clauses.last()) {
+            (Some(else_clause), _) => {
+                self.if_token.span.to(else_clause.span())
+            },
+
+            (None, Some(else_if_clause)) => {
+                self.if_token.span.to(else_if_clause.span())
+            },
+
+            (None, None) => self.if_token.span,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct ElseIfClause {
     pub else_token: Token,
@@ -177,10 +237,22 @@ pub struct ElseIfClause {
     pub body: Block,
 }
 
+impl ElseIfClause {
+    pub fn span(&self) -> Span {
+        self.else_token.span.to(self.body.span())
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct ElseClause {
     pub else_token: Token,
     pub body: Block,
+}
+
+impl ElseClause {
+    pub fn span(&self) -> Span {
+        self.else_token.span.to(self.body.span())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -188,6 +260,12 @@ pub struct UnaryOpExpr {
     pub op: UnaryOp,
     pub op_token: Token,
     pub expr: Expr,
+}
+
+impl UnaryOpExpr {
+    pub fn span(&self) -> Span {
+        self.op_token.span.to(self.expr.span())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -198,9 +276,24 @@ pub struct BinaryOpExpr {
     pub rhs: Expr,
 }
 
+impl BinaryOpExpr {
+    pub fn span(&self) -> Span {
+        self.lhs.span().to(self.rhs.span())
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum LValueExpr {
     Def(DefSpan),
+}
+
+impl LValueExpr {
+    pub fn span(&self) -> Span {
+        use LValueExpr::*;
+        match self {
+            Def(def) => def.span,
+        }
+    }
 }
 
 /// Assignment expression
@@ -211,12 +304,24 @@ pub struct AssignExpr {
     pub rhs: Expr,
 }
 
+impl AssignExpr {
+    pub fn span(&self) -> Span {
+        self.lvalue.span().to(self.rhs.span())
+    }
+}
+
 /// An expression in parens
 #[derive(Debug, Clone, PartialEq)]
 pub struct GroupExpr {
     pub paren_open_token: Token,
     pub expr: Expr,
     pub paren_close_token: Token,
+}
+
+impl GroupExpr {
+    pub fn span(&self) -> Span {
+        self.paren_open_token.span.to(self.paren_close_token.span)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -227,10 +332,25 @@ pub struct CallExpr {
     pub paren_close_token: Token,
 }
 
+impl CallExpr {
+    pub fn span(&self) -> Span {
+        self.lhs.span().to(self.paren_close_token.span)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct ReturnExpr {
     pub return_token: Token,
     pub expr: Option<Expr>,
+}
+
+impl ReturnExpr {
+    pub fn span(&self) -> Span {
+        match &self.expr {
+            Some(expr) => self.return_token.span.to(expr.span()),
+            None => self.return_token.span,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -240,6 +360,12 @@ pub struct ListLiteral {
     pub bracket_close_token: Token,
 }
 
+impl ListLiteral {
+    pub fn span(&self) -> Span {
+        self.bracket_open_token.span.to(self.bracket_close_token.span)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct ListRepeatLiteral {
     pub bracket_open_token: Token,
@@ -247,6 +373,12 @@ pub struct ListRepeatLiteral {
     pub semicolon_token: Token,
     pub len: Expr,
     pub bracket_close_token: Token,
+}
+
+impl ListRepeatLiteral {
+    pub fn span(&self) -> Span {
+        self.bracket_open_token.span.to(self.bracket_close_token.span)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -259,11 +391,31 @@ pub enum Ty {
     Func(Box<FuncTy>),
 }
 
+impl Ty {
+    pub fn span(&self) -> Span {
+        use Ty::*;
+        match self {
+            Unit(ty) => ty.span(),
+            &Bool(span) => span,
+            &I64(span) => span,
+            &U8(span) => span,
+            List(ty) => ty.span(),
+            Func(ty) => ty.span(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct ListTy {
     pub bracket_open_token: Token,
     pub item_ty: Ty,
     pub bracket_close_token: Token,
+}
+
+impl ListTy {
+    pub fn span(&self) -> Span {
+        self.bracket_open_token.span.to(self.bracket_close_token.span)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -275,10 +427,26 @@ pub struct FuncTy {
     pub return_ty: Option<ReturnTy>,
 }
 
+impl FuncTy {
+    pub fn span(&self) -> Span {
+        let end_span = self.return_ty.as_ref()
+            .map(|ty| ty.span())
+            .unwrap_or(self.paren_close_token.span);
+
+        self.fn_token.span.to(end_span)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct ReturnTy {
     pub right_arrow_token: Token,
     pub ty: Ty,
+}
+
+impl ReturnTy {
+    pub fn span(&self) -> Span {
+        self.right_arrow_token.span.to(self.ty.span())
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

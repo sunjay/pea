@@ -1,0 +1,34 @@
+[tests/ui/type_infer.pea:6:17] error: mismatched types: expected `i64`, found: `[u8]`
+
+[tests/ui/type_infer.pea:8:20-8:31] error: mismatched types: expected `i64`, found: `[u8]`
+
+[tests/ui/type_infer.pea:8:20-8:31] error: mismatched types: expected `i64`, found: `[u8]`
+
+[tests/ui/type_infer.pea:11:14-11:16] error: mismatched types: expected `[u8]`, found: `i64`
+
+[tests/ui/type_infer.pea:98:4-98:6] error: mismatched types: expected `[i64]`, found: `i64`
+
+[tests/ui/type_infer.pea:19:8-19:10] error: mismatched types: expected `bool`, found: `i64`
+
+[tests/ui/type_infer.pea:33:11-33:27] error: mismatched types: expected `bool`, found: `[u8]`
+
+[tests/ui/type_infer.pea:37:9] error: mismatched types: expected `()`, found: `i64`
+
+[tests/ui/type_infer.pea:62:9-62:13] error: mismatched types: expected `()`, found: `[u8]`
+
+[tests/ui/type_infer.pea:67:9-67:10] error: mismatched types: expected `i64`, found: `[u8]`
+
+[tests/ui/type_infer.pea:76:9-76:10] error: mismatched types: expected `i64`, found: `()`
+
+[tests/ui/type_infer.pea:80:23-80:24] error: mismatched types: expected `i64`, found: `[u8]`
+
+[tests/ui/type_infer.pea:84:5-84:13] error: mismatched types: expected `fn (_)-> _`, found: `[u8]`
+
+[tests/ui/type_infer.pea:29:16-29:17] error: mismatched types: expected `()`, found: `i64`
+
+[tests/ui/type_infer.pea:109:16-109:18] error: mismatched types: expected `()`, found: `[u8]`
+
+[tests/ui/type_infer.pea:113:5] error: mismatched types: expected `()`, found: `i64`
+
+error: aborting due to 16 previous errors
+

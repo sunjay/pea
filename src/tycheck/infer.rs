@@ -2,9 +2,9 @@
 
 use std::collections::HashMap;
 
-use crate::{diagnostics::Diagnostics, nir::{self, DefId}};
+use crate::{diagnostics::Diagnostics, nir::{self, DefId}, source_files::Span};
 
-use super::{constraints::{ConstraintSet, TyVar}, ty::{Ty, FuncTy}, tyir};
+use super::{constraints::{ConstraintSet, TyVar, UnifyErrorSpan}, ty::{FuncTy, Ty}, tyir};
 
 pub struct Context<'a> {
     pub diag: &'a Diagnostics,
@@ -44,11 +44,11 @@ impl<'a> Context<'a> {
     }
 
     /// Adds a constraint that asserts that the given type variable is the given type
-    pub fn ty_var_is_ty(&mut self, ty_var: TyVar, ty: Ty) {
-        match self.constraints.ty_var_is_ty(ty_var, ty) {
+    pub fn ty_var_is_ty(&mut self, ty_var: TyVar, ty: Ty, span: impl Into<Option<Span>>) {
+        match self.constraints.ty_var_is_ty(ty_var, ty, span) {
             Ok(()) => (),
 
-            Err(err) => todo!(),
+            Err(err) => self.emit_unify_err(err),
         }
     }
 
@@ -57,13 +57,35 @@ impl<'a> Context<'a> {
         match self.constraints.ty_vars_unify(ty_var1, ty_var2) {
             Ok(()) => (),
 
-            Err(err) => todo!(),
+            Err(err) => self.emit_unify_err(err),
         }
     }
 
     /// Allows the given type variable to default to `()` if ambiguous
     pub fn ty_var_default_unit(&mut self, ty_var: TyVar) {
         self.constraints.ty_var_default_unit(ty_var);
+    }
+
+    fn emit_unify_err(&self, err: UnifyErrorSpan) {
+        use UnifyErrorSpan::*;
+        match err {
+            MismatchedTypes {ty1, ty2} => {
+                let span = ty2.span.or(ty1.span)
+                    .expect("bug: no span that can be used to emit error");
+
+                self.diag.span_error(span, format!("mismatched types: expected `{}`, found: `{}`", ty2.ty, ty1.ty)).emit();
+            },
+            ArityMismatch {ty1, ty1_arity, ty2, ty2_arity} => {
+                let call_span = ty2.span.or(ty1.span)
+                    .expect("bug: no span that can be used to emit error");
+                let func_span = ty1.span.or(ty2.span)
+                    .expect("bug: no span that can be used to emit error");
+
+                self.diag.span_error(call_span, format!("wrong number of arguments: expected {}, found {}", ty1_arity, ty2_arity))
+                    .span_note(func_span, format!("function being called has signature `{}`", ty1.ty))
+                    .emit();
+            },
+        }
     }
 }
 
@@ -83,7 +105,7 @@ fn infer_decls(ctx: &mut Context, decls: &[nir::Decl]) -> Vec<tyir::Decl> {
         match decl {
             Func(func) => {
                 let func_ty_var = ctx.fresh_def_type_var(func.name.id);
-                ctx.ty_var_is_ty(func_ty_var, func.into());
+                ctx.ty_var_is_ty(func_ty_var, func.into(), func.name.span);
             },
         }
     }
@@ -127,7 +149,7 @@ fn infer_func_decl(ctx: &mut Context, func: &nir::FuncDecl) -> tyir::FuncDecl {
             (None, Ty::Unit)
         },
     };
-    ctx.ty_var_is_ty(return_ty_var, return_ty);
+    ctx.ty_var_is_ty(return_ty_var, return_ty, right_arrow_token.as_ref().map(|token| token.span));
 
     // Allow `return` expressions to assert their type against this function's return type
     assert!(ctx.func_return_ty_var.is_none(), "bug: did not pop function return type variable");
@@ -158,7 +180,7 @@ fn infer_func_param(ctx: &mut Context, param: &nir::FuncParam) -> tyir::FuncPara
     let name = *name;
     let colon_token = colon_token.clone();
     let ty_var = ctx.fresh_def_type_var(name.id);
-    ctx.ty_var_is_ty(ty_var, ty.into());
+    ctx.ty_var_is_ty(ty_var, ty.into(), ty.span());
 
     tyir::FuncParam {name, colon_token, ty_var}
 }
@@ -207,7 +229,7 @@ fn infer_block(ctx: &mut Context, block: &nir::Block, return_ty_var: TyVar) -> t
 
             if reaches_end_of_block {
                 // Type must be `()` since that is the default return value of a block
-                ctx.ty_var_is_ty(return_ty_var, Ty::Unit);
+                ctx.ty_var_is_ty(return_ty_var, Ty::Unit, None);
             }
 
             None
@@ -313,7 +335,7 @@ fn infer_var_decl_stmt(ctx: &mut Context, stmt: &nir::VarDeclStmt) -> tyir::VarD
     // Optionally assert that the expression is the type annotated on the variable
     let colon_token = match ty {
         Some(nir::VarDeclTy {colon_token, ty}) => {
-            ctx.ty_var_is_ty(ty_var, ty.into());
+            ctx.ty_var_is_ty(ty_var, ty.into(), ty.span());
 
             Some(colon_token.clone())
         },
@@ -344,7 +366,7 @@ fn infer_expr_stmt(ctx: &mut Context, stmt: &nir::ExprStmt) -> tyir::ExprStmt {
 fn infer_cond_stmt(ctx: &mut Context, stmt: &nir::Cond) -> tyir::Cond {
     // A cond stmt is exactly the same as a cond expression except that it is required to return `()`
     let return_ty_var = ctx.fresh_type_var();
-    ctx.ty_var_is_ty(return_ty_var, Ty::Unit);
+    ctx.ty_var_is_ty(return_ty_var, Ty::Unit, None);
 
     infer_cond(ctx, stmt, return_ty_var)
 }
@@ -356,13 +378,13 @@ fn infer_while_loop(ctx: &mut Context, while_loop: &nir::WhileLoop) -> tyir::Whi
 
     // The condition of a loop must be `bool`
     let cond_ty_var = ctx.fresh_type_var();
-    ctx.ty_var_is_ty(cond_ty_var, Ty::Bool);
+    ctx.ty_var_is_ty(cond_ty_var, Ty::Bool, None);
 
     let cond = infer_expr(ctx, cond, cond_ty_var);
 
     // The body of a while loop must be `()`
     let return_ty_var = ctx.fresh_type_var();
-    ctx.ty_var_is_ty(return_ty_var, Ty::Unit);
+    ctx.ty_var_is_ty(return_ty_var, Ty::Unit, None);
 
     let body = infer_block(ctx, body, return_ty_var);
 
@@ -376,7 +398,7 @@ fn infer_loop_stmt(ctx: &mut Context, stmt: &nir::Loop) -> tyir::Loop {
 
     // The body of a loop must be `()`
     let return_ty_var = ctx.fresh_type_var();
-    ctx.ty_var_is_ty(return_ty_var, Ty::Unit);
+    ctx.ty_var_is_ty(return_ty_var, Ty::Unit, None);
 
     let body = infer_block(ctx, body, return_ty_var);
 
@@ -411,7 +433,7 @@ fn infer_or(ctx: &mut Context, expr: &nir::OrExpr, return_ty_var: TyVar) -> tyir
     let nir::OrExpr {lhs, oror_token, rhs} = expr;
 
     // Boolean expressions must be `bool`
-    ctx.ty_var_is_ty(return_ty_var, Ty::Bool);
+    ctx.ty_var_is_ty(return_ty_var, Ty::Bool, None);
 
     let lhs = infer_expr(ctx, lhs, return_ty_var);
     let oror_token = oror_token.clone();
@@ -424,7 +446,7 @@ fn infer_and(ctx: &mut Context, expr: &nir::AndExpr, return_ty_var: TyVar) -> ty
     let nir::AndExpr {lhs, andand_token, rhs} = expr;
 
     // Boolean expressions must be `bool`
-    ctx.ty_var_is_ty(return_ty_var, Ty::Bool);
+    ctx.ty_var_is_ty(return_ty_var, Ty::Bool, None);
 
     let lhs = infer_expr(ctx, lhs, return_ty_var);
     let andand_token = andand_token.clone();
@@ -446,7 +468,7 @@ fn infer_cond(ctx: &mut Context, cond: &nir::Cond, return_ty_var: TyVar) -> tyir
 
     // The condition must be `bool`
     let if_cond_ty_var = ctx.fresh_type_var();
-    ctx.ty_var_is_ty(if_cond_ty_var, Ty::Bool);
+    ctx.ty_var_is_ty(if_cond_ty_var, Ty::Bool, None);
 
     let if_cond = infer_expr(ctx, if_cond, if_cond_ty_var);
     let if_body = infer_block(ctx, if_body, return_ty_var);
@@ -458,7 +480,7 @@ fn infer_cond(ctx: &mut Context, cond: &nir::Cond, return_ty_var: TyVar) -> tyir
 
         // The condition must be `bool`
         let cond_ty_var = ctx.fresh_type_var();
-        ctx.ty_var_is_ty(cond_ty_var, Ty::Bool);
+        ctx.ty_var_is_ty(cond_ty_var, Ty::Bool, None);
 
         let cond = infer_expr(ctx, cond, cond_ty_var);
         let body = infer_block(ctx, body, return_ty_var);
@@ -479,7 +501,7 @@ fn infer_cond(ctx: &mut Context, cond: &nir::Cond, return_ty_var: TyVar) -> tyir
         None => {
             // Any conditions without an `else` block must be `()` since all branches must produce
             // the same type and no other type can be produced for the non-existent else branch
-            ctx.ty_var_is_ty(return_ty_var, Ty::Unit);
+            ctx.ty_var_is_ty(return_ty_var, Ty::Unit, None);
 
             None
         },
@@ -510,7 +532,7 @@ fn infer_unary_op(ctx: &mut Context, expr: &nir::UnaryOpExpr, return_ty_var: TyV
         },
         nir::UnaryOp::Not => {
             // HACK: Assume that operand type and return type are bool
-            ctx.ty_var_is_ty(return_ty_var, Ty::Bool);
+            ctx.ty_var_is_ty(return_ty_var, Ty::Bool, None);
             infer_expr(ctx, expr, return_ty_var)
         },
     };
@@ -548,7 +570,7 @@ fn infer_binary_op(ctx: &mut Context, expr: &nir::BinaryOpExpr, return_ty_var: T
         nir::BinaryOp::LessThan |
         nir::BinaryOp::LessThanEquals => {
             // HACK: Assume that return type is bool
-            ctx.ty_var_is_ty(return_ty_var, Ty::Bool);
+            ctx.ty_var_is_ty(return_ty_var, Ty::Bool, None);
         },
     }
 
@@ -559,7 +581,7 @@ fn infer_assign(ctx: &mut Context, expr: &nir::AssignExpr, return_ty_var: TyVar)
     let nir::AssignExpr {lvalue, equals_token, rhs} = expr;
 
     // Assignment always evaluates to `()`
-    ctx.ty_var_is_ty(return_ty_var, Ty::Unit);
+    ctx.ty_var_is_ty(return_ty_var, Ty::Unit, None);
 
     // Both sides of the assignment must be the same type
     let assign_ty_var = ctx.fresh_type_var();
@@ -608,7 +630,7 @@ fn infer_call(ctx: &mut Context, call: &nir::CallExpr, return_ty_var: TyVar) -> 
     ctx.ty_var_is_ty(lhs_ty_var, Ty::Func(Box::new(FuncTy {
         param_tys,
         return_ty: Ty::TyVar(return_ty_var),
-    })));
+    })), lhs.span());
     let lhs = infer_expr(ctx, lhs, lhs_ty_var);
 
     tyir::CallExpr {lhs, paren_open_token, args, paren_close_token}
@@ -632,7 +654,7 @@ fn infer_return(ctx: &mut Context, ret: &nir::ReturnExpr, return_ty_var: TyVar) 
 
         // If there is no expression, we return `()`
         None => {
-            ctx.ty_var_is_ty(func_return_ty_var, Ty::Unit);
+            ctx.ty_var_is_ty(func_return_ty_var, Ty::Unit, return_token.span);
 
             None
         },
@@ -668,14 +690,14 @@ fn infer_def(ctx: &mut Context, def: &nir::DefSpan, return_ty_var: TyVar) -> tyi
 fn infer_integer(ctx: &mut Context, expr: &nir::IntegerLiteral, return_ty_var: TyVar) -> tyir::IntegerLiteral {
     // Assert that the type must be an integer
     //TODO: May want to do something more complicated when multiple integral types are supported
-    ctx.ty_var_is_ty(return_ty_var, Ty::I64);
+    ctx.ty_var_is_ty(return_ty_var, Ty::I64, expr.span);
 
     expr.clone()
 }
 
 fn infer_bool(ctx: &mut Context, expr: &nir::BoolLiteral, return_ty_var: TyVar) -> tyir::BoolLiteral {
     // Assert that the type must be a bool
-    ctx.ty_var_is_ty(return_ty_var, Ty::Bool);
+    ctx.ty_var_is_ty(return_ty_var, Ty::Bool, expr.span);
 
     expr.clone()
 }
@@ -685,7 +707,7 @@ fn infer_list(ctx: &mut Context, expr: &nir::ListLiteral, return_ty_var: TyVar) 
 
     let item_ty_var = ctx.fresh_type_var();
     // The list type with a currently unknown item type
-    ctx.ty_var_is_ty(return_ty_var, Ty::List(Box::new(Ty::TyVar(item_ty_var))));
+    ctx.ty_var_is_ty(return_ty_var, Ty::List(Box::new(Ty::TyVar(item_ty_var))), expr.span());
 
     let bracket_open_token = bracket_open_token.clone();
     // Every item must be the same type
@@ -711,14 +733,14 @@ fn infer_list_repeat(ctx: &mut Context, expr: &nir::ListRepeatLiteral, return_ty
     // Every item must be the same type
     let item_ty_var = ctx.fresh_type_var();
     // The list type with a currently unknown item type
-    ctx.ty_var_is_ty(return_ty_var, Ty::List(Box::new(Ty::TyVar(item_ty_var))));
+    ctx.ty_var_is_ty(return_ty_var, Ty::List(Box::new(Ty::TyVar(item_ty_var))), expr.span());
 
     let item = infer_expr(ctx, item, item_ty_var);
 
     // The length must be an integer
     //TODO: Probably want this to be `uint` eventually
     let len_ty_var = ctx.fresh_type_var();
-    ctx.ty_var_is_ty(len_ty_var, Ty::I64);
+    ctx.ty_var_is_ty(len_ty_var, Ty::I64, None);
     let len = infer_expr(ctx, len, len_ty_var);
 
     tyir::ListRepeatLiteral {
@@ -732,14 +754,14 @@ fn infer_list_repeat(ctx: &mut Context, expr: &nir::ListRepeatLiteral, return_ty
 
 fn infer_bstr(ctx: &mut Context, expr: &nir::BStrLiteral, return_ty_var: TyVar) -> tyir::BStrLiteral {
     // A bstr is of type `[u8]`
-    ctx.ty_var_is_ty(return_ty_var, Ty::List(Box::new(Ty::U8)));
+    ctx.ty_var_is_ty(return_ty_var, Ty::List(Box::new(Ty::U8)), expr.span);
 
     expr.clone()
 }
 
 fn infer_unit(ctx: &mut Context, expr: &nir::UnitLiteral, return_ty_var: TyVar) -> tyir::UnitLiteral {
     // Assert that the type must be `()`
-    ctx.ty_var_is_ty(return_ty_var, Ty::Unit);
+    ctx.ty_var_is_ty(return_ty_var, Ty::Unit, expr.span());
 
     expr.clone()
 }

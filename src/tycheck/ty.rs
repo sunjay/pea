@@ -1,12 +1,51 @@
-use thiserror::Error;
+use std::fmt;
+
 use ena::unify::{NoError, UnifyValue};
 
-use crate::nir;
+use crate::{nir, source_files::Span};
 
-use super::constraints::{ConstraintSet, TyVar};
+use super::constraints::TyVar;
 
-#[derive(Debug, Clone, Error)]
+#[derive(Debug, Clone)]
 pub enum UnifyError {
+    MismatchedTypes {
+        ty1: Ty,
+        ty2: Ty,
+    },
+
+    ArityMismatch {
+        ty1: Ty,
+        ty1_arity: usize,
+        ty2: Ty,
+        ty2_arity: usize,
+    },
+}
+
+#[derive(Debug, Clone)]
+pub enum Constraint {
+    TyVarIsTy {ty_var: TyVar, ty: Ty},
+
+    TyVarsUnify {ty_var1: TyVar, ty_var2: TyVar},
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TySpan {
+    pub ty: Ty,
+    /// The span associated with the type (if any)
+    pub span: Option<Span>,
+}
+
+impl UnifyValue for TySpan {
+    type Error = NoError;
+
+    fn unify_values(ty1: &Self, ty2: &Self) -> Result<Self, Self::Error> {
+        Ok(Self {
+            ty: Ty::unify_values(&ty1.ty, &ty2.ty)?,
+            // Could choose either span if both exist. Most important is that we keep at least one
+            // span if either is set.
+            span: ty2.span.or(ty1.span),
+        })
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -77,9 +116,11 @@ impl UnifyValue for Ty {
 }
 
 impl Ty {
-    /// Recursively unify this type with the given other type. The constraints set will be updated
-    /// whenever type variables are equated with other types or variables.
-    pub fn unify(self, other: Self, constraints: &mut ConstraintSet) -> Result<Self, UnifyError> {
+    /// Recursively unify this type with the given other type.
+    ///
+    /// Collects substitutions/additional constraints found along the way so they can be applied
+    /// afterwards (if the unification succeeds).
+    pub fn unify(self, other: Self, constraints: &mut Vec<Constraint>) -> Result<Self, UnifyError> {
         use Ty::*;
         Ok(match (self, other) {
             (Unit, Unit) => Unit,
@@ -91,21 +132,36 @@ impl Ty {
             (Func(ty1), Func(ty2)) => Func(Box::new(ty1.unify(*ty2, constraints)?)),
 
             (TyVar(ty_var1), TyVar(ty_var2)) => {
-                constraints.ty_vars_unify(ty_var1, ty_var2)?;
+                constraints.push(Constraint::TyVarsUnify {ty_var1, ty_var2});
                 // Could return either one
                 TyVar(ty_var1)
             },
             (TyVar(ty_var), ty) |
             (ty, TyVar(ty_var)) => {
-                constraints.ty_var_is_ty(ty_var, ty.clone())?;
+                constraints.push(Constraint::TyVarIsTy {ty_var, ty: ty.clone()});
                 ty
             },
 
             // Mismatched types
-            //TODO: Collect the types on the way back up so we print the message for the outer-most type
-            // e.g. if [i64] != [u8], we want to print that and not just i64 != u8
-            (ty1, ty2) => todo!("{:?} {:?}", ty1, ty2),
+            (ty1, ty2) => {
+                return Err(UnifyError::MismatchedTypes {ty1, ty2});
+            },
         })
+    }
+}
+
+impl fmt::Display for Ty {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use Ty::*;
+        match self {
+            Unit => write!(f, "()"),
+            Bool => write!(f, "bool"),
+            I64 => write!(f, "i64"),
+            U8 => write!(f, "u8"),
+            List(item_ty) => write!(f, "[{}]", item_ty),
+            Func(func) => write!(f, "{}", func),
+            TyVar(_) => write!(f, "_"),
+        }
     }
 }
 
@@ -183,11 +239,19 @@ impl UnifyValue for FuncTy {
 }
 
 impl FuncTy {
-    /// Recursively unify this type with the given other type. The constraints set will be updated
-    /// whenever type variables are equated with other types or variables.
-    pub fn unify(self, other: Self, constraints: &mut ConstraintSet) -> Result<Self, UnifyError> {
+    /// Recursively unify this type with the given other type.
+    ///
+    /// Collects substitutions/additional constraints found along the way so they can be applied
+    /// afterwards (if the unification succeeds).
+    pub fn unify(self, other: Self, constraints: &mut Vec<Constraint>) -> Result<Self, UnifyError> {
         if self.param_tys.len() != other.param_tys.len() {
-            todo!()
+            let ty1_arity = self.param_tys.len();
+            let ty2_arity = other.param_tys.len();
+
+            let ty1 = Ty::Func(Box::new(self));
+            let ty2 = Ty::Func(Box::new(other));
+
+            return Err(UnifyError::ArityMismatch {ty1, ty1_arity, ty2, ty2_arity});
         }
 
         let param_tys = self.param_tys.into_iter()
@@ -198,5 +262,29 @@ impl FuncTy {
         let return_ty = self.return_ty.unify(other.return_ty, constraints)?;
 
         Ok(Self {param_tys, return_ty})
+    }
+}
+
+impl fmt::Display for FuncTy {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let Self {param_tys, return_ty} = self;
+
+        write!(f, "fn (")?;
+
+        if let Some(param_ty) = param_tys.get(0) {
+            write!(f, "{}", param_ty)?;
+
+            for param_ty in &param_tys[1..] {
+                write!(f, ", {}", param_ty)?;
+            }
+        }
+
+        write!(f, ")")?;
+
+        if *return_ty != Ty::Unit {
+            write!(f, "-> {}", return_ty)?;
+        }
+
+        Ok(())
     }
 }
