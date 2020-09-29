@@ -1,0 +1,114 @@
+fn main() {
+    // ambiguous type
+    let a = [];
+
+    // non-homogenous list
+    let y = [3, 4, b"abc"];
+    // does not match type annotation on variable
+    let z: [i64] = [b"a", b"c"];
+
+    // does not match function signature
+    let q = [b""];
+    let r: [u8] = foo(q);
+
+    let f = foo;
+    // does not match the signature of the first function assigned to f
+    f = bar;
+
+    // non-boolean if condition
+    if foo([1]) {
+        // println can contain anything
+        println!(33);
+        // println can contain anything
+        println!(b"abc");
+
+        // Return expression is fine in a block as long as it evaluates to () or !
+        ()
+    } else {
+        // Return expression that evaluates to !
+        return ()
+    }
+
+    // condition of while loop must be a boolean
+    while b"test test test" {
+        println!(f);
+
+        // body of while loop must evaluate to `()`
+        1
+    }
+
+    loop {
+        println!(3);
+
+        if false {
+            // `continue` can be any type since it never actually returns
+            let v: i64 = continue;
+        } else {
+            // `break` can be any type since it never actually returns
+            let v: [u8] = break;
+        }
+
+        // Both `continue` and `break` should continue to type check as `()`, even if there is
+        // nothing to disambiguate their types
+        if false {
+            continue;
+            // implicit `()`
+        } else {
+            break;
+            // implicit `()`
+        }
+
+        // body of loop must evaluate to `()`
+        b"ok"
+    }
+
+    // all branches of if must produce the same type
+    let var1 = if false {
+        55
+    } else if true {
+        b""
+    } else {
+        -333
+    };
+
+    // if without an else must produce `()`
+    let var2 = if true {
+        45
+    };
+
+    // Complex expressions with errors
+    let x = (4 * 3) - 45 / b"";
+    let y = b"" % bar(3333);
+
+    // Non-function call
+    bar(-111)(4);
+
+    let x = if false {
+        // return evaluates to any type but return expression type must be the return type of the
+        // function
+        return 33
+    } else {
+        44
+    };
+
+    // return with no argument returns `()`
+    return
+}
+
+fn foo(x: [i64]) -> i64 {
+    3 * 4
+}
+
+fn bar(x: i64) -> [u8] {
+    b"test"
+}
+
+fn returns_unit() {
+    if false {
+        // Not a value of type `()`
+        return b"";
+    }
+
+    // Not a value of type `()`
+    3
+}
