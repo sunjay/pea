@@ -2,6 +2,7 @@ mod ty;
 mod tyir;
 mod subst;
 mod constraints;
+mod solver;
 mod infer;
 
 use crate::{cgenir, nir, diagnostics::Diagnostics};

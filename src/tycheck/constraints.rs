@@ -4,7 +4,7 @@ use ena::unify::{UnifyKey, InPlaceUnificationTable};
 
 use crate::diagnostics::Diagnostics;
 
-use super::{subst::Subst, ty::{Ty, UnifyError}};
+use super::{subst::Subst, ty::{Ty, UnifyError}, solver};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TyVar(u32);
@@ -84,11 +84,12 @@ impl ConstraintSet {
     /// Solves this constraint set, and returns a substitution that can be used to map all type
     /// variables to concrete types
     pub fn solve(self, _diag: &Diagnostics) -> Subst {
-        let Self {mut ty_var_table, default_unit: _} = self;
-        //TODO: Call functions in a separate `solve` module to resolve remaining constraints
+        let Self {mut ty_var_table, default_unit} = self;
+        let ty_vars = (0..ty_var_table.len() as u32).map(TyVar);
 
-        (0..ty_var_table.len() as u32).map(|id| {
-            let ty_var = TyVar(id);
+        solver::apply_defaults(&mut ty_var_table, ty_vars.clone(), &default_unit);
+
+        ty_vars.map(|ty_var| {
             let ty = ty_var_table.probe_value(ty_var)
                 .expect("bug: not all types were inferred into concrete types");
             (ty_var, ty)
