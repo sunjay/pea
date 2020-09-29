@@ -472,9 +472,21 @@ fn infer_unary_op(ctx: &mut Context, expr: &nir::UnaryOpExpr, return_ty_var: TyV
 
     let op = *op;
     let op_token = op_token.clone();
-    //TODO: (Soundness) Currently allows through any type, even if the operator is not supported.
+
+    //TODO: (unsound) This does not check if the operator is actually supported by the operands.
     //  To fix: resolve this as a method call and assert the types properly.
-    let expr = infer_expr(ctx, expr, return_ty_var);
+    let expr = match op {
+        nir::UnaryOp::Pos |
+        nir::UnaryOp::Neg => {
+            // HACK: Assume that return type is the same as operand type
+            infer_expr(ctx, expr, return_ty_var)
+        },
+        nir::UnaryOp::Not => {
+            // HACK: Assume that operand type and return type are bool
+            ctx.ty_var_is_ty(return_ty_var, Ty::Bool);
+            infer_expr(ctx, expr, return_ty_var)
+        },
+    };
 
     tyir::UnaryOpExpr {op, op_token, expr}
 }
@@ -482,13 +494,36 @@ fn infer_unary_op(ctx: &mut Context, expr: &nir::UnaryOpExpr, return_ty_var: TyV
 fn infer_binary_op(ctx: &mut Context, expr: &nir::BinaryOpExpr, return_ty_var: TyVar) -> tyir::BinaryOpExpr {
     let nir::BinaryOpExpr {lhs, op, op_token, rhs} = expr;
 
-    //TODO: (Soundness) Currently allows through any type, even if the operator is not supported.
-    //  To fix: resolve this as a method call and assert the types properly.
+    //TODO: The LHS and RHS are not necessarily the same type
+    let operand_ty_var = ctx.fresh_type_var();
+    let lhs = infer_expr(ctx, lhs, operand_ty_var);
+    let rhs = infer_expr(ctx, rhs, operand_ty_var);
 
-    let lhs = infer_expr(ctx, lhs, return_ty_var);
     let op = *op;
     let op_token = op_token.clone();
-    let rhs = infer_expr(ctx, rhs, return_ty_var);
+
+    //TODO: (unsound) This does not check if the operator is actually supported by the operands.
+    //  To fix: resolve this as a method call and assert the types properly.
+    match op {
+        nir::BinaryOp::Add |
+        nir::BinaryOp::Sub |
+        nir::BinaryOp::Mul |
+        nir::BinaryOp::Div |
+        nir::BinaryOp::Rem => {
+            // HACK: Assume that return type is the same as operand type
+            ctx.ty_vars_unify(operand_ty_var, return_ty_var);
+        },
+
+        nir::BinaryOp::EqualsEquals |
+        nir::BinaryOp::NotEquals |
+        nir::BinaryOp::GreaterThan |
+        nir::BinaryOp::GreaterThanEquals |
+        nir::BinaryOp::LessThan |
+        nir::BinaryOp::LessThanEquals => {
+            // HACK: Assume that return type is bool
+            ctx.ty_var_is_ty(return_ty_var, Ty::Bool);
+        },
+    }
 
     tyir::BinaryOpExpr {lhs, op, op_token, rhs}
 }

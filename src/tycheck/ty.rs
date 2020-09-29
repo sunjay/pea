@@ -102,7 +102,7 @@ impl Ty {
             },
 
             // Mismatched types
-            _ => todo!(),
+            (ty1, ty2) => todo!("{:?} {:?}", ty1, ty2),
         })
     }
 }
