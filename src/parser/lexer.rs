@@ -78,7 +78,7 @@ impl<'a> Lexer<'a> {
             (b'/', _) => self.byte_token(start, Slash),
             (b'%', _) => self.byte_token(start, Percent),
 
-            (b'b', Some(b'"')) => self.byte_str(start),
+            (b'b', Some(b'"')) => self.bstr_lit(start),
 
             (b'a' ..= b'z', _) |
             (b'A' ..= b'Z', _) |
@@ -311,7 +311,7 @@ impl<'a> Lexer<'a> {
 
     /// Parses a byte str, assuming that the opening 'b' character has already been parsed
     /// and that the next character is definitely the opening double quote '"'
-    fn byte_str(&mut self, start: usize) -> Token {
+    fn bstr_lit(&mut self, start: usize) -> Token {
         // Skip the opening quote
         self.scanner.next();
 
@@ -321,7 +321,7 @@ impl<'a> Lexer<'a> {
             match self.scanner.next() {
                 // Found closing quote
                 Some(b'"') => break,
-                Some(b'\\') => match self.byte_str_unescape_byte(pos) {
+                Some(b'\\') => match self.bstr_lit_unescape_byte(pos) {
                     Ok(Some(ch)) => value.push(ch),
                     Ok(None) => {},
                     Err(token) => return token,
@@ -345,7 +345,7 @@ impl<'a> Lexer<'a> {
 
     /// Parses a byte string escape sequence, assuming that the starting backslash has already been
     /// parsed
-    fn byte_str_unescape_byte(&mut self, lit_start: usize) -> Result<Option<u8>, Token> {
+    fn bstr_lit_unescape_byte(&mut self, lit_start: usize) -> Result<Option<u8>, Token> {
         Ok(match self.scanner.next() {
             Some(b'\\') => Some(b'\\'),
             Some(b'n') => Some(b'\n'),
@@ -356,7 +356,7 @@ impl<'a> Lexer<'a> {
             Some(b'"') => Some(b'"'),
 
             // Hex escape
-            Some(b'x') => match self.byte_str_byte_escape_hex(lit_start, b'"') {
+            Some(b'x') => match self.bstr_lit_byte_escape_hex(lit_start, b'"') {
                 Ok(ch) => ch,
                 Err(err) => {
                     // Error recovery: continue until the end quote
@@ -402,12 +402,12 @@ impl<'a> Lexer<'a> {
     /// byte that denotes the end of the literal this is in. `"` for byte strings and `'` for bytes.
     ///
     /// Returns None if any errors occur
-    fn byte_str_byte_escape_hex(&mut self, lit_start: usize, lit_end_byte: u8) -> Result<Option<u8>, Token> {
+    fn bstr_lit_byte_escape_hex(&mut self, lit_start: usize, lit_end_byte: u8) -> Result<Option<u8>, Token> {
         let digits_start = self.scanner.current_pos();
 
         // Get two hex digits
         for _ in 0..2 {
-            match self.byte_str_escape_hex_digit(lit_start, lit_end_byte)? {
+            match self.bstr_lit_escape_hex_digit(lit_start, lit_end_byte)? {
                 Some(_) => {},
                 None => return Ok(None),
             }
@@ -420,7 +420,7 @@ impl<'a> Lexer<'a> {
         Ok(Some(value))
     }
 
-    fn byte_str_escape_hex_digit(&mut self, lit_start: usize, lit_end_byte: u8) -> Result<Option<u8>, Token> {
+    fn bstr_lit_escape_hex_digit(&mut self, lit_start: usize, lit_end_byte: u8) -> Result<Option<u8>, Token> {
         if self.scanner.peek() == Some(lit_end_byte) {
             let token = self.token_to_current(lit_start, Error, None);
             self.diag.span_error(token.span, "numeric character escape is too short").emit();

@@ -1,0 +1,14 @@
+[tests/ui/invalid_bstr_literal.pea:3:21-3:22] error: unknown character escape: `q`
+
+[tests/ui/invalid_bstr_literal.pea:4:21-4:22] error: numeric character escape is too short
+
+[tests/ui/invalid_bstr_literal.pea:5:21-5:23] error: numeric character escape is too short
+
+[tests/ui/invalid_bstr_literal.pea:6:21-6:23] error: invalid character in numeric character escape: `q`
+
+[tests/ui/invalid_bstr_literal.pea:7:21-7:24] error: invalid character in numeric character escape: `q`
+
+[tests/ui/invalid_bstr_literal.pea:8:19-9:2] error: unterminated double quote string
+
+error: aborting due to 6 previous errors
+
