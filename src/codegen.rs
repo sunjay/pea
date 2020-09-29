@@ -5,6 +5,7 @@ use std::convert::TryInto;
 
 use crate::{
     nir,
+    cgenir,
     bytecode,
     prim,
     interpreter::Interpreter,
@@ -26,7 +27,7 @@ pub struct Compiler<'a> {
 
 impl<'a> Compiler<'a> {
     pub fn compile(
-        program: &nir::Program,
+        program: &cgenir::Program,
         def_table: &'a nir::DefTable,
         diag: &'a Diagnostics,
     ) -> Interpreter {
@@ -68,22 +69,22 @@ impl<'a> Compiler<'a> {
         interpreter
     }
 
-    fn declare_consts_program(&mut self, program: &nir::Program) {
-        let nir::Program {decls, scope: _} = program;
+    fn declare_consts_program(&mut self, program: &cgenir::Program) {
+        let cgenir::Program {decls, scope: _} = program;
 
         for decl in decls {
             self.declare_consts_decl(decl);
         }
     }
 
-    fn declare_consts_decl(&mut self, decl: &nir::Decl) {
-        use nir::Decl::*;
+    fn declare_consts_decl(&mut self, decl: &cgenir::Decl) {
+        use cgenir::Decl::*;
         match decl {
             Func(func) => self.declare_consts_func_decl(func),
         }
     }
 
-    fn declare_consts_func_decl(&mut self, func: &nir::FuncDecl) {
+    fn declare_consts_func_decl(&mut self, func: &cgenir::FuncDecl) {
         let def_id = func.name.id;
         let name = self.def_table.get(def_id);
 
@@ -96,22 +97,22 @@ impl<'a> Compiler<'a> {
         self.const_ids.insert(def_id, const_id);
     }
 
-    fn walk_program(&mut self, program: &nir::Program) {
-        let nir::Program {decls, scope: _} = program;
+    fn walk_program(&mut self, program: &cgenir::Program) {
+        let cgenir::Program {decls, scope: _} = program;
 
         for decl in decls {
             self.walk_decl(decl);
         }
     }
 
-    fn walk_decl(&mut self, decl: &nir::Decl) {
-        use nir::Decl::*;
+    fn walk_decl(&mut self, decl: &cgenir::Decl) {
+        use cgenir::Decl::*;
         match decl {
             Func(func) => self.walk_func(func),
         }
     }
 
-    fn walk_func(&mut self, func: &nir::FuncDecl) {
+    fn walk_func(&mut self, func: &cgenir::FuncDecl) {
         let func_code = FunctionCompiler::compile(
             func,
             &mut self.consts,

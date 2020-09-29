@@ -4,6 +4,7 @@ use std::collections::HashMap;
 
 use crate::{
     nir,
+    cgenir,
     diagnostics::Diagnostics,
     bytecode::{self, OpCode, PatchJump, LoopCheckpoint},
     value::Value,
@@ -48,7 +49,7 @@ pub struct FunctionCompiler<'a> {
 
 impl<'a> FunctionCompiler<'a> {
     pub fn compile(
-        func: &nir::FuncDecl,
+        func: &cgenir::FuncDecl,
         consts: &'a mut bytecode::Constants,
         const_ids: &'a DefConsts,
         diag: &'a Diagnostics,
@@ -69,13 +70,14 @@ impl<'a> FunctionCompiler<'a> {
         compiler.code
     }
 
-    fn walk_func(&mut self, func: &nir::FuncDecl) {
-        let nir::FuncDecl {
+    fn walk_func(&mut self, func: &cgenir::FuncDecl) {
+        let cgenir::FuncDecl {
             fn_token: _,
             name: _,
             paren_open_token: _,
             params,
             paren_close_token: _,
+            right_arrow_token: _,
             return_ty: _,
             body,
             scope: _,
@@ -85,7 +87,7 @@ impl<'a> FunctionCompiler<'a> {
         // is generated for the parameters since they are implicitly provided thanks to our calling
         // convention.
         for param in params {
-            let nir::FuncParam {name, ..} = param;
+            let cgenir::FuncParam {name, ..} = param;
             self.declare_local(name);
         }
 
@@ -96,8 +98,8 @@ impl<'a> FunctionCompiler<'a> {
         self.code.write_instr(OpCode::Return, body.brace_close_token.span);
     }
 
-    fn walk_block(&mut self, block: &nir::Block) {
-        let nir::Block {
+    fn walk_block(&mut self, block: &cgenir::Block) {
+        let cgenir::Block {
             brace_open_token: _,
             stmts,
             ret_expr,
@@ -142,8 +144,8 @@ impl<'a> FunctionCompiler<'a> {
         self.next_frame_offset = start_frame_offset;
     }
 
-    fn walk_stmt(&mut self, stmt: &nir::Stmt) {
-        use nir::Stmt::*;
+    fn walk_stmt(&mut self, stmt: &cgenir::Stmt) {
+        use cgenir::Stmt::*;
         match stmt {
             Println(stmt) => self.walk_println_stmt(stmt),
             Print(stmt) => self.walk_print_stmt(stmt),
@@ -155,24 +157,24 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
-    fn walk_println_stmt(&mut self, stmt: &nir::PrintlnStmt) {
-        let nir::PrintlnStmt {println_token, expr, ..} = stmt;
+    fn walk_println_stmt(&mut self, stmt: &cgenir::PrintlnStmt) {
+        let cgenir::PrintlnStmt {println_token, expr, ..} = stmt;
 
         self.walk_expr(expr);
 
         self.code.write_instr(OpCode::Println, println_token.span);
     }
 
-    fn walk_print_stmt(&mut self, stmt: &nir::PrintStmt) {
-        let nir::PrintStmt {print_token, expr, ..} = stmt;
+    fn walk_print_stmt(&mut self, stmt: &cgenir::PrintStmt) {
+        let cgenir::PrintStmt {print_token, expr, ..} = stmt;
 
         self.walk_expr(expr);
 
         self.code.write_instr(OpCode::Print, print_token.span);
     }
 
-    fn walk_var_decl_stmt(&mut self, stmt: &nir::VarDeclStmt) {
-        let nir::VarDeclStmt {name, expr, ..} = stmt;
+    fn walk_var_decl_stmt(&mut self, stmt: &cgenir::VarDeclStmt) {
+        let cgenir::VarDeclStmt {name, expr, ..} = stmt;
 
         self.declare_local(name);
 
@@ -182,8 +184,8 @@ impl<'a> FunctionCompiler<'a> {
         self.walk_expr(expr);
     }
 
-    fn walk_expr_stmt(&mut self, stmt: &nir::ExprStmt) {
-        let nir::ExprStmt {expr, semicolon_token} = stmt;
+    fn walk_expr_stmt(&mut self, stmt: &cgenir::ExprStmt) {
+        let cgenir::ExprStmt {expr, semicolon_token} = stmt;
 
         self.walk_expr(&expr);
 
@@ -191,7 +193,7 @@ impl<'a> FunctionCompiler<'a> {
         self.code.write_instr_u8(OpCode::Pop, 1, semicolon_token.span);
     }
 
-    fn walk_cond_stmt(&mut self, stmt: &nir::Cond) {
+    fn walk_cond_stmt(&mut self, stmt: &cgenir::Cond) {
         self.walk_cond(stmt);
 
         // The span for the pop instruction is the last brace in the statement
@@ -211,8 +213,8 @@ impl<'a> FunctionCompiler<'a> {
         self.code.write_instr_u8(OpCode::Pop, 1, span);
     }
 
-    fn walk_while_loop_stmt(&mut self, stmt: &nir::WhileLoop) {
-        let nir::WhileLoop {while_token: _, cond, body} = stmt;
+    fn walk_while_loop_stmt(&mut self, stmt: &cgenir::WhileLoop) {
+        let cgenir::WhileLoop {while_token: _, cond, body} = stmt;
 
         let top_block = self.blocks.last_mut().expect("bug: should be in a block");
         assert!(top_block.current_loop.is_none(), "bug: overwrote loop");
@@ -255,8 +257,8 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
-    fn walk_loop_stmt(&mut self, stmt: &nir::Loop) {
-        let nir::Loop {loop_token: _, body} = stmt;
+    fn walk_loop_stmt(&mut self, stmt: &cgenir::Loop) {
+        let cgenir::Loop {loop_token: _, body} = stmt;
 
         let top_block = self.blocks.last_mut().expect("bug: should be in a block");
         assert!(top_block.current_loop.is_none(), "bug: overwrote loop");
@@ -286,8 +288,8 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
-    fn walk_expr(&mut self, expr: &nir::Expr) {
-        use nir::Expr::*;
+    fn walk_expr(&mut self, expr: &cgenir::Expr) {
+        use cgenir::Expr::*;
         match expr {
             Or(expr) => self.walk_or(expr),
             And(expr) => self.walk_and(expr),
@@ -310,8 +312,8 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
-    fn walk_or(&mut self, expr: &nir::OrExpr) {
-        let nir::OrExpr {lhs, oror_token, rhs} = expr;
+    fn walk_or(&mut self, expr: &cgenir::OrExpr) {
+        let cgenir::OrExpr {lhs, oror_token, rhs} = expr;
 
         self.walk_expr(lhs);
 
@@ -327,8 +329,8 @@ impl<'a> FunctionCompiler<'a> {
         self.code.finish_jump_patch(end_patch);
     }
 
-    fn walk_and(&mut self, expr: &nir::AndExpr) {
-        let nir::AndExpr {lhs, andand_token, rhs} = expr;
+    fn walk_and(&mut self, expr: &cgenir::AndExpr) {
+        let cgenir::AndExpr {lhs, andand_token, rhs} = expr;
 
         self.walk_expr(lhs);
 
@@ -344,8 +346,8 @@ impl<'a> FunctionCompiler<'a> {
         self.code.finish_jump_patch(end_patch);
     }
 
-    fn walk_cond(&mut self, cond: &nir::Cond) {
-        let nir::Cond {
+    fn walk_cond(&mut self, cond: &cgenir::Cond) {
+        let cgenir::Cond {
             if_token: _,
             if_cond,
             if_body,
@@ -424,7 +426,7 @@ impl<'a> FunctionCompiler<'a> {
         // Note that the Pop just before the else body is already generated by the loop above
         match else_clause {
             Some(clause) => {
-                let nir::ElseClause {else_token: _, body} = clause;
+                let cgenir::ElseClause {else_token: _, body} = clause;
                 self.walk_block(body);
             },
 
@@ -445,46 +447,46 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
-    fn walk_unary_op(&mut self, expr: &nir::UnaryOpExpr) {
-        let nir::UnaryOpExpr {op, op_token, expr} = expr;
+    fn walk_unary_op(&mut self, expr: &cgenir::UnaryOpExpr) {
+        let cgenir::UnaryOpExpr {op, op_token, expr} = expr;
 
         self.walk_expr(expr);
 
         self.code.write_instr(match op {
-            nir::UnaryOp::Pos => OpCode::Pos,
-            nir::UnaryOp::Neg => OpCode::Neg,
-            nir::UnaryOp::Not => OpCode::Not,
+            cgenir::UnaryOp::Pos => OpCode::Pos,
+            cgenir::UnaryOp::Neg => OpCode::Neg,
+            cgenir::UnaryOp::Not => OpCode::Not,
         }, op_token.span);
     }
 
-    fn walk_binary_op(&mut self, expr: &nir::BinaryOpExpr) {
-        let nir::BinaryOpExpr {lhs, op, op_token, rhs} = expr;
+    fn walk_binary_op(&mut self, expr: &cgenir::BinaryOpExpr) {
+        let cgenir::BinaryOpExpr {lhs, op, op_token, rhs} = expr;
 
         self.walk_expr(lhs);
         self.walk_expr(rhs);
 
         self.code.write_instr(match op {
-            nir::BinaryOp::Add => OpCode::Add,
-            nir::BinaryOp::Sub => OpCode::Sub,
-            nir::BinaryOp::Mul => OpCode::Mul,
-            nir::BinaryOp::Div => OpCode::Div,
-            nir::BinaryOp::Rem => OpCode::Rem,
+            cgenir::BinaryOp::Add => OpCode::Add,
+            cgenir::BinaryOp::Sub => OpCode::Sub,
+            cgenir::BinaryOp::Mul => OpCode::Mul,
+            cgenir::BinaryOp::Div => OpCode::Div,
+            cgenir::BinaryOp::Rem => OpCode::Rem,
 
-            nir::BinaryOp::EqualsEquals => OpCode::EqualsEquals,
-            nir::BinaryOp::NotEquals => OpCode::NotEquals,
-            nir::BinaryOp::GreaterThan => OpCode::GreaterThan,
-            nir::BinaryOp::GreaterThanEquals => OpCode::GreaterThanEquals,
-            nir::BinaryOp::LessThan => OpCode::LessThan,
-            nir::BinaryOp::LessThanEquals => OpCode::LessThanEquals,
+            cgenir::BinaryOp::EqualsEquals => OpCode::EqualsEquals,
+            cgenir::BinaryOp::NotEquals => OpCode::NotEquals,
+            cgenir::BinaryOp::GreaterThan => OpCode::GreaterThan,
+            cgenir::BinaryOp::GreaterThanEquals => OpCode::GreaterThanEquals,
+            cgenir::BinaryOp::LessThan => OpCode::LessThan,
+            cgenir::BinaryOp::LessThanEquals => OpCode::LessThanEquals,
         }, op_token.span);
     }
 
-    fn walk_assign(&mut self, expr: &nir::AssignExpr) {
-        let nir::AssignExpr {lvalue, equals_token: _, rhs} = expr;
+    fn walk_assign(&mut self, expr: &cgenir::AssignExpr) {
+        let cgenir::AssignExpr {lvalue, equals_token: _, rhs} = expr;
 
         self.walk_expr(rhs);
 
-        use nir::LValueExpr::*;
+        use cgenir::LValueExpr::*;
         match lvalue {
             Def(def) => match self.local_var_offsets.get(&def.id) {
                 Some(&offset) => {
@@ -498,14 +500,14 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
-    fn walk_group(&mut self, expr: &nir::GroupExpr) {
-        let nir::GroupExpr {paren_open_token: _, expr, paren_close_token: _} = expr;
+    fn walk_group(&mut self, expr: &cgenir::GroupExpr) {
+        let cgenir::GroupExpr {paren_open_token: _, expr, paren_close_token: _} = expr;
 
         self.walk_expr(expr);
     }
 
-    fn walk_call(&mut self, call: &nir::CallExpr) {
-        let nir::CallExpr {lhs, paren_open_token, args, paren_close_token} = call;
+    fn walk_call(&mut self, call: &cgenir::CallExpr) {
+        let cgenir::CallExpr {lhs, paren_open_token, args, paren_close_token} = call;
 
         // Walk the lhs first so the function to be called is on the stack before the args
         self.walk_expr(lhs);
@@ -521,8 +523,8 @@ impl<'a> FunctionCompiler<'a> {
         self.code.write_instr_u8(OpCode::Call, nargs, call_span);
     }
 
-    fn walk_return(&mut self, ret: &nir::ReturnExpr) {
-        let nir::ReturnExpr {return_token, expr} = ret;
+    fn walk_return(&mut self, ret: &cgenir::ReturnExpr) {
+        let cgenir::ReturnExpr {return_token, expr} = ret;
 
         // Generate the value to return
         match expr {
@@ -535,8 +537,8 @@ impl<'a> FunctionCompiler<'a> {
         self.code.write_instr(OpCode::Return, return_token.span);
     }
 
-    fn walk_break(&mut self, expr: &nir::BreakExpr) {
-        let nir::BreakExpr {break_token} = expr;
+    fn walk_break(&mut self, expr: &cgenir::BreakExpr) {
+        let cgenir::BreakExpr {break_token} = expr;
 
         // `break` needs to do two things:
         // 1. pop all local variables up to the start of the **loop body**
@@ -577,8 +579,8 @@ impl<'a> FunctionCompiler<'a> {
         loop_state.after_loop_patches.push(after_loop_patch);
     }
 
-    fn walk_continue(&mut self, expr: &nir::ContinueExpr) {
-        let nir::ContinueExpr {continue_token} = expr;
+    fn walk_continue(&mut self, expr: &cgenir::ContinueExpr) {
+        let cgenir::ContinueExpr {continue_token} = expr;
 
         // `continue` needs to do two things:
         // 1. pop all local variables up to the start of the **loop body**
@@ -618,7 +620,7 @@ impl<'a> FunctionCompiler<'a> {
         self.code.write_loop(OpCode::Loop, loop_state.loop_start, continue_token.span);
     }
 
-    fn walk_def(&mut self, def: &nir::DefSpan) {
+    fn walk_def(&mut self, def: &cgenir::DefSpan) {
         // Name resolution has already taken place, so this name should be either a variable or a
         // constant
 
@@ -633,8 +635,8 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
-    fn walk_integer_literal(&mut self, lit: &nir::IntegerLiteral) {
-        let &nir::IntegerLiteral {value, span} = lit;
+    fn walk_integer_literal(&mut self, lit: &cgenir::IntegerLiteral) {
+        let &cgenir::IntegerLiteral {value, span} = lit;
 
         //TODO: Check the range on the type of the value being produced
         let value = value.try_into()
@@ -643,8 +645,8 @@ impl<'a> FunctionCompiler<'a> {
         self.code.write_instr_u16(OpCode::Constant, const_id.into_u16(), span);
     }
 
-    fn walk_bool_literal(&mut self, lit: &nir::BoolLiteral) {
-        let &nir::BoolLiteral {value, span} = lit;
+    fn walk_bool_literal(&mut self, lit: &cgenir::BoolLiteral) {
+        let &cgenir::BoolLiteral {value, span} = lit;
 
         if value {
             self.code.write_instr(OpCode::ConstTrue, span);
@@ -653,8 +655,8 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
-    fn walk_list(&mut self, lit: &nir::ListLiteral) {
-        let nir::ListLiteral {bracket_open_token: _, items, bracket_close_token} = lit;
+    fn walk_list(&mut self, lit: &cgenir::ListLiteral) {
+        let cgenir::ListLiteral {bracket_open_token: _, items, bracket_close_token} = lit;
 
         // Push each item onto the stack in order
         for item in items {
@@ -671,8 +673,8 @@ impl<'a> FunctionCompiler<'a> {
         self.code.write_instr(OpCode::List, bracket_close_token.span);
     }
 
-    fn walk_list_repeat(&mut self, lit: &nir::ListRepeatLiteral) {
-        let nir::ListRepeatLiteral {
+    fn walk_list_repeat(&mut self, lit: &cgenir::ListRepeatLiteral) {
+        let cgenir::ListRepeatLiteral {
             bracket_open_token: _,
             item,
             semicolon_token: _,
@@ -686,20 +688,20 @@ impl<'a> FunctionCompiler<'a> {
         self.code.write_instr(OpCode::ListRepeat, bracket_close_token.span);
     }
 
-    fn walk_bstr_literal(&mut self, lit: &nir::BStrLiteral) {
-        let nir::BStrLiteral {value, span} = lit;
+    fn walk_bstr_literal(&mut self, lit: &cgenir::BStrLiteral) {
+        let cgenir::BStrLiteral {value, span} = lit;
 
         let const_id = self.consts.push(Value::Bytes(Gc::new((**value).into())));
         self.code.write_instr_u16(OpCode::Constant, const_id.into_u16(), *span);
     }
 
-    fn walk_unit_literal(&mut self, lit: &nir::UnitLiteral) {
-        let nir::UnitLiteral {paren_open_token, paren_close_token} = lit;
+    fn walk_unit_literal(&mut self, lit: &cgenir::UnitLiteral) {
+        let cgenir::UnitLiteral {paren_open_token, paren_close_token} = lit;
 
         self.code.write_instr(OpCode::ConstUnit, paren_open_token.span.to(paren_close_token.span));
     }
 
-    fn declare_local(&mut self, name: &nir::DefSpan) {
+    fn declare_local(&mut self, name: &cgenir::DefSpan) {
         debug_assert!(!self.local_var_offsets.contains_key(&name.id),
             "bug: two declared variables had the same `DefId` for some reason");
         self.local_var_offsets.insert(name.id, self.next_frame_offset);

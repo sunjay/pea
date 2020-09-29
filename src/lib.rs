@@ -96,7 +96,7 @@ pub fn compile(
     let (program, def_table) = resolve::NameResolver::resolve(&program, diag);
     check_errors!(diag);
 
-    let _program = tycheck::check_types(&program, diag);
+    let program = tycheck::check_types(&program, diag);
     check_errors!(diag);
 
     let interpreter = codegen::Compiler::compile(&program, &def_table, diag);
