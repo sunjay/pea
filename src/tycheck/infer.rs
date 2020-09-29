@@ -177,11 +177,30 @@ fn infer_block(ctx: &mut Context, block: &nir::Block, return_ty_var: TyVar) -> t
     let stmts = stmts.iter().map(|stmt| infer_stmt(ctx, stmt)).collect();
 
     let ret_expr = match ret_expr {
+        // Infer type of block from return expression
         Some(expr) => Some(infer_expr(ctx, expr, return_ty_var)),
 
         None => {
-            // Blocks without a return expression must return `()`
-            ctx.ty_var_is_ty(return_ty_var, Ty::Unit);
+            // To support blocks ending in `return`, `break`, `continue`, etc. we do the following:
+            //
+            // If any of the direct child nodes of this block return `!`, the block returns `!`
+            // Otherwise, it returns `()`.
+
+            //TODO: This is kind of a hack. A more precise way to do this is to do control flow
+            // analysis and look at the control flow graph to see if every control path returns the
+            // same type.
+            let reaches_end_of_block = block.stmts.iter().any(|stmt| match stmt {
+                nir::Stmt::Expr(nir::ExprStmt {expr: nir::Expr::Return(_), ..}) |
+                nir::Stmt::Expr(nir::ExprStmt {expr: nir::Expr::Break(_), ..}) |
+                nir::Stmt::Expr(nir::ExprStmt {expr: nir::Expr::Continue(_), ..}) => false,
+
+                _ => true,
+            });
+
+            if reaches_end_of_block {
+                // Type must be `()` since that is the default return value of a block
+                ctx.ty_var_is_ty(return_ty_var, Ty::Unit);
+            }
 
             None
         },
