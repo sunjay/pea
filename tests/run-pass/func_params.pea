@@ -8,10 +8,10 @@ fn foo2(a: i64, b: [u8]) {
     println!(b);
 
     // Function parameters are still regular variables
-    a = b"cool beans";
+    b = b"cool beans";
+    println!(b);
     // Function parameters can be shadowed by variables
     let b = b"shadowed b";
-    println!(a);
     println!(b);
 }
 
