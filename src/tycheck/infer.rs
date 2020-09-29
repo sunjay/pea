@@ -188,7 +188,15 @@ fn infer_block(ctx: &mut Context, block: &nir::Block, return_ty_var: TyVar) -> t
 
             //TODO: This is kind of a hack. A more precise way to do this is to do control flow
             // analysis and look at the control flow graph to see if every control path returns the
-            // same type.
+            // same type. An example of a valid program that would fail to type check without proper
+            // control flow analysis:
+            //     fn foo(q: i32) -> i32 {
+            //         let x = if q > 3 {
+            //             return 1;
+            //         } else {
+            //             return 3;
+            //         };
+            //     }
             let reaches_end_of_block = block.stmts.iter().all(|stmt| match stmt {
                 nir::Stmt::Expr(nir::ExprStmt {expr: nir::Expr::Return(_), ..}) |
                 nir::Stmt::Expr(nir::ExprStmt {expr: nir::Expr::Break(_), ..}) |

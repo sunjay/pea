@@ -1,0 +1,13 @@
+fn foo(q: i64) -> i64 {
+    // This function should type check because all paths return `i64`
+    let x = if q > 3 {
+        return 1;
+    } else {
+        return 3;
+    };
+}
+
+fn main() {
+    println!(foo(1));
+    println!(foo(4));
+}
