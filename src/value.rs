@@ -14,6 +14,7 @@ pub enum Type {
     Unit,
     Bool,
     I64,
+    U8,
     List,
     Bytes,
     Func,
@@ -26,6 +27,7 @@ impl fmt::Display for Type {
             Unit => write!(f, "()"),
             Bool => write!(f, "bool"),
             I64 => write!(f, "i64"),
+            U8 => write!(f, "u8"),
             List => write!(f, "list"),
             Bytes => write!(f, "[u8]"),
             Func => write!(f, "fn"),
@@ -40,6 +42,7 @@ pub enum Value {
     Unit,
     Bool(bool),
     I64(i64),
+    U8(u8),
     List(Gc<prim::List>),
     Bytes(Gc<prim::Bytes>),
     Func(Gc<prim::Func>),
@@ -55,6 +58,8 @@ impl Trace for Value {
             Unit |
             Bool(_) |
             I64(_) => {},
+            U8(_) => {},
+
             List(value) => value.trace(),
             Bytes(value) => value.trace(),
             Func(value) => value.trace(),
@@ -69,6 +74,7 @@ impl fmt::Display for Value {
             Unit => write!(f, "()"),
             Bool(value) => write!(f, "{}", value),
             I64(value) => write!(f, "{}", value),
+            U8(value) => write!(f, "{}", value),
             List(value) => write!(f, "{}", value),
             Bytes(value) => write!(f, "{}", value),
             Func(value) => write!(f, "{}", value),
@@ -83,6 +89,7 @@ impl DeepClone for Value {
             Unit => Unit,
             Bool(value) => Bool(value.deep_clone()),
             I64(value) => I64(value.deep_clone()),
+            U8(value) => U8(value.deep_clone()),
             List(value) => List(value.deep_clone()),
             Bytes(value) => Bytes(value.deep_clone()),
             // Functions are immutable, so we can short-circuit the deep clone here
@@ -98,6 +105,7 @@ impl Value {
             Unit => Type::Unit,
             Bool(_) => Type::Bool,
             I64(_) => Type::I64,
+            U8(_) => Type::U8,
             List(_) => Type::List,
             Bytes(_) => Type::Bytes,
             Func(_) => Type::Func,
@@ -145,6 +153,7 @@ impl Value {
 
             Unit |
             Bool(_) |
+            U8(_) |
             List(_) |
             Bytes(_) |
             Func(_) => None,
@@ -158,6 +167,7 @@ impl Value {
         match self {
             // unary `+` has no effect on integers
             I64(_) => Some(self),
+            U8(_) => Some(self),
 
             Unit |
             Bool(_) |
@@ -176,6 +186,7 @@ impl Value {
 
             Unit |
             I64(_) |
+            U8(_) |
             List(_) |
             Bytes(_) |
             Func(_) => None,
@@ -188,6 +199,7 @@ impl Value {
         use Value::*;
         match (self, other) {
             (I64(value1), I64(value2)) => Some(Value::I64(value1 + value2)),
+            (U8(value1), U8(value2)) => Some(Value::U8(value1 + value2)),
             (Bytes(value1), Bytes(value2)) => Some(Value::Bytes(Gc::new(value1.add(&value2)))),
 
             _ => None,
@@ -200,6 +212,7 @@ impl Value {
         use Value::*;
         match (self, other) {
             (I64(value1), I64(value2)) => Some(Value::I64(value1 - value2)),
+            (U8(value1), U8(value2)) => Some(Value::U8(value1 - value2)),
 
             _ => None,
         }
@@ -211,6 +224,7 @@ impl Value {
         use Value::*;
         match (self, other) {
             (I64(value1), I64(value2)) => Some(Value::I64(value1 * value2)),
+            (U8(value1), U8(value2)) => Some(Value::U8(value1 * value2)),
 
             _ => None,
         }
@@ -224,6 +238,10 @@ impl Value {
             (I64(value1), I64(value2)) => Some(match value2 {
                 0 => Err(RuntimeError::DivideByZero),
                 _ => Ok(Value::I64(value1 / value2)),
+            }),
+            (U8(value1), U8(value2)) => Some(match value2 {
+                0 => Err(RuntimeError::DivideByZero),
+                _ => Ok(Value::U8(value1 / value2)),
             }),
 
             _ => None,
@@ -239,6 +257,10 @@ impl Value {
                 0 => Err(RuntimeError::RemainderByZero),
                 _ => Ok(Value::I64(value1 % value2)),
             }),
+            (U8(value1), U8(value2)) => Some(match value2 {
+                0 => Err(RuntimeError::RemainderByZero),
+                _ => Ok(Value::U8(value1 % value2)),
+            }),
 
             _ => None,
         }
@@ -252,6 +274,7 @@ impl Value {
             (Unit, Unit) => Some(Value::Bool(true)),
             (Bool(value1), Bool(value2)) => Some(Value::Bool(value1 == value2)),
             (I64(value1), I64(value2)) => Some(Value::Bool(value1 == value2)),
+            (U8(value1), U8(value2)) => Some(Value::Bool(value1 == value2)),
             (Bytes(value1), Bytes(value2)) => Some(Value::Bool(value1 == value2)),
             (Func(value1), Func(value2)) => Some(Value::Bool(value1 == value2)),
 
@@ -267,6 +290,7 @@ impl Value {
             (Unit, Unit) => Some(Value::Bool(false)),
             (Bool(value1), Bool(value2)) => Some(Value::Bool(value1 != value2)),
             (I64(value1), I64(value2)) => Some(Value::Bool(value1 != value2)),
+            (U8(value1), U8(value2)) => Some(Value::Bool(value1 != value2)),
             (Bytes(value1), Bytes(value2)) => Some(Value::Bool(value1 != value2)),
             (Func(value1), Func(value2)) => Some(Value::Bool(value1 != value2)),
 
@@ -280,6 +304,7 @@ impl Value {
         use Value::*;
         match (self, other) {
             (I64(value1), I64(value2)) => Some(Value::Bool(value1 > value2)),
+            (U8(value1), U8(value2)) => Some(Value::Bool(value1 > value2)),
 
             _ => None,
         }
@@ -291,6 +316,7 @@ impl Value {
         use Value::*;
         match (self, other) {
             (I64(value1), I64(value2)) => Some(Value::Bool(value1 >= value2)),
+            (U8(value1), U8(value2)) => Some(Value::Bool(value1 >= value2)),
 
             _ => None,
         }
@@ -302,6 +328,7 @@ impl Value {
         use Value::*;
         match (self, other) {
             (I64(value1), I64(value2)) => Some(Value::Bool(value1 < value2)),
+            (U8(value1), U8(value2)) => Some(Value::Bool(value1 < value2)),
 
             _ => None,
         }
@@ -313,6 +340,7 @@ impl Value {
         use Value::*;
         match (self, other) {
             (I64(value1), I64(value2)) => Some(Value::Bool(value1 <= value2)),
+            (U8(value1), U8(value2)) => Some(Value::Bool(value1 <= value2)),
 
             _ => None,
         }

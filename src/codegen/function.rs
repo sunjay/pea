@@ -308,7 +308,7 @@ impl<'a> FunctionCompiler<'a> {
             List(list) => self.walk_list(list),
             ListRepeat(list) => self.walk_list_repeat(list),
             BStr(lit) => self.walk_bstr_literal(lit),
-            Byte(lit) => todo!(),
+            Byte(lit) => self.walk_byte_literal(lit),
             Unit(lit) => self.walk_unit_literal(lit),
         }
     }
@@ -694,6 +694,13 @@ impl<'a> FunctionCompiler<'a> {
 
         let const_id = self.consts.push(Value::Bytes(Gc::new((**value).into())));
         self.code.write_instr_u16(OpCode::Constant, const_id.into_u16(), *span);
+    }
+
+    fn walk_byte_literal(&mut self, lit: &cgenir::ByteLiteral) {
+        let &cgenir::ByteLiteral {value, span} = lit;
+
+        let const_id = self.consts.push(Value::U8(value));
+        self.code.write_instr_u16(OpCode::Constant, const_id.into_u16(), span);
     }
 
     fn walk_unit_literal(&mut self, lit: &cgenir::UnitLiteral) {

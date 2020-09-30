@@ -1,0 +1,19 @@
+fn main() {
+    let a = b'a';
+    let b = b'b';
+    let n = b'\n';
+
+    println!(a);
+    println!(b);
+    println!(n);
+    println!(b);
+    println!(a);
+
+    foo(a);
+    foo(b);
+}
+
+fn foo(x: u8) {
+    print!(b"check out this byte: ");
+    println!(x);
+}
