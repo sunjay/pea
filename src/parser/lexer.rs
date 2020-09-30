@@ -61,6 +61,7 @@ impl<'a> Lexer<'a> {
             (b';', _) => self.byte_token(start, Semicolon),
             (b':', _) => self.byte_token(start, Colon),
             (b'-', Some(b'>')) => self.next_token(start, RightArrow),
+            (b'.', _) => self.byte_token(start, Dot),
 
             (b'0' ..= b'9', _) |
             (b'+', Some(b'0' ..= b'9')) |
@@ -682,6 +683,11 @@ mod tests {
     #[test]
     fn semicolon_symbol() {
         expect_token!(b";", t!(Semicolon));
+    }
+
+    #[test]
+    fn dot_symbol() {
+        expect_token!(b".", t!(Dot));
     }
 
     #[test]

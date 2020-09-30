@@ -76,6 +76,8 @@ pub enum TokenKind {
     Colon,
     /// The `->` symbol
     RightArrow,
+    /// The `.` symbol
+    Dot,
 
     /// The `+` symbol
     Plus,
@@ -140,6 +142,7 @@ impl fmt::Display for TokenKind {
             Semicolon => write!(f, "`;`"),
             Colon => write!(f, "`:`"),
             RightArrow => write!(f, "`->`"),
+            Dot => write!(f, "`.`"),
 
             Plus => write!(f, "`+`"),
             Minus => write!(f, "`-`"),
