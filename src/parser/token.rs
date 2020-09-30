@@ -219,6 +219,14 @@ impl Token {
             _ => panic!("bug: expected a byte string"),
         }
     }
+
+    /// Returns the data as a byte literal or panics
+    pub fn unwrap_byte(&self) -> u8 {
+        match &self.value {
+            &Some(TokenValue::Byte(value)) => value,
+            _ => panic!("bug: expected a byte literal"),
+        }
+    }
 }
 
 macro_rules! keywords {

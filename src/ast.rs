@@ -138,6 +138,7 @@ pub enum Expr {
     List(ListLiteral),
     ListRepeat(Box<ListRepeatLiteral>),
     BStr(BStrLiteral),
+    Byte(ByteLiteral),
     Unit(UnitLiteral),
 }
 
@@ -162,6 +163,7 @@ impl Expr {
             List(expr) => expr.span(),
             ListRepeat(expr) => expr.span(),
             BStr(expr) => expr.span,
+            Byte(expr) => expr.span,
             Unit(expr) => expr.span(),
         }
     }
@@ -429,6 +431,12 @@ pub struct Ident {
 #[derive(Debug, Clone, PartialEq)]
 pub struct BStrLiteral {
     pub value: Arc<[u8]>,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ByteLiteral {
+    pub value: u8,
     pub span: Span,
 }
 

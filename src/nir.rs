@@ -147,6 +147,7 @@ pub enum Expr {
     List(ListLiteral),
     ListRepeat(Box<ListRepeatLiteral>),
     BStr(BStrLiteral),
+    Byte(ByteLiteral),
     Unit(UnitLiteral),
 }
 
@@ -171,6 +172,7 @@ impl Expr {
             List(expr) => expr.span(),
             ListRepeat(expr) => expr.span(),
             BStr(expr) => expr.span,
+            Byte(expr) => expr.span,
             Unit(expr) => expr.span(),
         }
     }
@@ -462,5 +464,6 @@ pub type ContinueExpr = ast::ContinueExpr;
 pub type IntegerLiteral = ast::IntegerLiteral;
 pub type BoolLiteral = ast::BoolLiteral;
 pub type BStrLiteral = ast::BStrLiteral;
+pub type ByteLiteral = ast::ByteLiteral;
 pub type UnitLiteral = ast::UnitLiteral;
 pub type UnitTy = ast::UnitTy;

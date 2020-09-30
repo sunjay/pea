@@ -347,6 +347,8 @@ impl<'a> Parser<'a> {
 
             TokenKind::BracketOpen => self.list_literal(),
 
+            TokenKind::Literal(Literal::Byte) => self.byte_literal().map(ast::Expr::Byte),
+
             _ => self.bstr_literal().map(ast::Expr::BStr),
         }
     }
@@ -418,6 +420,13 @@ impl<'a> Parser<'a> {
     fn bstr_literal(&mut self) -> ParseResult<ast::BStrLiteral> {
         self.input.match_kind(TokenKind::Literal(Literal::BStr)).map(|token| ast::BStrLiteral {
             value: token.unwrap_bstr().clone(),
+            span: token.span,
+        })
+    }
+
+    fn byte_literal(&mut self) -> ParseResult<ast::ByteLiteral> {
+        self.input.match_kind(TokenKind::Literal(Literal::Byte)).map(|token| ast::ByteLiteral {
+            value: token.unwrap_byte(),
             span: token.span,
         })
     }

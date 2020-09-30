@@ -425,6 +425,7 @@ fn infer_expr(ctx: &mut Context, expr: &nir::Expr, return_ty_var: TyVar) -> tyir
         List(list) => tyir::Expr::List(infer_list(ctx, list, return_ty_var)),
         ListRepeat(list) => tyir::Expr::ListRepeat(Box::new(infer_list_repeat(ctx, list, return_ty_var))),
         BStr(value) => tyir::Expr::BStr(infer_bstr(ctx, value, return_ty_var)),
+        Byte(value) => todo!(),
         Unit(value) => tyir::Expr::Unit(infer_unit(ctx, value, return_ty_var)),
     }
 }
