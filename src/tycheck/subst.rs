@@ -340,6 +340,7 @@ impl ApplySubst for tyir::Expr {
             List(list) => cgenir::Expr::List(list.apply_subst(subst)),
             ListRepeat(list) => cgenir::Expr::ListRepeat(Box::new(list.apply_subst(subst))),
             BStr(value) => cgenir::Expr::BStr(value),
+            Byte(value) => cgenir::Expr::Byte(value),
             Unit(value) => cgenir::Expr::Unit(value),
         }
     }

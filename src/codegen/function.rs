@@ -308,6 +308,7 @@ impl<'a> FunctionCompiler<'a> {
             List(list) => self.walk_list(list),
             ListRepeat(list) => self.walk_list_repeat(list),
             BStr(lit) => self.walk_bstr_literal(lit),
+            Byte(lit) => todo!(),
             Unit(lit) => self.walk_unit_literal(lit),
         }
     }

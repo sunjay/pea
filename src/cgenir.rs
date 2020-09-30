@@ -125,6 +125,7 @@ pub enum Expr {
     List(ListLiteral),
     ListRepeat(Box<ListRepeatLiteral>),
     BStr(BStrLiteral),
+    Byte(ByteLiteral),
     Unit(UnitLiteral),
 }
 
@@ -240,6 +241,7 @@ pub type ContinueExpr = nir::ContinueExpr;
 pub type IntegerLiteral = nir::IntegerLiteral;
 pub type BoolLiteral = nir::BoolLiteral;
 pub type BStrLiteral = nir::BStrLiteral;
+pub type ByteLiteral = nir::ByteLiteral;
 pub type UnitLiteral = nir::UnitLiteral;
 pub type UnitTy = nir::UnitTy;
 pub type DefSpan = nir::DefSpan;

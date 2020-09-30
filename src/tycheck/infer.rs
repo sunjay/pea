@@ -425,7 +425,7 @@ fn infer_expr(ctx: &mut Context, expr: &nir::Expr, return_ty_var: TyVar) -> tyir
         List(list) => tyir::Expr::List(infer_list(ctx, list, return_ty_var)),
         ListRepeat(list) => tyir::Expr::ListRepeat(Box::new(infer_list_repeat(ctx, list, return_ty_var))),
         BStr(value) => tyir::Expr::BStr(infer_bstr(ctx, value, return_ty_var)),
-        Byte(value) => todo!(),
+        Byte(value) => tyir::Expr::Byte(infer_byte(ctx, value, return_ty_var)),
         Unit(value) => tyir::Expr::Unit(infer_unit(ctx, value, return_ty_var)),
     }
 }
@@ -756,6 +756,12 @@ fn infer_list_repeat(ctx: &mut Context, expr: &nir::ListRepeatLiteral, return_ty
 fn infer_bstr(ctx: &mut Context, expr: &nir::BStrLiteral, return_ty_var: TyVar) -> tyir::BStrLiteral {
     // A bstr is of type `[u8]`
     ctx.ty_var_is_ty(return_ty_var, Ty::List(Box::new(Ty::U8)), expr.span);
+
+    expr.clone()
+}
+
+fn infer_byte(ctx: &mut Context, expr: &nir::ByteLiteral, return_ty_var: TyVar) -> tyir::ByteLiteral {
+    ctx.ty_var_is_ty(return_ty_var, Ty::U8, expr.span);
 
     expr.clone()
 }
