@@ -258,6 +258,7 @@ impl<'a> NameResolver<'a> {
             Cond(cond) => nir::Expr::Cond(Box::new(self.resolve_cond(cond))),
             UnaryOp(expr) => nir::Expr::UnaryOp(Box::new(self.resolve_unary_op(expr))),
             BinaryOp(expr) => nir::Expr::BinaryOp(Box::new(self.resolve_binary_op(expr))),
+            Field(expr) => nir::Expr::Field(Box::new(self.resolve_field_access(expr))),
             Assign(expr) => nir::Expr::Assign(Box::new(self.resolve_assign(expr))),
             Group(expr) => nir::Expr::Group(Box::new(self.resolve_group(expr))),
             Call(call) => nir::Expr::Call(Box::new(self.resolve_call(call))),
@@ -352,6 +353,16 @@ impl<'a> NameResolver<'a> {
         let rhs = self.resolve_expr(rhs);
 
         nir::BinaryOpExpr {lhs, op, op_token, rhs}
+    }
+
+    fn resolve_field_access(&mut self, expr: &ast::FieldAccess) -> nir::FieldAccess {
+        let ast::FieldAccess {lhs, dot_token, field} = expr;
+
+        let lhs = self.resolve_expr(lhs);
+        let dot_token = dot_token.clone();
+        let field = field.clone();
+
+        nir::FieldAccess {lhs, dot_token, field}
     }
 
     fn resolve_assign(&mut self, expr: &ast::AssignExpr) -> nir::AssignExpr {

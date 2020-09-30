@@ -126,6 +126,7 @@ pub enum Expr {
     Cond(Box<Cond>),
     UnaryOp(Box<UnaryOpExpr>),
     BinaryOp(Box<BinaryOpExpr>),
+    Field(Box<FieldAccess>),
     Assign(Box<AssignExpr>),
     Group(Box<GroupExpr>),
     Call(Box<CallExpr>),
@@ -151,6 +152,7 @@ impl Expr {
             Cond(expr) => expr.span(),
             UnaryOp(expr) => expr.span(),
             BinaryOp(expr) => expr.span(),
+            Field(expr) => expr.span(),
             Assign(expr) => expr.span(),
             Group(expr) => expr.span(),
             Call(expr) => expr.span(),
@@ -326,6 +328,20 @@ pub struct BinaryOpExpr {
 impl BinaryOpExpr {
     pub fn span(&self) -> Span {
         self.lhs.span().to(self.rhs.span())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct FieldAccess {
+    pub lhs: Expr,
+    pub dot_token: Token,
+    /// The field or method being accessed
+    pub field: Ident,
+}
+
+impl FieldAccess {
+    pub fn span(&self) -> Span {
+        self.lhs.span().to(self.field.span)
     }
 }
 

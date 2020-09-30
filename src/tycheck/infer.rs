@@ -413,6 +413,7 @@ fn infer_expr(ctx: &mut Context, expr: &nir::Expr, return_ty_var: TyVar) -> tyir
         Cond(cond) => tyir::Expr::Cond(Box::new(infer_cond(ctx, cond, return_ty_var))),
         UnaryOp(expr) => tyir::Expr::UnaryOp(Box::new(infer_unary_op(ctx, expr, return_ty_var))),
         BinaryOp(expr) => tyir::Expr::BinaryOp(Box::new(infer_binary_op(ctx, expr, return_ty_var))),
+        Field(expr) => todo!(),
         Assign(expr) => tyir::Expr::Assign(Box::new(infer_assign(ctx, expr, return_ty_var))),
         Group(expr) => tyir::Expr::Group(Box::new(infer_group(ctx, expr, return_ty_var))),
         Call(call) => tyir::Expr::Call(Box::new(infer_call(ctx, call, return_ty_var))),

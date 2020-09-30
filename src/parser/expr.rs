@@ -6,6 +6,7 @@
 //!
 //! |  Prec  | Fixity  | Operators                          |
 //! |--------|---------|------------------------------------|
+//! | 31, 32 | infix   | `.`                                |
 //! | 29, _  | postfix | `(...)`                            |
 //! |  _, 25 | prefix  | `+`, `-`, `!`                      |
 //! | 21, 22 | infix   | `*`, `/`, `%`                      |
@@ -63,6 +64,7 @@ enum InfixOp {
     Assign,
     /// Augmented assignment, e.g. `+=`, `-=`, etc.
     AugAssign(ast::BinaryOp),
+    FieldAccess,
     Or,
     And,
     BinaryOp(ast::BinaryOp),
@@ -76,6 +78,8 @@ fn infix_binding_power(kind: TokenKind) -> Result<(TokenKind, InfixOp, (u8, u8))
         TokenKind::TimesEquals => (InfixOp::AugAssign(ast::BinaryOp::Mul), (2, 1)),
         TokenKind::SlashEquals => (InfixOp::AugAssign(ast::BinaryOp::Div), (2, 1)),
         TokenKind::PercentEquals => (InfixOp::AugAssign(ast::BinaryOp::Rem), (2, 1)),
+
+        TokenKind::Dot => (InfixOp::FieldAccess, (31, 32)),
 
         TokenKind::OrOr => (InfixOp::Or, (5, 6)),
         TokenKind::AndAnd => (InfixOp::And, (7, 8)),
@@ -214,11 +218,11 @@ impl<'a> Parser<'a> {
                 }
 
                 let op_token = self.input.match_kind(kind)?.clone();
-                let rhs = self.expr_bp(r_bp)?;
 
                 lhs = match op {
                     InfixOp::Assign => {
                         let lvalue = extract_lvalue(lhs)?;
+                        let rhs = self.expr_bp(r_bp)?;
 
                         ast::Expr::Assign(Box::new(ast::AssignExpr {
                             lvalue,
@@ -231,6 +235,7 @@ impl<'a> Parser<'a> {
                     //TODO: This desugaring will NOT work if `a` has side-effects
                     InfixOp::AugAssign(op) => {
                         let lvalue = extract_lvalue(lhs.clone())?;
+                        let rhs = self.expr_bp(r_bp)?;
 
                         ast::Expr::Assign(Box::new(ast::AssignExpr {
                             lvalue,
@@ -244,24 +249,47 @@ impl<'a> Parser<'a> {
                         }))
                     },
 
-                    InfixOp::Or => ast::Expr::Or(Box::new(ast::OrExpr {
-                        lhs,
-                        oror_token: op_token,
-                        rhs,
-                    })),
+                    // A field or method access
+                    InfixOp::FieldAccess => {
+                        let field = self.ident()?;
 
-                    InfixOp::And => ast::Expr::And(Box::new(ast::AndExpr {
-                        lhs,
-                        andand_token: op_token,
-                        rhs,
-                    })),
+                        ast::Expr::Field(Box::new(ast::FieldAccess {
+                            lhs,
+                            dot_token: op_token,
+                            field,
+                        }))
+                    },
 
-                    InfixOp::BinaryOp(op) => ast::Expr::BinaryOp(Box::new(ast::BinaryOpExpr {
-                        lhs,
-                        op,
-                        op_token,
-                        rhs,
-                    })),
+                    InfixOp::Or => {
+                        let rhs = self.expr_bp(r_bp)?;
+
+                        ast::Expr::Or(Box::new(ast::OrExpr {
+                            lhs,
+                            oror_token: op_token,
+                            rhs,
+                        }))
+                    },
+
+                    InfixOp::And => {
+                        let rhs = self.expr_bp(r_bp)?;
+
+                        ast::Expr::And(Box::new(ast::AndExpr {
+                            lhs,
+                            andand_token: op_token,
+                            rhs,
+                        }))
+                    },
+
+                    InfixOp::BinaryOp(op) => {
+                        let rhs = self.expr_bp(r_bp)?;
+
+                        ast::Expr::BinaryOp(Box::new(ast::BinaryOpExpr {
+                            lhs,
+                            op,
+                            op_token,
+                            rhs,
+                        }))
+                    },
                 };
 
                 continue;

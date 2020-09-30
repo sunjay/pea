@@ -24,7 +24,7 @@ cond ::= 'if' expr block ('else' 'if' expr block)* ('else' block)?
 
 # The precendence of these operators is defined in the code
 bin_op ::= '+' | '-' | '*' | '/' | '%' | '==' | '!=' | '>' | '>=' | '<' | '<=' | '||' | '&&' |
-           '+=' | '-=' | '*=' | '/=' | '%='
+           '+=' | '-=' | '*=' | '/=' | '%=' | '.'
 unary_op ::= '+' | '-' | '!'
 assign ::= lvalue '=' expr
 lvalue ::= ident
