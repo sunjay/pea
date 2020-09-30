@@ -79,6 +79,7 @@ impl<'a> Lexer<'a> {
             (b'%', _) => self.byte_token(start, Percent),
 
             (b'b', Some(b'"')) => self.bstr_lit(start),
+            (b'b', Some(b'\'')) => self.byte_lit(start),
 
             (b'a' ..= b'z', _) |
             (b'A' ..= b'Z', _) |
@@ -321,7 +322,7 @@ impl<'a> Lexer<'a> {
             match self.scanner.next() {
                 // Found closing quote
                 Some(b'"') => break,
-                Some(b'\\') => match self.bstr_lit_unescape_byte(pos) {
+                Some(b'\\') => match self.bstr_lit_unescape_byte(pos, b'"', true) {
                     Ok(Some(ch)) => value.push(ch),
                     Ok(None) => {},
                     Err(token) => return token,
@@ -343,9 +344,72 @@ impl<'a> Lexer<'a> {
         self.token_to_current(start, TokenKind::Literal(token::Literal::BStr), TokenValue::BStr(value))
     }
 
+    /// Parses a byte literal, assuming that the opening 'b' character has already been parsed
+    /// and that the next character is definitely the opening single quote
+    fn byte_lit(&mut self, start: usize) -> Token {
+        // Skip the opening quote
+        self.scanner.next();
+
+        let pos = self.scanner.current_pos();
+        let byte = match self.scanner.next() {
+            Some(b'\'') => {
+                let token = self.token_to_current(start, Error, None);
+                self.diag.span_error(token.span, "empty byte literal").emit();
+                return token;
+            },
+
+            Some(b'\n') | Some(b'\r') | Some(b'\t') | Some(b'\0') => {
+                let token = self.token_to_current(start, Error, None);
+                self.diag.span_error(token.span, "byte literal must be escaped").emit();
+                return token;
+            },
+
+            Some(b'\\') => match self.bstr_lit_unescape_byte(pos, b'\'', false) {
+                Ok(Some(ch)) => ch,
+                Ok(None) => {
+                    let token = self.token_to_current(start, Error, None);
+                    self.diag.span_error(token.span, "unterminated byte literal").emit();
+                    return token;
+                },
+                Err(token) => return token,
+            },
+
+            Some(ch) => ch,
+
+            None => {
+                let token = self.token_to_current(start, Error, None);
+                self.diag.span_error(token.span, "unterminated byte literal").emit();
+                return token;
+            },
+        };
+
+        match self.scanner.next() {
+            Some(b'\'') => {},
+
+            Some(_) => {
+                let token = self.token_to_current(start, Error, None);
+                self.diag.span_error(token.span, "byte literal may only contain a single byte").emit();
+                return token;
+            },
+
+            None => {
+                let token = self.token_to_current(start, Error, None);
+                self.diag.span_error(token.span, "unterminated byte literal").emit();
+                return token;
+            },
+        }
+
+        self.token_to_current(start, TokenKind::Literal(token::Literal::Byte), TokenValue::Byte(byte))
+    }
+
     /// Parses a byte string escape sequence, assuming that the starting backslash has already been
     /// parsed
-    fn bstr_lit_unescape_byte(&mut self, lit_start: usize) -> Result<Option<u8>, Token> {
+    fn bstr_lit_unescape_byte(
+        &mut self,
+        lit_start: usize,
+        lit_end_byte: u8,
+        allow_line_continuation: bool,
+    ) -> Result<Option<u8>, Token> {
         Ok(match self.scanner.next() {
             Some(b'\\') => Some(b'\\'),
             Some(b'n') => Some(b'\n'),
@@ -356,7 +420,7 @@ impl<'a> Lexer<'a> {
             Some(b'"') => Some(b'"'),
 
             // Hex escape
-            Some(b'x') => match self.bstr_lit_byte_escape_hex(lit_start, b'"') {
+            Some(b'x') => match self.bstr_lit_byte_escape_hex(lit_start, lit_end_byte) {
                 Ok(ch) => ch,
                 Err(err) => {
                     // Error recovery: continue until the end quote
@@ -370,7 +434,7 @@ impl<'a> Lexer<'a> {
             },
 
             // Found backslash at the end of a line
-            Some(b'\n') => {
+            Some(b'\n') if allow_line_continuation => {
                 // Ignore all whitespace characters
                 self.ignore_whitespace();
 
@@ -535,6 +599,12 @@ mod tests {
     macro_rules! bstr {
         ($value:expr) => (
             t!(Literal(token::Literal::BStr), TokenValue::BStr((&$value[..]).into()))
+        );
+    }
+
+    macro_rules! byte {
+        ($value:expr) => (
+            t!(Literal(token::Literal::Byte), TokenValue::Byte($value))
         );
     }
 
@@ -713,6 +783,40 @@ mod tests {
         // decimal or hex digit
         expect_error!(b"0b2");
         expect_tokens!(b"0bF", &[t!(Error), ident!("F")]);
+    }
+
+    #[test]
+    fn byte_lits() {
+        expect_token!(b"b'a'", byte!(b'a'));
+        expect_token!(b"b' '", byte!(b'b'));
+        expect_token!(b"b'T'", byte!(b'T'));
+        expect_token!(b"b'\\n'", byte!(b'\n'));
+        expect_token!(b"b'\\r'", byte!(b'\r'));
+        expect_token!(b"b'\\t'", byte!(b'\t'));
+        expect_token!(b"b'\\0'", byte!(b'\0'));
+        expect_token!(b"b'\\\\'", byte!(b'\\'));
+        expect_token!(b"b'\\\''", byte!(b'\''));
+        expect_token!(b"b'\"'", byte!(b'"'));
+        expect_token!(b"b'\\x94'", byte!(b'\x94'));
+    }
+
+    #[test]
+    fn byte_lits_invalid() {
+        expect_error!(b"b''");
+        expect_tokens!(b"b'ab'", &[t!(Error), t!(Error)]);
+        expect_error!(b"b'\\q'");
+        expect_error!(b"b'\\x'");
+        expect_error!(b"b'\\x1'");
+        expect_error!(b"b'\\xq '");
+        expect_error!(b"b'\\x1q '");
+        expect_error!(b"b'");
+        expect_error!(b"b'\\'");
+        // line continuation is not valid for single-byte literals
+        expect_error!(b"b'\\
+        '");
+        // no implicit newlines
+        expect_tokens!(b"b'
+'", &[t!(Error), t!(Error)]);
     }
 
     #[test]

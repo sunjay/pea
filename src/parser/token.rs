@@ -8,6 +8,7 @@ use crate::source_files::Span;
 pub enum Literal {
     Integer,
     BStr,
+    Byte,
 }
 
 impl fmt::Display for Literal {
@@ -16,6 +17,7 @@ impl fmt::Display for Literal {
         match self {
             Integer => write!(f, "an integer"),
             BStr => write!(f, "a byte string literal"),
+            Byte => write!(f, "a byte literal"),
         }
     }
 }
@@ -164,6 +166,8 @@ pub enum TokenValue {
     Integer(i128),
     /// The unescaped characters of the byte string (without the surrounding double quotes)
     BStr(Arc<[u8]>),
+    /// The unescaped byte value of a byte literal
+    Byte(u8),
 }
 
 impl From<i128> for TokenValue {
