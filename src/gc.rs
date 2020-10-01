@@ -39,6 +39,9 @@ pub struct Gc<T: ?Sized> {
     ptr: NonNull<T>,
 }
 
+unsafe impl<T: ?Sized + Sync + Send> Send for Gc<T> {}
+unsafe impl<T: ?Sized + Sync + Send> Sync for Gc<T> {}
+
 impl<T: Trace> Gc<T> {
     /// Allocates memory managed by the GC and initializes it with the given value
     #[inline]
