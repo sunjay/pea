@@ -46,6 +46,7 @@ pub enum Value {
     List(Gc<prim::List>),
     Bytes(Gc<prim::Bytes>),
     Func(Gc<prim::Func>),
+    NativeFunc(Gc<prim::NativeFunc>),
 }
 
 // Make sure value doesn't grow beyond what we expect it to be
@@ -63,6 +64,7 @@ impl Trace for Value {
             List(value) => value.trace(),
             Bytes(value) => value.trace(),
             Func(value) => value.trace(),
+            NativeFunc(value) => value.trace(),
         }
     }
 }
@@ -78,6 +80,7 @@ impl fmt::Display for Value {
             List(value) => write!(f, "{}", value),
             Bytes(value) => write!(f, "{}", value),
             Func(value) => write!(f, "{}", value),
+            NativeFunc(value) => write!(f, "{}", value),
         }
     }
 }
@@ -94,6 +97,7 @@ impl DeepClone for Value {
             Bytes(value) => Bytes(value.deep_clone()),
             // Functions are immutable, so we can short-circuit the deep clone here
             Func(value) => Func(value.clone()),
+            NativeFunc(value) => NativeFunc(value.clone()),
         }
     }
 }
@@ -108,7 +112,8 @@ impl Value {
             U8(_) => Type::U8,
             List(_) => Type::List,
             Bytes(_) => Type::Bytes,
-            Func(_) => Type::Func,
+            Func(_) |
+            NativeFunc(_) => Type::Func,
         }
     }
 
@@ -156,7 +161,8 @@ impl Value {
             U8(_) |
             List(_) |
             Bytes(_) |
-            Func(_) => None,
+            Func(_) |
+            NativeFunc(_) => None,
         }
     }
 
@@ -173,7 +179,8 @@ impl Value {
             Bool(_) |
             List(_) |
             Bytes(_) |
-            Func(_) => None,
+            Func(_) |
+            NativeFunc(_) => None,
         }
     }
 
@@ -189,7 +196,8 @@ impl Value {
             U8(_) |
             List(_) |
             Bytes(_) |
-            Func(_) => None,
+            Func(_) |
+            NativeFunc(_) => None,
         }
     }
 
