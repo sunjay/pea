@@ -258,7 +258,7 @@ impl<'a> NameResolver<'a> {
             Cond(cond) => nir::Expr::Cond(Box::new(self.resolve_cond(cond))),
             UnaryOp(expr) => nir::Expr::UnaryOp(Box::new(self.resolve_unary_op(expr))),
             BinaryOp(expr) => nir::Expr::BinaryOp(Box::new(self.resolve_binary_op(expr))),
-            Field(expr) => nir::Expr::Field(Box::new(self.resolve_field_access(expr))),
+            MethodCall(expr) => nir::Expr::MethodCall(Box::new(self.resolve_field_access(expr))),
             Assign(expr) => nir::Expr::Assign(Box::new(self.resolve_assign(expr))),
             Group(expr) => nir::Expr::Group(Box::new(self.resolve_group(expr))),
             Call(call) => nir::Expr::Call(Box::new(self.resolve_call(call))),
@@ -355,14 +355,31 @@ impl<'a> NameResolver<'a> {
         nir::BinaryOpExpr {lhs, op, op_token, rhs}
     }
 
-    fn resolve_field_access(&mut self, expr: &ast::FieldAccess) -> nir::FieldAccess {
-        let ast::FieldAccess {lhs, dot_token, field} = expr;
+    fn resolve_field_access(&mut self, expr: &ast::MethodCallExpr) -> nir::MethodCallExpr {
+        let ast::MethodCallExpr {
+            lhs,
+            dot_token,
+            name,
+            paren_open_token,
+            args,
+            paren_close_token,
+        } = expr;
 
         let lhs = self.resolve_expr(lhs);
         let dot_token = dot_token.clone();
-        let field = field.clone();
+        let name = name.clone();
+        let paren_open_token = paren_open_token.clone();
+        let args = args.iter().map(|expr| self.resolve_expr(expr)).collect();
+        let paren_close_token = paren_close_token.clone();
 
-        nir::FieldAccess {lhs, dot_token, field}
+        nir::MethodCallExpr {
+            lhs,
+            dot_token,
+            name,
+            paren_open_token,
+            args,
+            paren_close_token,
+        }
     }
 
     fn resolve_assign(&mut self, expr: &ast::AssignExpr) -> nir::AssignExpr {

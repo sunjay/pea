@@ -135,7 +135,7 @@ pub enum Expr {
     Cond(Box<Cond>),
     UnaryOp(Box<UnaryOpExpr>),
     BinaryOp(Box<BinaryOpExpr>),
-    Field(Box<FieldAccess>),
+    MethodCall(Box<MethodCallExpr>),
     Assign(Box<AssignExpr>),
     Group(Box<GroupExpr>),
     Call(Box<CallExpr>),
@@ -161,7 +161,7 @@ impl Expr {
             Cond(expr) => expr.span(),
             UnaryOp(expr) => expr.span(),
             BinaryOp(expr) => expr.span(),
-            Field(expr) => expr.span(),
+            MethodCall(expr) => expr.span(),
             Assign(expr) => expr.span(),
             Group(expr) => expr.span(),
             Call(expr) => expr.span(),
@@ -287,16 +287,18 @@ impl BinaryOpExpr {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct FieldAccess {
+pub struct MethodCallExpr {
     pub lhs: Expr,
     pub dot_token: Token,
-    /// The field or method being accessed
-    pub field: Ident,
+    pub name: Ident,
+    pub paren_open_token: Token,
+    pub args: Vec<Expr>,
+    pub paren_close_token: Token,
 }
 
-impl FieldAccess {
+impl MethodCallExpr {
     pub fn span(&self) -> Span {
-        self.lhs.span().to(self.field.span)
+        self.lhs.span().to(self.paren_close_token.span)
     }
 }
 

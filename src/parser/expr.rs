@@ -64,7 +64,7 @@ enum InfixOp {
     Assign,
     /// Augmented assignment, e.g. `+=`, `-=`, etc.
     AugAssign(ast::BinaryOp),
-    FieldAccess,
+    MethodCall,
     Or,
     And,
     BinaryOp(ast::BinaryOp),
@@ -79,7 +79,7 @@ fn infix_binding_power(kind: TokenKind) -> Result<(TokenKind, InfixOp, (u8, u8))
         TokenKind::SlashEquals => (InfixOp::AugAssign(ast::BinaryOp::Div), (2, 1)),
         TokenKind::PercentEquals => (InfixOp::AugAssign(ast::BinaryOp::Rem), (2, 1)),
 
-        TokenKind::Dot => (InfixOp::FieldAccess, (31, 32)),
+        TokenKind::Dot => (InfixOp::MethodCall, (31, 32)),
 
         TokenKind::OrOr => (InfixOp::Or, (5, 6)),
         TokenKind::AndAnd => (InfixOp::And, (7, 8)),
@@ -249,14 +249,22 @@ impl<'a> Parser<'a> {
                         }))
                     },
 
-                    // A field or method access
-                    InfixOp::FieldAccess => {
-                        let field = self.ident()?;
+                    // A field access or method call
+                    InfixOp::MethodCall => {
+                        let name = self.ident()?;
 
-                        ast::Expr::Field(Box::new(ast::FieldAccess {
+                        // Parse method call arguments
+                        let paren_open_token = self.input.match_kind(TokenKind::ParenOpen)?.clone();
+                        let args = self.func_args()?;
+                        let paren_close_token = self.input.match_kind(TokenKind::ParenClose)?.clone();
+
+                        ast::Expr::MethodCall(Box::new(ast::MethodCallExpr {
                             lhs,
                             dot_token: op_token,
-                            field,
+                            name,
+                            paren_open_token,
+                            args,
+                            paren_close_token,
                         }))
                     },
 
