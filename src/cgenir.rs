@@ -1,11 +1,20 @@
 //! Code Generation IR - An IR with all names and types fully resolved, ready for code generation
 
-use crate::{nir::{self, Scope}, ty::Ty, parser::Token};
+use std::sync::Arc;
+
+use crate::{nir::{self, DefTable, Scope}, parser::Token, ty::Ty};
+
+#[derive(Debug)]
+pub struct Program {
+    pub root_module: Module,
+    pub def_table: Arc<DefTable>,
+}
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Program {
+pub struct Module {
+    pub name: Arc<str>,
     pub decls: Vec<Decl>,
-    /// The root scope of the program
+    /// The root scope of the module
     pub scope: Scope,
 }
 

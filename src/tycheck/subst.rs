@@ -106,11 +106,23 @@ impl ApplySubst for tyir::Program {
     type Output = cgenir::Program;
 
     fn apply_subst(self, subst: &mut Subst) -> Self::Output {
-        let tyir::Program {decls, scope} = self;
+        let tyir::Program {root_module, def_table} = self;
+
+        let root_module = root_module.apply_subst(subst);
+
+        cgenir::Program {root_module, def_table}
+    }
+}
+
+impl ApplySubst for tyir::Module {
+    type Output = cgenir::Module;
+
+    fn apply_subst(self, subst: &mut Subst) -> Self::Output {
+        let tyir::Module {name, decls, scope} = self;
 
         let decls = decls.apply_subst(subst);
 
-        cgenir::Program {decls, scope}
+        cgenir::Module {name, decls, scope}
     }
 }
 

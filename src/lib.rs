@@ -84,22 +84,23 @@ pub fn compile(
     source_files: Arc<RwLock<SourceFiles>>,
     diag: &Diagnostics,
 ) -> Result<Interpreter, ErrorsEmitted> {
-    let program = {
+    let root_module = {
         // New scope because we want to drop this lock guard as soon as possible
         let files = source_files.read();
+        let mod_name = files.mod_name(root_file);
         let tokens = parser::collect_tokens(files.source(root_file), diag);
         check_errors!(diag);
-        parser::parse_program(&tokens, diag)
+        parser::parse_module(mod_name.clone(), &tokens, diag)
     };
     check_errors!(diag);
 
-    let (program, def_table) = resolve::NameResolver::resolve(&program, diag);
+    let program = resolve::NameResolver::resolve(&root_module, diag);
     check_errors!(diag);
 
     let program = tycheck::check_types(&program, diag);
     check_errors!(diag);
 
-    let interpreter = codegen::Compiler::compile(&program, &def_table, diag);
+    let interpreter = codegen::Compiler::compile(&program, diag);
     check_errors!(diag);
 
     Ok(interpreter)

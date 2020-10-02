@@ -7,6 +7,7 @@ pub use file_source::*;
 
 use std::fs;
 use std::io::{self, Read};
+use std::sync::Arc;
 use std::path::{Path, PathBuf};
 
 use line_numbers::LineNumbers;
@@ -22,6 +23,8 @@ pub struct FileHandle {
 #[derive(Debug)]
 struct File {
     path: PathBuf,
+    /// The module name based on the stem of this path
+    mod_name: Arc<str>,
     /// The index into `SourceFiles::source` that represents the start of this file
     start_offset: usize,
     /// An index of the line numbers for all offsets in the file
@@ -88,12 +91,23 @@ impl SourceFiles {
         let handle = FileHandle {start, len};
         let source = self.source(handle);
         let line_numbers = LineNumbers::new(source);
+
+        let path = path.to_path_buf();
+        let mod_name: Arc<str> = path.file_stem().and_then(|p| p.to_str())
+            .expect("module path was not valid unicode").replace('-', "_").into();
+        //TODO: This check can be done better (it currently panics on the empty string)
+        if mod_name.chars().next().unwrap().is_numeric() || mod_name.chars().any(|ch| !ch.is_alphanumeric() && ch != '_') {
+            todo!("TODO: module name is not a valid identifier (produce a better error)");
+        }
+
         self.files.push(File {
-            path: path.to_path_buf(),
+            path,
+            mod_name,
             start_offset: start,
             line_numbers,
             handle,
         });
+
         handle
     }
 
@@ -125,6 +139,11 @@ impl SourceFiles {
     /// Returns the path of the file whose source contains the given index
     pub fn path(&self, index: usize) -> &Path {
         &self.file(index).path
+    }
+
+    /// Returns the name of the (root) module this file represents, based on its path
+    pub fn mod_name(&self, handle: FileHandle) -> &Arc<str> {
+        &self.file(handle.start).mod_name
     }
 
     /// Returns the source for the given file handle

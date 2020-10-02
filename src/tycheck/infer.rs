@@ -90,12 +90,22 @@ impl<'a> Context<'a> {
 }
 
 pub fn infer_program(ctx: &mut Context, program: &nir::Program) -> tyir::Program {
-    let nir::Program {decls, scope} = program;
+    let nir::Program {root_module, def_table} = program;
 
+    let root_module = infer_module(ctx, root_module);
+    let def_table = def_table.clone();
+
+    tyir::Program {root_module, def_table}
+}
+
+fn infer_module(ctx: &mut Context, module: &nir::Module) -> tyir::Module {
+    let nir::Module {name, decls, scope} = module;
+
+    let name = name.clone();
     let decls = infer_decls(ctx, decls);
     let scope = scope.clone();
 
-    tyir::Program {decls, scope}
+    tyir::Module {name, decls, scope}
 }
 
 fn infer_decls(ctx: &mut Context, decls: &[nir::Decl]) -> Vec<tyir::Decl> {

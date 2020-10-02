@@ -14,6 +14,11 @@ pub struct ScopeStack {
 }
 
 impl ScopeStack {
+    /// Returns true if the stack is currently empty
+    pub fn is_empty(&self) -> bool {
+        self.stack.is_empty()
+    }
+
     /// Pushes a new scope onto the scope stack
     pub fn push(&mut self) -> ScopeToken {
         self.stack.push(nir::Scope::default());

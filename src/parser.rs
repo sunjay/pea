@@ -6,7 +6,7 @@ mod expr;
 
 pub use token::*;
 
-use std::fmt::Write;
+use std::{fmt::Write, sync::Arc};
 
 use crate::{
     ast,
@@ -35,10 +35,10 @@ pub fn collect_tokens(source: FileSource, diag: &Diagnostics) -> Vec<Token> {
     tokens
 }
 
-pub fn parse_program(input: &[Token], diag: &Diagnostics) -> ast::Program {
+pub fn parse_module(mod_name: Arc<str>, input: &[Token], diag: &Diagnostics) -> ast::Module {
     let input = input.into();
     let mut parser = Parser {input, diag};
-    parser.parse_program()
+    parser.parse_module(mod_name)
 }
 
 // Technically we can support up to 256 params, but we want to leave some space for locals too
@@ -125,7 +125,7 @@ struct Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
-    fn parse_program(&mut self) -> ast::Program {
+    fn parse_module(&mut self, name: Arc<str>) -> ast::Module {
         let mut decls = Vec::new();
 
         while !self.input.check(TokenKind::Eof) {
@@ -138,7 +138,7 @@ impl<'a> Parser<'a> {
             }
         }
 
-        ast::Program {decls}
+        ast::Module {name, decls}
     }
 
     fn decl(&mut self) -> ParseResult<ast::Decl> {

@@ -4,7 +4,8 @@ use std::sync::Arc;
 use crate::{source_files::Span, parser::Token};
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Program {
+pub struct Module {
+    pub name: Arc<str>,
     pub decls: Vec<Decl>,
 }
 

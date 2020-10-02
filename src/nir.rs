@@ -12,12 +12,21 @@ mod scope;
 pub use def_table::*;
 pub use scope::*;
 
+use std::sync::Arc;
+
 use crate::{ast, parser::Token, source_files::Span};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug)]
 pub struct Program {
+    pub root_module: Module,
+    pub def_table: Arc<DefTable>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Module {
+    pub name: Arc<str>,
     pub decls: Vec<Decl>,
-    /// The root scope of the program
+    /// The root scope of the module
     pub scope: Scope,
 }
 

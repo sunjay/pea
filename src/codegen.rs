@@ -28,21 +28,16 @@ pub struct Compiler<'a> {
 impl<'a> Compiler<'a> {
     pub fn compile(
         program: &cgenir::Program,
-        def_table: &'a nir::DefTable,
         diag: &'a Diagnostics,
     ) -> Interpreter {
         let mut compiler = Compiler {
-            def_table,
+            def_table: &program.def_table,
             diag,
 
             consts: Default::default(),
             const_ids: Default::default(),
         };
 
-        // Declare constants in the bytecode for every item in the program
-        compiler.declare_consts_program(program);
-
-        // Generate the code for the entire program
         compiler.walk_program(program);
 
         let Compiler {consts, const_ids, ..} = compiler;
@@ -52,7 +47,7 @@ impl<'a> Compiler<'a> {
         // Call main function
         //
         // Note: `main` must be declared in the root scope, take zero arguments, and return nothing.
-        let main_const_id = program.scope.lookup("main")
+        let main_const_id = program.root_module.scope.lookup("main")
             .and_then(|def_id| const_ids.get(def_id));
 
         match main_const_id {
@@ -69,8 +64,18 @@ impl<'a> Compiler<'a> {
         interpreter
     }
 
-    fn declare_consts_program(&mut self, program: &cgenir::Program) {
-        let cgenir::Program {decls, scope: _} = program;
+    fn walk_program(&mut self, program: &cgenir::Program) {
+        let cgenir::Program {root_module, def_table: _} = program;
+
+        // Declare constants in the bytecode for every item in the module
+        self.declare_consts_module(root_module);
+
+        // Generate the code for the root module
+        self.walk_module(root_module);
+    }
+
+    fn declare_consts_module(&mut self, module: &cgenir::Module) {
+        let cgenir::Module {name: _, decls, scope: _} = module;
 
         for decl in decls {
             self.declare_consts_decl(decl);
@@ -97,8 +102,8 @@ impl<'a> Compiler<'a> {
         self.const_ids.insert(def_id, const_id);
     }
 
-    fn walk_program(&mut self, program: &cgenir::Program) {
-        let cgenir::Program {decls, scope: _} = program;
+    fn walk_module(&mut self, module: &cgenir::Module) {
+        let cgenir::Module {name: _, decls, scope: _} = module;
 
         for decl in decls {
             self.walk_decl(decl);

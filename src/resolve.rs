@@ -1,5 +1,7 @@
 mod scope_stack;
 
+use std::sync::Arc;
+
 use crate::{
     ast,
     nir,
@@ -17,25 +19,32 @@ pub struct NameResolver<'a> {
 }
 
 impl<'a> NameResolver<'a> {
-    pub fn resolve(prog: &ast::Program, diag: &'a Diagnostics) -> (nir::Program, nir::DefTable) {
+    pub fn resolve(prog: &ast::Module, diag: &'a Diagnostics) -> nir::Program {
         let mut resolver = Self {
             diag,
             def_table: nir::DefTable::default(),
             scope_stack: ScopeStack::default(),
         };
 
-        let prog = resolver.resolve_program(prog);
-        (prog, resolver.def_table)
+        let root_module = resolver.resolve_module(prog);
+
+        let Self {diag: _, def_table, scope_stack} = resolver;
+        assert!(scope_stack.is_empty(), "bug: scope stack should be empty after root module");
+
+        let def_table = Arc::new(def_table);
+
+        nir::Program {root_module, def_table}
     }
 
-    fn resolve_program(&mut self, prog: &ast::Program) -> nir::Program {
-        let ast::Program {decls} = prog;
+    fn resolve_module(&mut self, module: &ast::Module) -> nir::Module {
+        let ast::Module {name, decls} = module;
+        let name = name.clone();
 
-        let token = self.scope_stack.push();
+        let stack_token = self.scope_stack.push();
         let decls = self.resolve_decls(decls);
-        let scope = self.scope_stack.pop(token);
+        let scope = self.scope_stack.pop(stack_token);
 
-        nir::Program {decls, scope}
+        nir::Module {name, decls, scope}
     }
 
     fn resolve_decls(&mut self, decls: &[ast::Decl]) -> Vec<nir::Decl> {
@@ -81,7 +90,7 @@ impl<'a> NameResolver<'a> {
         let name = nir::DefSpan {id, span: name.span};
 
         // Create a new scope for the parameters
-        let token = self.scope_stack.push();
+        let stack_token = self.scope_stack.push();
 
         // Since we check at parse time to make sure there aren't any duplicate function parameters,
         // we don't have to do any additional checking here
@@ -91,7 +100,7 @@ impl<'a> NameResolver<'a> {
 
         let body = self.resolve_block(body);
 
-        let scope = self.scope_stack.pop(token);
+        let scope = self.scope_stack.pop(stack_token);
 
         nir::FuncDecl {
             fn_token,
@@ -121,14 +130,14 @@ impl<'a> NameResolver<'a> {
         let brace_close_token = brace_close_token.clone();
 
         // Push a new scope for all the variables in the block
-        let token = self.scope_stack.push();
+        let stack_token = self.scope_stack.push();
 
         let stmts = stmts.iter()
             .map(|stmt| self.resolve_stmt(stmt))
             .collect();
         let ret_expr = ret_expr.as_ref().map(|expr| self.resolve_expr(expr));
 
-        let scope = self.scope_stack.pop(token);
+        let scope = self.scope_stack.pop(stack_token);
 
         nir::Block {brace_open_token, stmts, ret_expr, brace_close_token, scope}
     }
