@@ -18,6 +18,8 @@ pub mod value;
 pub mod bytecode;
 pub mod codegen;
 pub mod interpreter;
+pub mod package;
+pub mod prelude;
 
 use std::fmt;
 use std::sync::Arc;
@@ -84,6 +86,11 @@ pub fn compile(
     source_files: Arc<RwLock<SourceFiles>>,
     diag: &Diagnostics,
 ) -> Result<Interpreter, ErrorsEmitted> {
+    let mut packages = package::Packages::default();
+
+    let mut consts = bytecode::Constants::default();
+    let prelude = prelude::populate(packages.add_package(), &mut consts);
+
     let root_module = {
         // New scope because we want to drop this lock guard as soon as possible
         let files = source_files.read();
@@ -94,13 +101,12 @@ pub fn compile(
     };
     check_errors!(diag);
 
-    let program = resolve::NameResolver::resolve(&root_module, diag);
+    let pkg_id = packages.add_package();
+    let program = resolve::NameResolver::resolve(pkg_id, &root_module, diag);
     check_errors!(diag);
 
     let program = tycheck::check_types(&program, diag);
     check_errors!(diag);
-
-    let mut consts = bytecode::Constants::default();
 
     let def_consts = codegen::Compiler::compile(&program, &mut consts, diag);
     check_errors!(diag);
@@ -116,7 +122,7 @@ pub fn compile(
 fn call_main(
     interpreter: &mut Interpreter,
     program: &cgenir::Program,
-    def_consts: &codegen::DefConsts,
+    def_consts: &package::DefConsts,
     diag: &Diagnostics,
 ) {
     // `main` must be declared in the root module, take zero arguments, and return `()`.

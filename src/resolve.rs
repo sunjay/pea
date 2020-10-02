@@ -2,11 +2,7 @@ mod scope_stack;
 
 use std::sync::Arc;
 
-use crate::{
-    ast,
-    nir,
-    diagnostics::Diagnostics,
-};
+use crate::{ast, diagnostics::Diagnostics, nir, package::PkgId};
 
 use scope_stack::ScopeStack;
 
@@ -19,10 +15,10 @@ pub struct NameResolver<'a> {
 }
 
 impl<'a> NameResolver<'a> {
-    pub fn resolve(prog: &ast::Module, diag: &'a Diagnostics) -> nir::Program {
+    pub fn resolve(pkg_id: PkgId, prog: &ast::Module, diag: &'a Diagnostics) -> nir::Program {
         let mut resolver = Self {
             diag,
-            def_table: nir::DefTable::default(),
+            def_table: nir::DefTable::new(pkg_id),
             scope_stack: ScopeStack::default(),
         };
 

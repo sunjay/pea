@@ -1,18 +1,16 @@
-mod def_consts;
 mod function;
-
-pub use def_consts::*;
 
 use std::convert::TryInto;
 
 use crate::{
-    nir,
-    cgenir,
     bytecode,
+    cgenir,
+    nir,
     prim,
-    diagnostics::Diagnostics,
-    value::Value,
     gc::Gc,
+    diagnostics::Diagnostics,
+    package::DefConsts,
+    value::Value,
 };
 
 use function::FunctionCompiler;

@@ -9,9 +9,8 @@ use crate::{
     bytecode::{self, OpCode, PatchJump, LoopCheckpoint},
     value::Value,
     gc::Gc,
+    package::DefConsts,
 };
-
-use super::def_consts::DefConsts;
 
 #[derive(Debug)]
 struct LoopState {

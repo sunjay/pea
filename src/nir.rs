@@ -6,9 +6,11 @@
 //! Note that this IR still contains field and method names as `Ident`s since those don't get
 //! resolved until later when we know the types.
 
+mod def_id;
 mod def_table;
 mod scope;
 
+pub use def_id::*;
 pub use def_table::*;
 pub use scope::*;
 
