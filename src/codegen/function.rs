@@ -35,7 +35,7 @@ struct BlockState {
 
 pub struct FunctionCompiler<'a> {
     consts: &'a mut bytecode::Constants,
-    const_ids: &'a DefConsts,
+    def_consts: &'a DefConsts,
     diag: &'a Diagnostics,
 
     code: bytecode::Bytecode,
@@ -51,12 +51,12 @@ impl<'a> FunctionCompiler<'a> {
     pub fn compile(
         func: &cgenir::FuncDecl,
         consts: &'a mut bytecode::Constants,
-        const_ids: &'a DefConsts,
+        def_consts: &'a DefConsts,
         diag: &'a Diagnostics,
     ) -> bytecode::Bytecode {
         let mut compiler = Self {
             consts,
-            const_ids,
+            def_consts,
             diag,
 
             code: Default::default(),
@@ -628,7 +628,7 @@ impl<'a> FunctionCompiler<'a> {
         if let Some(&offset) = self.local_var_offsets.get(&def.id) {
             self.code.write_instr_u8(OpCode::GetLocal, offset, def.span);
 
-        } else if let Some(const_id) = self.const_ids.get(def.id) {
+        } else if let Some(const_id) = self.def_consts.get(def.id) {
             self.code.write_instr_u16(OpCode::Constant, const_id.into_u16(), def.span);
 
         } else {

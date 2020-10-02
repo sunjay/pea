@@ -100,8 +100,37 @@ pub fn compile(
     let program = tycheck::check_types(&program, diag);
     check_errors!(diag);
 
-    let interpreter = codegen::Compiler::compile(&program, diag);
+    let mut consts = bytecode::Constants::default();
+
+    let def_consts = codegen::Compiler::compile(&program, &mut consts, diag);
+    check_errors!(diag);
+
+    let mut interpreter = Interpreter::new(consts, diag.source_files().clone());
+    call_main(&mut interpreter, &program, &def_consts, &diag);
     check_errors!(diag);
 
     Ok(interpreter)
+}
+
+/// Calls the `main` function
+fn call_main(
+    interpreter: &mut Interpreter,
+    program: &cgenir::Program,
+    def_consts: &codegen::DefConsts,
+    diag: &Diagnostics,
+) {
+    // `main` must be declared in the root module, take zero arguments, and return `()`.
+    let main_const_id = program.root_module.scope.lookup("main")
+        .and_then(|def_id| def_consts.get(def_id));
+
+    match main_const_id {
+        Some(index) => {
+            //TODO: Check that `main` is a function with zero arguments and returns `()`
+            interpreter.call_main(index);
+        },
+
+        None => {
+            diag.error("`main` function not found").emit();
+        },
+    }
 }

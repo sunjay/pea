@@ -1,6 +1,8 @@
 mod def_consts;
 mod function;
 
+pub use def_consts::*;
+
 use std::convert::TryInto;
 
 use crate::{
@@ -8,60 +10,40 @@ use crate::{
     cgenir,
     bytecode,
     prim,
-    interpreter::Interpreter,
     diagnostics::Diagnostics,
     value::Value,
     gc::Gc,
 };
 
-use def_consts::DefConsts;
 use function::FunctionCompiler;
 
 pub struct Compiler<'a> {
     def_table: &'a nir::DefTable,
     diag: &'a Diagnostics,
 
-    consts: bytecode::Constants,
-    const_ids: DefConsts,
+    consts: &'a mut bytecode::Constants,
+    def_consts: DefConsts,
 }
 
 impl<'a> Compiler<'a> {
     pub fn compile(
         program: &cgenir::Program,
+        consts: &mut bytecode::Constants,
         diag: &'a Diagnostics,
-    ) -> Interpreter {
+    ) -> DefConsts {
         let mut compiler = Compiler {
             def_table: &program.def_table,
             diag,
 
-            consts: Default::default(),
-            const_ids: Default::default(),
+            consts,
+            def_consts: Default::default(),
         };
 
         compiler.walk_program(program);
 
-        let Compiler {consts, const_ids, ..} = compiler;
+        let Compiler {consts: _, def_consts, ..} = compiler;
 
-        let mut interpreter = Interpreter::new(consts, diag.source_files().clone());
-
-        // Call main function
-        //
-        // Note: `main` must be declared in the root scope, take zero arguments, and return nothing.
-        let main_const_id = program.root_module.scope.lookup("main")
-            .and_then(|def_id| const_ids.get(def_id));
-
-        match main_const_id {
-            Some(index) => {
-                //TODO: Check that `main` is a function with zero arguments
-                interpreter.call_main(index);
-            },
-
-            None => {
-                diag.error("`main` function not found").emit();
-            },
-        }
-
-        interpreter
+        def_consts
     }
 
     fn walk_program(&mut self, program: &cgenir::Program) {
@@ -99,7 +81,7 @@ impl<'a> Compiler<'a> {
         let func = Gc::new(prim::Func::new(name.value.clone(), arity));
 
         let const_id = self.consts.push(Value::Func(func));
-        self.const_ids.insert(def_id, const_id);
+        self.def_consts.insert(def_id, const_id);
     }
 
     fn walk_module(&mut self, module: &cgenir::Module) {
@@ -121,13 +103,13 @@ impl<'a> Compiler<'a> {
         let func_code = FunctionCompiler::compile(
             func,
             &mut self.consts,
-            &self.const_ids,
+            &self.def_consts,
             self.diag,
         );
 
         let def_id = func.name.id;
         let name = self.def_table.get(def_id);
-        let const_id = self.const_ids.get(def_id)
+        let const_id = self.def_consts.get(def_id)
             .expect("bug: function constant did not remain a constant");
 
         let arity = func.params.len().try_into()
