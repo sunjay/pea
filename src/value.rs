@@ -2,11 +2,11 @@ mod deep_clone;
 
 pub use deep_clone::*;
 
-use std::{fmt, mem};
+use std::{fmt, mem, convert::TryFrom};
 
 use static_assertions::const_assert_eq;
 
-use crate::{prim, gc::{Gc, Trace}, interpreter::RuntimeError};
+use crate::{gc::{Gc, Trace}, interpreter::RuntimeError, prim};
 
 /// The different supported types of values
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -51,6 +51,147 @@ pub enum Value {
 
 // Make sure value doesn't grow beyond what we expect it to be
 const_assert_eq!(mem::size_of::<Value>(), 16);
+
+impl From<()> for Value {
+    fn from(_: ()) -> Self {
+        Value::Unit
+    }
+}
+
+impl From<bool> for Value {
+    fn from(value: bool) -> Self {
+        Value::Bool(value)
+    }
+}
+
+impl From<i64> for Value {
+    fn from(value: i64) -> Self {
+        Value::I64(value)
+    }
+}
+
+impl From<u8> for Value {
+    fn from(value: u8) -> Self {
+        Value::U8(value)
+    }
+}
+
+impl From<prim::List> for Value {
+    fn from(value: prim::List) -> Self {
+        Value::List(Gc::new(value))
+    }
+}
+
+impl From<prim::Bytes> for Value {
+    fn from(value: prim::Bytes) -> Self {
+        Value::Bytes(Gc::new(value))
+    }
+}
+
+impl From<prim::Func> for Value {
+    fn from(value: prim::Func) -> Self {
+        Value::Func(Gc::new(value))
+    }
+}
+
+impl From<prim::NativeFunc> for Value {
+    fn from(value: prim::NativeFunc) -> Self {
+        Value::NativeFunc(Gc::new(value))
+    }
+}
+
+impl From<Gc<prim::List>> for Value {
+    fn from(value: Gc<prim::List>) -> Self {
+        Value::List(value)
+    }
+}
+
+impl From<Gc<prim::Bytes>> for Value {
+    fn from(value: Gc<prim::Bytes>) -> Self {
+        Value::Bytes(value)
+    }
+}
+
+impl From<Gc<prim::Func>> for Value {
+    fn from(value: Gc<prim::Func>) -> Self {
+        Value::Func(value)
+    }
+}
+
+impl From<Gc<prim::NativeFunc>> for Value {
+    fn from(value: Gc<prim::NativeFunc>) -> Self {
+        Value::NativeFunc(value)
+    }
+}
+
+impl TryFrom<Value> for () {
+    type Error = Value;
+
+    fn try_from(value: Value) -> Result<Self, Self::Error> {
+        match value {
+            Value::Unit => Ok(()),
+            _ => Err(value),
+        }
+    }
+}
+
+impl TryFrom<Value> for bool {
+    type Error = Value;
+
+    fn try_from(value: Value) -> Result<Self, Self::Error> {
+        match value {
+            Value::Bool(value) => Ok(value),
+            _ => Err(value),
+        }
+    }
+}
+
+impl TryFrom<Value> for i64 {
+    type Error = Value;
+
+    fn try_from(value: Value) -> Result<Self, Self::Error> {
+        match value {
+            Value::I64(value) => Ok(value),
+            _ => Err(value),
+        }
+    }
+}
+
+impl TryFrom<Value> for u8 {
+    type Error = Value;
+
+    fn try_from(value: Value) -> Result<Self, Self::Error> {
+        match value {
+            Value::U8(value) => Ok(value),
+            _ => Err(value),
+        }
+    }
+}
+
+impl TryFrom<Value> for Gc<prim::List> {
+    type Error = Value;
+
+    fn try_from(value: Value) -> Result<Self, Self::Error> {
+        match value {
+            Value::List(value) => Ok(value),
+            _ => Err(value),
+        }
+    }
+}
+
+impl TryFrom<Value> for Gc<prim::Bytes> {
+    type Error = Value;
+
+    fn try_from(value: Value) -> Result<Self, Self::Error> {
+        match value {
+            Value::Bytes(value) => Ok(value),
+            _ => Err(value),
+        }
+    }
+}
+
+// NOTE: No `TryFrom<Value>` impl for any callable types since any function taking those should take
+// `Value` instead (several types of values are callable)
 
 impl Trace for Value {
     fn trace(&self) {
