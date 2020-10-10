@@ -96,7 +96,7 @@ impl<T: Trace> From<Vec<T>> for Gc<[T]> {
 // This code is pretty much the same as the impl for Arc<str>
 impl From<&str> for Gc<str> {
     #[inline]
-    fn from(value: &str) -> Gc<str> {
+    fn from(value: &str) -> Self {
         let Gc {ptr} = Gc::<[u8]>::from(value.as_bytes());
         let ptr = unsafe { NonNull::new_unchecked(ptr.as_ptr() as *mut str) };
 
@@ -107,8 +107,22 @@ impl From<&str> for Gc<str> {
 // This code is pretty much the same as the impl for Arc<str>
 impl From<String> for Gc<str> {
     #[inline]
-    fn from(value: String) -> Gc<str> {
+    fn from(value: String) -> Self {
         Gc::from(&value[..])
+    }
+}
+
+impl From<&std::sync::Arc<str>> for Gc<str> {
+    #[inline]
+    fn from(value: &std::sync::Arc<str>) -> Self {
+        (&**value).into()
+    }
+}
+
+impl From<std::sync::Arc<str>> for Gc<str> {
+    #[inline]
+    fn from(value: std::sync::Arc<str>) -> Self {
+        (&*value).into()
     }
 }
 
