@@ -107,8 +107,15 @@ fn populate_i64_methods(
     insert_method(package, consts, methods, "add", |_: &mut _, x: i64, y: i64| Ok(x + y));
     insert_method(package, consts, methods, "sub", |_: &mut _, x: i64, y: i64| Ok(x - y));
     insert_method(package, consts, methods, "mul", |_: &mut _, x: i64, y: i64| Ok(x * y));
-    insert_method(package, consts, methods, "div", |_: &mut _, x: i64, y: i64| Ok(x / y));
-    insert_method(package, consts, methods, "rem", |_: &mut _, x: i64, y: i64| Ok(x % y));
+
+    insert_method(package, consts, methods, "div", |_: &mut _, x: i64, y: i64| match y {
+        0 => Err(RuntimeError::DivideByZero),
+        _ => Ok(x / y),
+    });
+    insert_method(package, consts, methods, "rem", |_: &mut _, x: i64, y: i64| match y {
+        0 => Err(RuntimeError::RemainderByZero),
+        _ => Ok(x % y),
+    });
 
     insert_method(package, consts, methods, "==", |_: &mut _, x: i64, y: i64| Ok(x == y));
     insert_method(package, consts, methods, "!=", |_: &mut _, x: i64, y: i64| Ok(x != y));
@@ -132,8 +139,15 @@ fn populate_u8_methods(
     insert_method(package, consts, methods, "add", |_: &mut _, x: u8, y: u8| Ok(x + y));
     insert_method(package, consts, methods, "sub", |_: &mut _, x: u8, y: u8| Ok(x - y));
     insert_method(package, consts, methods, "mul", |_: &mut _, x: u8, y: u8| Ok(x * y));
-    insert_method(package, consts, methods, "div", |_: &mut _, x: u8, y: u8| Ok(x / y));
-    insert_method(package, consts, methods, "rem", |_: &mut _, x: u8, y: u8| Ok(x % y));
+
+    insert_method(package, consts, methods, "div", |_: &mut _, x: u8, y: u8| match y {
+        0 => Err(RuntimeError::DivideByZero),
+        _ => Ok(x / y),
+    });
+    insert_method(package, consts, methods, "rem", |_: &mut _, x: u8, y: u8| match y {
+        0 => Err(RuntimeError::RemainderByZero),
+        _ => Ok(x % y),
+    });
 
     insert_method(package, consts, methods, "==", |_: &mut _, x: u8, y: u8| Ok(x == y));
     insert_method(package, consts, methods, "!=", |_: &mut _, x: u8, y: u8| Ok(x != y));
