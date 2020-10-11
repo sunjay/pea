@@ -8,6 +8,7 @@ use crate::{
     nir,
     prim,
     gc::Gc,
+    package::Package,
     diagnostics::Diagnostics,
     package::DefConsts,
     value::Value,
@@ -17,6 +18,7 @@ use function::FunctionCompiler;
 
 pub struct Compiler<'a> {
     def_table: &'a nir::DefTable,
+    prelude: &'a Package,
     diag: &'a Diagnostics,
 
     consts: &'a mut bytecode::Constants,
@@ -27,10 +29,12 @@ impl<'a> Compiler<'a> {
     pub fn compile(
         program: &cgenir::Program,
         consts: &mut bytecode::Constants,
+        prelude: &'a Package,
         diag: &'a Diagnostics,
     ) -> DefConsts {
         let mut compiler = Compiler {
             def_table: &program.def_table,
+            prelude,
             diag,
 
             consts,
@@ -102,6 +106,7 @@ impl<'a> Compiler<'a> {
             func,
             &mut self.consts,
             &self.def_consts,
+            self.prelude,
             self.diag,
         );
 

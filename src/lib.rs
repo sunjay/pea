@@ -108,7 +108,7 @@ pub fn compile(
     let program = tycheck::check_types(&program, &prelude, diag);
     check_errors!(diag);
 
-    let def_consts = codegen::Compiler::compile(&program, &mut consts, diag);
+    let def_consts = codegen::Compiler::compile(&program, &mut consts, &prelude, diag);
     check_errors!(diag);
 
     let mut interpreter = Interpreter::new(consts, diag.source_files().clone());

@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use crate::{
     nir,
     cgenir,
+    package::Package,
     diagnostics::Diagnostics,
     bytecode::{self, OpCode, PatchJump, LoopCheckpoint},
     value::Value,
@@ -35,6 +36,7 @@ struct BlockState {
 pub struct FunctionCompiler<'a> {
     consts: &'a mut bytecode::Constants,
     def_consts: &'a DefConsts,
+    prelude: &'a Package,
     diag: &'a Diagnostics,
 
     code: bytecode::Bytecode,
@@ -51,11 +53,13 @@ impl<'a> FunctionCompiler<'a> {
         func: &cgenir::FuncDecl,
         consts: &'a mut bytecode::Constants,
         def_consts: &'a DefConsts,
+        prelude: &'a Package,
         diag: &'a Diagnostics,
     ) -> bytecode::Bytecode {
         let mut compiler = Self {
             consts,
             def_consts,
+            prelude,
             diag,
 
             code: Default::default(),
@@ -630,8 +634,13 @@ impl<'a> FunctionCompiler<'a> {
         } else if let Some(const_id) = self.def_consts.get(def.id) {
             self.code.write_instr_u16(OpCode::Constant, const_id.into_u16(), def.span);
 
+        } else if let Some(const_id) = self.prelude.def_consts.get(def.id) {
+            self.code.write_instr_u16(OpCode::Constant, const_id.into_u16(), def.span);
+
         } else {
-            unreachable!("bug: name resolution should have caught undefined variable");
+            // The only way this could happen is if a variable was used before it was defined, but
+            // that kind of error should already be caught in name resolution
+            unreachable!("bug: all `DefId`s should have an associated `ConstId`");
         }
     }
 
