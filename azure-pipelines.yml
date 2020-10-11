@@ -60,6 +60,7 @@ steps:
     rustc --version --verbose
     cargo build --verbose --all --all-targets
     cargo test --verbose --all --no-run
+    cargo test --verbose --all --no-run --release
   displayName: build
 
 - script: |
@@ -85,6 +86,10 @@ steps:
     MIRIFLAGS="-Zmiri-disable-isolation" cargo miri test --verbose --all -- --nocapture
   displayName: miri
   condition: and( ne( variables['Agent.OS'], 'Windows_NT' ), eq( variables['rustup_toolchain'], 'nightly' ) )
+
+- script: |
+    cargo test --verbose --all --release --features 'gc_stress_test'
+  displayName: gc_stress_test
 
 - script: |
     cargo doc --no-deps --verbose --all
