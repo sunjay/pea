@@ -22,7 +22,7 @@
 
 [tests/ui/type_infer.pea:80:23-80:24] error: mismatched types: expected `i64`, found: `[u8]`
 
-[tests/ui/type_infer.pea:84:5-84:13] error: mismatched types: expected `fn (_)-> _`, found: `[u8]`
+[tests/ui/type_infer.pea:84:5-84:13] error: mismatched types: expected `fn (_) -> _`, found: `[u8]`
 
 [tests/ui/type_infer.pea:29:16-29:17] error: mismatched types: expected `()`, found: `i64`
 

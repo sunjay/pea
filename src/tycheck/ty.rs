@@ -306,7 +306,7 @@ impl fmt::Display for FuncTy {
         write!(f, ")")?;
 
         if *return_ty != Ty::Unit {
-            write!(f, "-> {}", return_ty)?;
+            write!(f, " -> {}", return_ty)?;
         }
 
         Ok(())
