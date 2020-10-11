@@ -1,0 +1,16 @@
+fn main() {
+    let start = clock();
+
+    let i = 0;
+    while i < 1000 {
+        println!(i);
+        i += 1;
+    }
+
+    let end = clock();
+
+    // Commented out to make tests deterministic
+    // print!(b"Time: ");
+    // print!(end - start);
+    // println!(b" ms");
+}

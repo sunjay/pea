@@ -6,24 +6,56 @@ use super::{CallFrame, Interpreter, RuntimeError, RuntimeResult, Status};
 
 #[inline]
 pub fn call(ctx: &mut Interpreter, nargs: u8) -> RuntimeResult {
-    let func = match ctx.peek(nargs as usize) {
-        Value::Func(func) => func.clone(),
+    match ctx.peek(nargs as usize) {
+        Value::Func(func) => {
+            let func = func.clone();
+
+            if nargs != func.arity {
+                return Err(RuntimeError::ArityMismatch {
+                    name: func.name.clone(),
+                    arity: func.arity,
+                    nargs,
+                });
+            }
+
+            // Start with the arguments and the function itself on the start of the stack frame
+            let frame_index = ctx.value_stack.len() - nargs as usize - 1;
+            ctx.call_stack.push(CallFrame::new(func, frame_index))?;
+
+            Ok(Status::Running)
+        },
+
+        Value::NativeFunc(func) => {
+            let func = func.clone();
+
+            if nargs != func.arity {
+                return Err(RuntimeError::ArityMismatch {
+                    name: func.name.clone(),
+                    arity: func.arity,
+                    nargs,
+                });
+            }
+
+            // NOTE: This code must produce exactly the same state in `ctx` as `ret` would
+            //   Not checking if the call stack is empty because a native function cannot be `main`.
+
+            let args_index = ctx.value_stack.len() - nargs as usize;
+            //TODO: Would be nice if there was a way to avoid allocating here
+            let args = ctx.value_stack.drain(args_index..).collect();
+
+            // Remove the function itself from the top of the stack
+            ctx.pop();
+
+            let return_value = func.call(ctx, args)?;
+
+            // Push the returned value
+            ctx.value_stack.push(return_value);
+
+            Ok(Status::Running)
+        },
+
         _ => return Err(RuntimeError::NonFunctionCall),
-    };
-
-    if nargs != func.arity {
-        return Err(RuntimeError::ArityMismatch {
-            name: func.name.clone(),
-            arity: func.arity,
-            nargs,
-        });
     }
-
-    // Start with the arguments and the function itself on the start of the stack frame
-    let frame_index = ctx.value_stack.len() - nargs as usize - 1;
-    ctx.call_stack.push(CallFrame::new(func, frame_index))?;
-
-    Ok(Status::Running)
 }
 
 #[inline]

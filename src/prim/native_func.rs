@@ -43,6 +43,12 @@ impl gc::Trace for NativeFunc {
     }
 }
 
+impl NativeFunc {
+    pub fn call(&self, interpreter: &mut Interpreter, args: Vec<Value>) -> Result<Value, RuntimeError> {
+        (self.func)(interpreter, args)
+    }
+}
+
 pub trait IntoNativeFunc<A> {
     fn into_native_func<N: Into<Gc<str>>>(self, name: N) -> NativeFunc;
 }
