@@ -1,14 +1,16 @@
+mod def_tys;
 mod def_consts;
 mod def_names;
 mod decls;
 
+pub use def_tys::*;
 pub use def_consts::*;
 pub use def_names::*;
 pub use decls::*;
 
 use std::sync::Arc;
 
-use crate::{bytecode::ConstId, nir::DefId};
+use crate::{ty::Ty, bytecode::ConstId, nir::DefId};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct PkgId(usize);
@@ -33,6 +35,8 @@ pub struct Package {
     pub root_module: Module,
     /// Provides a mapping from `DefId` to name
     pub def_names: DefNames,
+    /// Provides a mapping from `DefId` to `Ty`
+    pub def_tys: DefTys,
     /// Provides a mapping from `DefId` to `ConstId`
     pub def_consts: DefConsts,
 }
@@ -43,6 +47,7 @@ impl Package {
             id,
             root_module: Module::new(name.into()),
             def_names: DefNames::new(id),
+            def_tys: DefTys::default(),
             def_consts: DefConsts::default(),
         }
     }
@@ -50,8 +55,9 @@ impl Package {
     /// Associates the given name with the given constant ID and returns the generated `DefId`.
     ///
     /// For the value to be usable, it must then be inserted into a module using the same name.
-    pub fn insert(&mut self, name: Arc<str>, const_id: ConstId) -> DefId {
+    pub fn insert(&mut self, name: Arc<str>, ty: Ty, const_id: ConstId) -> DefId {
         let def_id = self.def_names.insert(name);
+        self.def_tys.insert(def_id, ty);
         self.def_consts.insert(def_id, const_id);
         def_id
     }
