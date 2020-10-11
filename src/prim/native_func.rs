@@ -74,8 +74,10 @@ impl<F: 'static, Ret> IntoNativeFunc<()> for F
 }
 
 macro_rules! impl_into_native_func {
-    ($arg0:ident, $($arg:ident),*) => {
-        impl<$arg0, $($arg),*, Ret, FN: 'static> IntoNativeFunc<($arg0, $($arg),*)> for FN
+    ($arg0:ident $(, $arg:ident)* $(,)?) => {
+        impl_into_native_func!($($arg),*);
+
+        impl<$arg0, $($arg,)* Ret, FN: 'static> IntoNativeFunc<($arg0, $($arg),*)> for FN
             where FN: for<'a> Fn(&'a mut Interpreter, $arg0, $($arg),*) -> Result<Ret, RuntimeError>,
                   $arg0: PrimTy,
                   $($arg: PrimTy,)*
@@ -113,12 +115,12 @@ macro_rules! impl_into_native_func {
 
     () => {};
 
-    (@count $arg0:ident, $($arg:ident),*) => (
+    (@count $arg0:ident $(, $arg:ident)* $(,)?) => (
         1 + impl_into_native_func!(@count $($arg),*)
     );
 
-    (@count $arg0:ident) => (
-        1
+    (@count) => (
+        0
     );
 }
 

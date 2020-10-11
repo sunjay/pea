@@ -77,8 +77,10 @@ impl<Ret> PrimFuncTy for fn() -> Ret
 }
 
 macro_rules! impl_prim_func_ty {
-    ($arg0:ident, $($arg:ident),*) => {
-        impl<$arg0, $($arg),*, Ret> PrimFuncTy for fn($arg0, $($arg),*) -> Ret
+    ($arg0:ident $(, $arg:ident)* $(,)?) => {
+        impl_prim_func_ty!($($arg),*);
+
+        impl<$arg0, $($arg,)* Ret> PrimFuncTy for fn($arg0, $($arg),*) -> Ret
             where $arg0: PrimTy,
                   $($arg: PrimTy,)*
                   Ret: PrimTy,
@@ -95,6 +97,8 @@ macro_rules! impl_prim_func_ty {
             }
         }
     };
+
+    () => ();
 }
 
 impl_prim_func_ty!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z);
