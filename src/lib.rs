@@ -102,7 +102,7 @@ pub fn compile(
     check_errors!(diag);
 
     let pkg_id = packages.add_package();
-    let program = resolve::NameResolver::resolve(pkg_id, &root_module, diag);
+    let program = resolve::NameResolver::resolve(pkg_id, &root_module, &prelude.root_module, diag);
     check_errors!(diag);
 
     let program = tycheck::check_types(&program, diag);

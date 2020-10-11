@@ -2,11 +2,12 @@ mod scope_stack;
 
 use std::sync::Arc;
 
-use crate::{ast, diagnostics::Diagnostics, nir, package::PkgId};
+use crate::{ast, diagnostics::Diagnostics, nir, package, package::PkgId};
 
 use scope_stack::ScopeStack;
 
 pub struct NameResolver<'a> {
+    prelude: &'a package::Module,
     diag: &'a Diagnostics,
 
     def_table: nir::DefTable,
@@ -15,8 +16,14 @@ pub struct NameResolver<'a> {
 }
 
 impl<'a> NameResolver<'a> {
-    pub fn resolve(pkg_id: PkgId, prog: &ast::Module, diag: &'a Diagnostics) -> nir::Program {
+    pub fn resolve(
+        pkg_id: PkgId,
+        prog: &ast::Module,
+        prelude: &'a package::Module,
+        diag: &'a Diagnostics,
+    ) -> nir::Program {
         let mut resolver = Self {
+            prelude,
             diag,
             def_table: nir::DefTable::new(pkg_id),
             scope_stack: ScopeStack::default(),
@@ -24,7 +31,7 @@ impl<'a> NameResolver<'a> {
 
         let root_module = resolver.resolve_module(prog);
 
-        let Self {diag: _, def_table, scope_stack} = resolver;
+        let Self {prelude: _, diag: _, def_table, scope_stack} = resolver;
         assert!(scope_stack.is_empty(), "bug: scope stack should be empty after root module");
 
         let def_table = Arc::new(def_table);
@@ -565,6 +572,14 @@ impl<'a> NameResolver<'a> {
                     span: name.span,
                 };
             }
+        }
+
+        // HACK: Check the prelude. Note that we eventually want a proper module system instead.
+        if let Some(id) = self.prelude.lookup(&name.value) {
+            return nir::DefSpan {
+                id,
+                span: name.span,
+            };
         }
 
         // No name found

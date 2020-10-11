@@ -72,4 +72,9 @@ impl Module {
             decls: Default::default(),
         }
     }
+
+    /// Looks up a name in this module
+    pub fn lookup(&self, name: &str) -> Option<DefId> {
+        self.decls.get(name)
+    }
 }
