@@ -143,6 +143,7 @@ impl Func {
 
 impl gc::Trace for Func {
     fn trace(&self) {
-        let Self {name: _, arity: _, code: _} = self;
+        let Self {name, arity: _, code: _} = self;
+        name.trace();
     }
 }
