@@ -1,3 +1,5 @@
+use crate::{prim, gc::Gc};
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Ty {
     /// The `()` type
@@ -49,9 +51,15 @@ impl PrimTy for u8 {
     }
 }
 
-impl<T: PrimTy> PrimTy for &[T] {
+impl PrimTy for prim::Bytes {
     fn ty() -> Ty {
-        Ty::List(Box::new(T::ty()))
+        Ty::List(Box::new(Ty::U8))
+    }
+}
+
+impl<T: PrimTy> PrimTy for Gc<T> {
+    fn ty() -> Ty {
+        T::ty()
     }
 }
 

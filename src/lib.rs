@@ -89,7 +89,7 @@ pub fn compile(
     let mut packages = package::Packages::default();
 
     let mut consts = bytecode::Constants::default();
-    let prelude = prelude::populate(packages.add_package(), &mut consts);
+    let (prelude, prim_methods) = prelude::populate(packages.add_package(), &mut consts);
 
     let root_module = {
         // New scope because we want to drop this lock guard as soon as possible
