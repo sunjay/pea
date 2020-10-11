@@ -13,7 +13,7 @@ use crate::{
     gc_debug,
     ast,
     bytecode::{ConstId, Constants, OpCode},
-    gc::{self, Trace},
+    gc::{self, Trace, Gc},
     source_files::SourceFiles,
     value::{self, Value},
 };
@@ -56,7 +56,7 @@ pub enum RuntimeError {
 
     #[error("wrong number of arguments for function `{name}`: expected {arity}, got {nargs}")]
     ArityMismatch {
-        name: Arc<str>,
+        name: Gc<str>,
         arity: u8,
         nargs: u8,
     },

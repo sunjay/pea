@@ -1,14 +1,17 @@
 use std::fmt;
-use std::sync::Arc;
 use std::io::Write;
 
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 
-use crate::{gc, bytecode::{Bytecode, BytecodeCursor, OpCode}, source_files::{SourceFiles, FileLine}};
+use crate::{
+    gc::{self, Gc},
+    bytecode::{Bytecode, BytecodeCursor, OpCode},
+    source_files::{SourceFiles, FileLine},
+};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Func {
-    pub name: Arc<str>,
+    pub name: Gc<str>,
     pub arity: u8,
     pub code: Bytecode,
 }
@@ -20,11 +23,11 @@ impl fmt::Display for Func {
 }
 
 impl Func {
-    pub fn new(name: Arc<str>, arity: u8) -> Self {
+    pub fn new(name: Gc<str>, arity: u8) -> Self {
         Self::with_code(name, arity, Default::default())
     }
 
-    pub fn with_code(name: Arc<str>, arity: u8, code: Bytecode) -> Self {
+    pub fn with_code(name: Gc<str>, arity: u8, code: Bytecode) -> Self {
         Self {name, arity, code}
     }
 
