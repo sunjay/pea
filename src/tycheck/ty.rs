@@ -85,6 +85,19 @@ impl From<&nir::FuncDecl> for Ty {
     }
 }
 
+impl From<&crate::ty::Ty> for Ty {
+    fn from(ty: &crate::ty::Ty) -> Self {
+        match ty {
+            crate::ty::Ty::Unit => Ty::Unit,
+            crate::ty::Ty::Bool => Ty::Bool,
+            crate::ty::Ty::I64 => Ty::I64,
+            crate::ty::Ty::U8 => Ty::U8,
+            crate::ty::Ty::List(ty) => Ty::List(Box::new((&**ty).into())),
+            crate::ty::Ty::Func(ty) => Ty::Func(Box::new((&**ty).into())),
+        }
+    }
+}
+
 impl UnifyValue for Ty {
     type Error = NoError;
 
@@ -217,6 +230,17 @@ impl From<&nir::FuncDecl> for FuncTy {
         }).unwrap_or(Ty::Unit);
 
         Self {param_tys, return_ty}
+    }
+}
+
+impl From<&crate::ty::FuncTy> for FuncTy {
+    fn from(ty: &crate::ty::FuncTy) -> Self {
+        let crate::ty::FuncTy {param_tys, return_ty} = ty;
+
+        Self {
+            param_tys: param_tys.iter().map(|ty| ty.into()).collect(),
+            return_ty: return_ty.into(),
+        }
     }
 }
 

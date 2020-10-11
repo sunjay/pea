@@ -2,11 +2,12 @@
 
 use std::collections::HashMap;
 
-use crate::{diagnostics::Diagnostics, nir::{self, DefId}, source_files::Span};
+use crate::{package::Package, diagnostics::Diagnostics, nir::{self, DefId}, source_files::Span};
 
 use super::{constraints::{ConstraintSet, TyVar, UnifyErrorSpan}, ty::{FuncTy, Ty}, tyir};
 
 pub struct Context<'a> {
+    pub prelude: &'a Package,
     pub diag: &'a Diagnostics,
     pub constraints: ConstraintSet,
     pub def_vars: HashMap<DefId, TyVar>,
@@ -15,8 +16,9 @@ pub struct Context<'a> {
 }
 
 impl<'a> Context<'a> {
-    pub fn new(diag: &'a Diagnostics) -> Self {
+    pub fn new(prelude: &'a Package, diag: &'a Diagnostics) -> Self {
         Self {
+            prelude,
             diag,
             constraints: Default::default(),
             def_vars: Default::default(),
@@ -24,9 +26,8 @@ impl<'a> Context<'a> {
         }
     }
 
-    pub fn def_type_var(&self, def_id: DefId) -> TyVar {
+    pub fn def_type_var(&self, def_id: DefId) -> Option<TyVar> {
         self.def_vars.get(&def_id).copied()
-            .expect("bug: DefId did not have an associated type variable")
     }
 
     pub fn fresh_type_var(&mut self) -> TyVar {
@@ -693,8 +694,15 @@ fn infer_continue(ctx: &mut Context, expr: &nir::ContinueExpr, return_ty_var: Ty
 
 fn infer_def(ctx: &mut Context, def: &nir::DefSpan, return_ty_var: TyVar) -> tyir::DefSpan {
     // The type of this variable must match the type we are expected to return from the expr
-    let ty_var = ctx.def_type_var(def.id);
-    ctx.ty_vars_unify(ty_var, return_ty_var);
+    if let Some(ty_var) = ctx.def_type_var(def.id) {
+        ctx.ty_vars_unify(ty_var, return_ty_var);
+
+    } else if let Some(ty) = ctx.prelude.def_tys.get(def.id) {
+        ctx.ty_var_is_ty(return_ty_var, ty.into(), def.span);
+
+    } else {
+        unreachable!("bug: DefId did not have an associated type variable");
+    }
 
     *def
 }
