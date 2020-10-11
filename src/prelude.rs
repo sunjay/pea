@@ -116,6 +116,9 @@ fn populate_i64_methods(
     insert_method(package, consts, methods, ">=", |_: &mut _, x: i64, y: i64| Ok(x >= y));
     insert_method(package, consts, methods, "<", |_: &mut _, x: i64, y: i64| Ok(x < y));
     insert_method(package, consts, methods, "<=", |_: &mut _, x: i64, y: i64| Ok(x <= y));
+
+    insert_method(package, consts, methods, "min", |_: &mut _, x: i64, y: i64| Ok(x.min(y)));
+    insert_method(package, consts, methods, "max", |_: &mut _, x: i64, y: i64| Ok(x.max(y)));
 }
 
 fn populate_u8_methods(
@@ -138,6 +141,9 @@ fn populate_u8_methods(
     insert_method(package, consts, methods, ">=", |_: &mut _, x: u8, y: u8| Ok(x >= y));
     insert_method(package, consts, methods, "<", |_: &mut _, x: u8, y: u8| Ok(x < y));
     insert_method(package, consts, methods, "<=", |_: &mut _, x: u8, y: u8| Ok(x <= y));
+
+    insert_method(package, consts, methods, "min", |_: &mut _, x: u8, y: u8| Ok(x.min(y)));
+    insert_method(package, consts, methods, "max", |_: &mut _, x: u8, y: u8| Ok(x.max(y)));
 }
 
 fn populate_list_methods(

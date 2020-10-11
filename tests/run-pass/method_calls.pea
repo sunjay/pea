@@ -1,0 +1,24 @@
+fn min(x: i64, y: i64) -> i64 {
+    if x < y {
+        x
+    } else {
+        y
+    }
+}
+
+fn main() {
+    let a = 3;
+    println!(min(-a, a));
+    println!(-a.min(a));
+    println!((-a).min(a));
+
+    let b = 1;
+    println!(min(a, b));
+    println!(a.min(b));
+    println!(-a.min(b));
+    println!((-a).min(b));
+
+    let c = -97;
+    println!(min(c, b));
+    println!(c.min(b));
+}
