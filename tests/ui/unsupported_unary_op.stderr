@@ -1,4 +1,4 @@
-[tests/ui/unsupported_unary_op.pea:2:15-2:20] error: mismatched types: expected `bool`, found: `[u8]`
+[tests/ui/unsupported_unary_op.pea:2:14] error: no method named `not` found for type `[u8]` in the current scope
 
 error: aborting due to 1 previous error
 

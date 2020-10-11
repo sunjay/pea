@@ -1,6 +1,6 @@
 //! Type inference algorithm
 
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 use crate::{
     diagnostics::Diagnostics,
@@ -12,14 +12,35 @@ use crate::{
 
 use super::{constraints::{ConstraintSet, TyVar, UnifyErrorSpan}, ty::{FuncTy, Ty, TySpan}, tyir};
 
+pub struct OperatorMethodNames {
+    pub pos: Arc<str>,
+    pub neg: Arc<str>,
+    pub not: Arc<str>,
+
+    pub add: Arc<str>,
+    pub sub: Arc<str>,
+    pub mul: Arc<str>,
+    pub div: Arc<str>,
+    pub rem: Arc<str>,
+
+    pub eq: Arc<str>,
+    pub ne: Arc<str>,
+    pub gt: Arc<str>,
+    pub ge: Arc<str>,
+    pub lt: Arc<str>,
+    pub le: Arc<str>,
+}
+
 pub struct Context<'a> {
-    pub prelude: &'a Package,
-    pub prim_methods: &'a PrimMethods,
-    pub diag: &'a Diagnostics,
-    pub constraints: ConstraintSet,
-    pub def_vars: HashMap<DefId, TyVar>,
+    prelude: &'a Package,
+    prim_methods: &'a PrimMethods,
+    diag: &'a Diagnostics,
+    constraints: ConstraintSet,
+    def_vars: HashMap<DefId, TyVar>,
     /// The type variable for the return type of the function currently being checked
-    pub func_return_ty_var: Option<TyVar>,
+    func_return_ty_var: Option<TyVar>,
+    /// Cached versions of each operator method name (amortizes heap allocations)
+    op_method_names: OperatorMethodNames,
 }
 
 impl<'a> Context<'a> {
@@ -31,7 +52,31 @@ impl<'a> Context<'a> {
             constraints: Default::default(),
             def_vars: Default::default(),
             func_return_ty_var: None,
+            op_method_names: OperatorMethodNames {
+                pos: "pos".into(),
+                neg: "neg".into(),
+                not: "not".into(),
+
+                add: "add".into(),
+                sub: "sub".into(),
+                mul: "mul".into(),
+                div: "div".into(),
+                rem: "rem".into(),
+
+                // Not using real method names because we don't want these to actually be callable
+                // like this. Eventually, we want to replace these with a single `cmp` method.
+                eq: "==".into(),
+                ne: "!=".into(),
+                gt: ">".into(),
+                ge: ">=".into(),
+                lt: "<".into(),
+                le: "<=".into(),
+            },
         }
+    }
+
+    pub fn into_constraints(self) -> ConstraintSet {
+        self.constraints
     }
 
     /// Returns the type variable associated with the given `DefId` (if any)
@@ -468,8 +513,8 @@ fn infer_expr(ctx: &mut Context, expr: &nir::Expr, return_ty_var: TyVar) -> tyir
         Or(expr) => tyir::Expr::Or(Box::new(infer_or(ctx, expr, return_ty_var))),
         And(expr) => tyir::Expr::And(Box::new(infer_and(ctx, expr, return_ty_var))),
         Cond(cond) => tyir::Expr::Cond(Box::new(infer_cond(ctx, cond, return_ty_var))),
-        UnaryOp(expr) => tyir::Expr::UnaryOp(Box::new(infer_unary_op(ctx, expr, return_ty_var))),
-        BinaryOp(expr) => tyir::Expr::BinaryOp(Box::new(infer_binary_op(ctx, expr, return_ty_var))),
+        UnaryOp(expr) => infer_unary_op(ctx, expr, return_ty_var),
+        BinaryOp(expr) => infer_binary_op(ctx, expr, return_ty_var),
         MethodCall(expr) => infer_method_call(ctx, expr, return_ty_var),
         Assign(expr) => tyir::Expr::Assign(Box::new(infer_assign(ctx, expr, return_ty_var))),
         Group(expr) => tyir::Expr::Group(Box::new(infer_group(ctx, expr, return_ty_var))),
@@ -575,65 +620,61 @@ fn infer_cond(ctx: &mut Context, cond: &nir::Cond, return_ty_var: TyVar) -> tyir
     }
 }
 
-fn infer_unary_op(ctx: &mut Context, expr: &nir::UnaryOpExpr, return_ty_var: TyVar) -> tyir::UnaryOpExpr {
+fn infer_unary_op(ctx: &mut Context, expr: &nir::UnaryOpExpr, return_ty_var: TyVar) -> tyir::Expr {
     let nir::UnaryOpExpr {op, op_token, expr} = expr;
 
-    let op = *op;
-    let op_token = op_token.clone();
-
-    //TODO: (unsound) This does not check if the operator is actually supported by the operands.
-    //  To fix: resolve this as a method call and assert the types properly.
-    let expr = match op {
-        nir::UnaryOp::Pos |
-        nir::UnaryOp::Neg => {
-            // HACK: Assume that return type is the same as operand type
-            infer_expr(ctx, expr, return_ty_var)
-        },
-        nir::UnaryOp::Not => {
-            // HACK: Assume that operand type and return type are bool
-            ctx.ty_var_is_ty(return_ty_var, Ty::Bool, None);
-            infer_expr(ctx, expr, return_ty_var)
-        },
+    let method_name = match *op {
+        nir::UnaryOp::Pos => ctx.op_method_names.pos.clone(),
+        nir::UnaryOp::Neg => ctx.op_method_names.neg.clone(),
+        nir::UnaryOp::Not => ctx.op_method_names.not.clone(),
     };
 
-    tyir::UnaryOpExpr {op, op_token, expr}
+    let method_call = nir::MethodCallExpr {
+        lhs: expr.clone(),
+        dot_token: op_token.clone(),
+        name: nir::Ident {
+            value: method_name,
+            span: op_token.span,
+        },
+        paren_open_token: op_token.clone(),
+        args: Vec::new(),
+        paren_close_token: op_token.clone(),
+    };
+
+    infer_method_call(ctx, &method_call, return_ty_var)
 }
 
-fn infer_binary_op(ctx: &mut Context, expr: &nir::BinaryOpExpr, return_ty_var: TyVar) -> tyir::BinaryOpExpr {
+fn infer_binary_op(ctx: &mut Context, expr: &nir::BinaryOpExpr, return_ty_var: TyVar) -> tyir::Expr {
     let nir::BinaryOpExpr {lhs, op, op_token, rhs} = expr;
 
-    //TODO: The LHS and RHS are not necessarily the same type
-    let operand_ty_var = ctx.fresh_type_var();
-    let lhs = infer_expr(ctx, lhs, operand_ty_var);
-    let rhs = infer_expr(ctx, rhs, operand_ty_var);
+    let method_name = match *op {
+        nir::BinaryOp::Add => ctx.op_method_names.add.clone(),
+        nir::BinaryOp::Sub => ctx.op_method_names.sub.clone(),
+        nir::BinaryOp::Mul => ctx.op_method_names.mul.clone(),
+        nir::BinaryOp::Div => ctx.op_method_names.div.clone(),
+        nir::BinaryOp::Rem => ctx.op_method_names.rem.clone(),
 
-    let op = *op;
-    let op_token = op_token.clone();
+        nir::BinaryOp::EqualsEquals => ctx.op_method_names.eq.clone(),
+        nir::BinaryOp::NotEquals => ctx.op_method_names.ne.clone(),
+        nir::BinaryOp::GreaterThan => ctx.op_method_names.gt.clone(),
+        nir::BinaryOp::GreaterThanEquals => ctx.op_method_names.ge.clone(),
+        nir::BinaryOp::LessThan => ctx.op_method_names.lt.clone(),
+        nir::BinaryOp::LessThanEquals => ctx.op_method_names.le.clone(),
+    };
 
-    //TODO: (unsound) This does not check if the operator is actually supported by the operands.
-    //  To fix: resolve this as a method call and assert the types properly.
-    match op {
-        nir::BinaryOp::Add |
-        nir::BinaryOp::Sub |
-        nir::BinaryOp::Mul |
-        nir::BinaryOp::Div |
-        nir::BinaryOp::Rem => {
-            // HACK: Assume that return type is the same as operand type
-            ctx.ty_vars_unify(operand_ty_var, return_ty_var);
+    let method_call = nir::MethodCallExpr {
+        lhs: lhs.clone(),
+        dot_token: op_token.clone(),
+        name: nir::Ident {
+            value: method_name,
+            span: op_token.span,
         },
+        paren_open_token: op_token.clone(),
+        args: vec![rhs.clone()],
+        paren_close_token: op_token.clone(),
+    };
 
-        nir::BinaryOp::EqualsEquals |
-        nir::BinaryOp::NotEquals |
-        nir::BinaryOp::GreaterThan |
-        nir::BinaryOp::GreaterThanEquals |
-        nir::BinaryOp::LessThan |
-        nir::BinaryOp::LessThanEquals => {
-            // HACK: Assume that return type is bool
-            ctx.ty_var_is_ty(return_ty_var, Ty::Bool, None);
-        },
-    }
-
-    tyir::BinaryOpExpr {lhs, op, op_token, rhs}
+    infer_method_call(ctx, &method_call, return_ty_var)
 }
 
 fn infer_method_call(ctx: &mut Context, expr: &nir::MethodCallExpr, return_ty_var: TyVar) -> tyir::Expr {

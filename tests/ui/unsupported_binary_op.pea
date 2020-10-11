@@ -1,3 +1,4 @@
 fn main() {
     println!(b"3245" - 3);
+    println!(3 - b"3245");
 }

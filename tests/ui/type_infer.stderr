@@ -20,7 +20,9 @@
 
 [tests/ui/type_infer.pea:76:9-76:10] error: mismatched types: expected `i64`, found: `()`
 
-[tests/ui/type_infer.pea:80:23-80:24] error: mismatched types: expected `i64`, found: `[u8]`
+[tests/ui/type_infer.pea:80:28-80:30] error: mismatched types: expected `[u8]`, found: `i64`
+
+[tests/ui/type_infer.pea:81:17] error: no method named `rem` found for type `[u8]` in the current scope
 
 [tests/ui/type_infer.pea:84:5-84:13] error: mismatched types: expected `fn (_) -> _`, found: `[u8]`
 
@@ -30,5 +32,5 @@
 
 [tests/ui/type_infer.pea:113:5] error: mismatched types: expected `()`, found: `i64`
 
-error: aborting due to 16 previous errors
+error: aborting due to 17 previous errors
 

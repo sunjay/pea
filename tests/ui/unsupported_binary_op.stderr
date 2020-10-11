@@ -1,4 +1,6 @@
-[tests/ui/unsupported_binary_op.pea:2:14-2:20] error: mismatched types: expected `[u8]`, found: `i64`
+[tests/ui/unsupported_binary_op.pea:2:22] error: no method named `sub` found for type `[u8]` in the current scope
 
-error: aborting due to 1 previous error
+[tests/ui/unsupported_binary_op.pea:3:18-3:24] error: mismatched types: expected `[u8]`, found: `i64`
+
+error: aborting due to 2 previous errors
 

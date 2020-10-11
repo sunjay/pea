@@ -17,7 +17,7 @@ pub fn check_types(
     let mut ctx = infer::Context::new(prelude, prim_methods, diag);
 
     let program = infer::infer_program(&mut ctx, program);
-    let mut subst = ctx.constraints.solve(diag);
+    let mut subst = ctx.into_constraints().solve(diag);
 
     subst.apply(program)
 }
