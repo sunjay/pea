@@ -2,12 +2,19 @@
 
 use std::collections::HashMap;
 
-use crate::{package::Package, diagnostics::Diagnostics, nir::{self, DefId}, source_files::Span};
+use crate::{
+    diagnostics::Diagnostics,
+    nir::{self, DefId},
+    package::Package,
+    prelude::PrimMethods,
+    source_files::Span,
+};
 
-use super::{constraints::{ConstraintSet, TyVar, UnifyErrorSpan}, ty::{FuncTy, Ty}, tyir};
+use super::{constraints::{ConstraintSet, TyVar, UnifyErrorSpan}, ty::{FuncTy, Ty, TySpan}, tyir};
 
 pub struct Context<'a> {
     pub prelude: &'a Package,
+    pub prim_methods: &'a PrimMethods,
     pub diag: &'a Diagnostics,
     pub constraints: ConstraintSet,
     pub def_vars: HashMap<DefId, TyVar>,
@@ -16,9 +23,10 @@ pub struct Context<'a> {
 }
 
 impl<'a> Context<'a> {
-    pub fn new(prelude: &'a Package, diag: &'a Diagnostics) -> Self {
+    pub fn new(prelude: &'a Package, prim_methods: &'a PrimMethods, diag: &'a Diagnostics) -> Self {
         Self {
             prelude,
+            prim_methods,
             diag,
             constraints: Default::default(),
             def_vars: Default::default(),
@@ -26,8 +34,46 @@ impl<'a> Context<'a> {
         }
     }
 
+    /// Returns the type variable associated with the given `DefId` (if any)
     pub fn def_type_var(&self, def_id: DefId) -> Option<TyVar> {
         self.def_vars.get(&def_id).copied()
+    }
+
+    /// Attempts to find a method with the given name for the given type
+    pub fn lookup_method(&self, ty: TySpan, name: &str, span: Span) -> Option<DefId> {
+        let PrimMethods {
+            unit: unit_methods,
+            bool: bool_methods,
+            i64: i64_methods,
+            u8: u8_methods,
+            list: list_methods,
+        } = &self.prim_methods;
+
+        use Ty::*;
+        let def_id = match &ty.ty {
+            Unit => unit_methods.get(name),
+            Bool => bool_methods.get(name),
+            I64 => i64_methods.get(name),
+            U8 => u8_methods.get(name),
+            List(_) => list_methods.get(name),
+
+            //TODO: Functions could support methods once we have polymorphism
+            Func(_) => None,
+
+            //TODO: Not sure which case this can happen in, so leaving it until later
+            TyVar(_) => unreachable!(),
+        };
+
+        def_id.or_else(|| {
+            self.diag.span_error(span, format!("no method named `{}` found for type `{}` in the current scope", name, ty.ty)).emit();
+
+            None
+        })
+    }
+
+    /// Returns the type that has been inferred so far for the given variable
+    pub fn current_type(&mut self, ty_var: TyVar) -> Option<TySpan> {
+        self.constraints.current_type(ty_var)
     }
 
     pub fn fresh_type_var(&mut self) -> TyVar {
@@ -424,7 +470,7 @@ fn infer_expr(ctx: &mut Context, expr: &nir::Expr, return_ty_var: TyVar) -> tyir
         Cond(cond) => tyir::Expr::Cond(Box::new(infer_cond(ctx, cond, return_ty_var))),
         UnaryOp(expr) => tyir::Expr::UnaryOp(Box::new(infer_unary_op(ctx, expr, return_ty_var))),
         BinaryOp(expr) => tyir::Expr::BinaryOp(Box::new(infer_binary_op(ctx, expr, return_ty_var))),
-        MethodCall(expr) => todo!(),
+        MethodCall(expr) => infer_method_call(ctx, expr, return_ty_var),
         Assign(expr) => tyir::Expr::Assign(Box::new(infer_assign(ctx, expr, return_ty_var))),
         Group(expr) => tyir::Expr::Group(Box::new(infer_group(ctx, expr, return_ty_var))),
         Call(call) => tyir::Expr::Call(Box::new(infer_call(ctx, call, return_ty_var))),
@@ -588,6 +634,72 @@ fn infer_binary_op(ctx: &mut Context, expr: &nir::BinaryOpExpr, return_ty_var: T
     }
 
     tyir::BinaryOpExpr {lhs, op, op_token, rhs}
+}
+
+fn infer_method_call(ctx: &mut Context, expr: &nir::MethodCallExpr, return_ty_var: TyVar) -> tyir::Expr {
+    let nir::MethodCallExpr {
+        lhs,
+        dot_token: _,
+        name,
+        paren_open_token,
+        args: method_args,
+        paren_close_token,
+    } = expr;
+    let paren_open_token = paren_open_token.clone();
+    let paren_close_token = paren_close_token.clone();
+
+    // The "receiver" is the `self` argument of the method (i.e. the first argument)
+    let receiver_ty_var = ctx.fresh_type_var();
+    let receiver_arg = infer_expr(ctx, lhs, receiver_ty_var);
+
+    // Uses the the receiver type to determine which method to call and returns a plain function
+    // call that calls that method
+    let method_def_id = match ctx.current_type(receiver_ty_var) {
+        Some(ty) => match ctx.lookup_method(ty, &name.value, name.span) {
+            Some(def_id) => def_id,
+
+            None => {
+                // Error recovery: return the receiver argument as-is so we can keep going
+                return receiver_arg;
+            },
+        },
+
+        None => {
+            ctx.diag.span_error(lhs.span(), "the type of this value must be known in this context").emit();
+            // Error recovery: return the receiver argument as-is so we can keep going
+            return receiver_arg;
+        },
+    };
+
+    // The receiver is the first argument of the generated function call
+    let mut param_tys = vec![Ty::TyVar(receiver_ty_var)];
+    let mut args = vec![receiver_arg];
+    args.reserve(method_args.len());
+
+    for arg in method_args {
+        let arg_ty_var = ctx.fresh_type_var();
+        param_tys.push(Ty::TyVar(arg_ty_var));
+
+        args.push(infer_expr(ctx, arg, arg_ty_var));
+    }
+
+    let method_ty_var = ctx.fresh_type_var();
+    // method must be a function type that takes the receiver + the additional args and returns the
+    // same type as `return_ty_var`
+    ctx.ty_var_is_ty(method_ty_var, Ty::Func(Box::new(FuncTy {
+        param_tys,
+        return_ty: Ty::TyVar(return_ty_var),
+    })), lhs.span());
+
+    let method_def = nir::DefSpan {id: method_def_id, span: name.span};
+    let method = tyir::Expr::Def(infer_def(ctx, &method_def, method_ty_var));
+
+    tyir::Expr::Call(Box::new(tyir::CallExpr {
+        lhs: method,
+        paren_open_token,
+        args,
+        paren_close_token,
+    }))
 }
 
 fn infer_assign(ctx: &mut Context, expr: &nir::AssignExpr, return_ty_var: TyVar) -> tyir::AssignExpr {

@@ -87,6 +87,11 @@ pub struct ConstraintSet {
 }
 
 impl ConstraintSet {
+    /// Returns the type that has been inferred so far for the given variable
+    pub fn current_type(&mut self, ty_var: TyVar) -> Option<TySpan> {
+        self.ty_var_table.probe_value(ty_var)
+    }
+
     /// Generates a fresh type variable and returns it
     pub fn fresh_type_var(&mut self) -> TyVar {
         self.ty_var_table.new_key(None)

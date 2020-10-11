@@ -105,7 +105,7 @@ pub fn compile(
     let program = resolve::NameResolver::resolve(pkg_id, &root_module, &prelude.root_module, diag);
     check_errors!(diag);
 
-    let program = tycheck::check_types(&program, &prelude, diag);
+    let program = tycheck::check_types(&program, &prelude, &prim_methods, diag);
     check_errors!(diag);
 
     let def_consts = codegen::Compiler::compile(&program, &mut consts, &prelude, diag);

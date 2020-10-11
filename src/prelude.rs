@@ -163,6 +163,7 @@ fn insert_method<A>(
     let name = name.into();
 
     let func = f.into_native_func(&name);
+    assert!(func.arity > 0, "bug: all methods must at least have a receiver `self` argument");
     let ty = Ty::Func(Box::new(func.ty.clone()));
     let const_id = consts.push(func.into());
     let def_id = package.insert(name.clone(), ty, const_id);

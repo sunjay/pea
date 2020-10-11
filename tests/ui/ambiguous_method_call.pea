@@ -1,0 +1,9 @@
+fn main() {
+    let value = if true {
+        return;
+    } else {
+        return;
+    };
+
+    ((((value)))).foo();
+}

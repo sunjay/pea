@@ -1,0 +1,4 @@
+fn main() {
+    let x = b"abc";
+    x.foo();
+}
