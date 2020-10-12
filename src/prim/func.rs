@@ -119,22 +119,6 @@ impl Func {
 
                 Println => cwriteln!(out, "println()"),
                 Print => cwrite!(out, "print()"),
-
-                Neg => cwriteln!(out, "neg()"),
-                Pos => cwriteln!(out, "pos()"),
-                Not => cwriteln!(out, "not()"),
-                Add => cwriteln!(out, "add()"),
-                Sub => cwriteln!(out, "sub()"),
-                Mul => cwriteln!(out, "mul()"),
-                Div => cwriteln!(out, "div()"),
-                Rem => cwriteln!(out, "rem()"),
-
-                EqualsEquals => cwriteln!(out, "equals_equals()"),
-                NotEquals => cwriteln!(out, "not_equals"),
-                GreaterThan => cwriteln!(out, "greater_than()"),
-                GreaterThanEquals => cwriteln!(out, "greater_than_equals()"),
-                LessThan => cwriteln!(out, "less_than()"),
-                LessThanEquals => cwriteln!(out, "less_than_equals()"),
             }
         }
         cwriteln!(out);

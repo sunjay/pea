@@ -338,8 +338,6 @@ impl ApplySubst for tyir::Expr {
             Or(expr) => cgenir::Expr::Or(Box::new(expr.apply_subst(subst))),
             And(expr) => cgenir::Expr::And(Box::new(expr.apply_subst(subst))),
             Cond(cond) => cgenir::Expr::Cond(Box::new(cond.apply_subst(subst))),
-            UnaryOp(expr) => cgenir::Expr::UnaryOp(Box::new(expr.apply_subst(subst))),
-            BinaryOp(expr) => cgenir::Expr::BinaryOp(Box::new(expr.apply_subst(subst))),
             Assign(expr) => cgenir::Expr::Assign(Box::new(expr.apply_subst(subst))),
             Group(expr) => cgenir::Expr::Group(Box::new(expr.apply_subst(subst))),
             Call(call) => cgenir::Expr::Call(Box::new(call.apply_subst(subst))),
@@ -433,31 +431,6 @@ impl ApplySubst for tyir::ElseClause {
         let body = body.apply_subst(subst);
 
         cgenir::ElseClause {else_token, body}
-    }
-}
-
-impl ApplySubst for tyir::UnaryOpExpr {
-    type Output = cgenir::UnaryOpExpr;
-
-    fn apply_subst(self, subst: &mut Subst) -> Self::Output {
-        let tyir::UnaryOpExpr {op, op_token, expr} = self;
-
-        let expr = expr.apply_subst(subst);
-
-        cgenir::UnaryOpExpr {op, op_token, expr}
-    }
-}
-
-impl ApplySubst for tyir::BinaryOpExpr {
-    type Output = cgenir::BinaryOpExpr;
-
-    fn apply_subst(self, subst: &mut Subst) -> Self::Output {
-        let tyir::BinaryOpExpr {lhs, op, op_token, rhs} = self;
-
-        let lhs = lhs.apply_subst(subst);
-        let rhs = rhs.apply_subst(subst);
-
-        cgenir::BinaryOpExpr {lhs, op, op_token, rhs}
     }
 }
 

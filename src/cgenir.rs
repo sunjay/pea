@@ -120,8 +120,6 @@ pub enum Expr {
     Or(Box<OrExpr>),
     And(Box<AndExpr>),
     Cond(Box<Cond>),
-    UnaryOp(Box<UnaryOpExpr>),
-    BinaryOp(Box<BinaryOpExpr>),
     Assign(Box<AssignExpr>),
     Group(Box<GroupExpr>),
     Call(Box<CallExpr>),
@@ -178,21 +176,6 @@ pub struct ElseClause {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct UnaryOpExpr {
-    pub op: UnaryOp,
-    pub op_token: Token,
-    pub expr: Expr,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct BinaryOpExpr {
-    pub lhs: Expr,
-    pub op: BinaryOp,
-    pub op_token: Token,
-    pub rhs: Expr,
-}
-
-#[derive(Debug, Clone, PartialEq)]
 pub enum LValueExpr {
     Def(DefSpan),
 }
@@ -243,8 +226,6 @@ pub struct ListRepeatLiteral {
     pub bracket_close_token: Token,
 }
 
-pub type UnaryOp = nir::UnaryOp;
-pub type BinaryOp = nir::BinaryOp;
 pub type BreakExpr = nir::BreakExpr;
 pub type ContinueExpr = nir::ContinueExpr;
 pub type IntegerLiteral = nir::IntegerLiteral;

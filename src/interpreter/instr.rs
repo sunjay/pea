@@ -1,6 +1,6 @@
 use std::iter;
 
-use crate::{ast, bytecode::ConstId, value::{Value, DeepClone}, gc::Gc};
+use crate::{bytecode::ConstId, value::{Value, DeepClone}, gc::Gc};
 
 use super::{CallFrame, Interpreter, RuntimeError, RuntimeResult, Status};
 
@@ -246,131 +246,6 @@ pub fn println(ctx: &mut Interpreter) -> RuntimeResult {
 #[inline]
 pub fn print(ctx: &mut Interpreter) -> RuntimeResult {
     print!("{}", ctx.pop());
-
-    Ok(Status::Running)
-}
-
-#[inline]
-pub fn neg(ctx: &mut Interpreter) -> RuntimeResult {
-    unary_op(ctx, Value::neg, ast::UnaryOp::Neg)
-}
-
-#[inline]
-pub fn pos(ctx: &mut Interpreter) -> RuntimeResult {
-    unary_op(ctx, Value::pos, ast::UnaryOp::Pos)
-}
-
-#[inline]
-pub fn not(ctx: &mut Interpreter) -> RuntimeResult {
-    unary_op(ctx, Value::not, ast::UnaryOp::Not)
-}
-
-#[inline(always)]
-fn unary_op(
-    ctx: &mut Interpreter,
-    f: impl FnOnce(Value) -> Option<Value>,
-    op: ast::UnaryOp,
-) -> RuntimeResult {
-    let value = ctx.pop();
-    let typ = value.typ();
-
-    let result = f(value).ok_or_else(|| RuntimeError::UnsupportedUnaryOp {op, typ})?;
-    ctx.value_stack.push(result);
-
-    Ok(Status::Running)
-}
-
-#[inline]
-pub fn add(ctx: &mut Interpreter) -> RuntimeResult {
-    binary_op(ctx, Value::add, ast::BinaryOp::Add)
-}
-
-#[inline]
-pub fn sub(ctx: &mut Interpreter) -> RuntimeResult {
-    binary_op(ctx, Value::sub, ast::BinaryOp::Sub)
-}
-
-#[inline]
-pub fn mul(ctx: &mut Interpreter) -> RuntimeResult {
-    binary_op(ctx, Value::mul, ast::BinaryOp::Mul)
-}
-
-#[inline]
-pub fn div(ctx: &mut Interpreter) -> RuntimeResult {
-    try_binary_op(ctx, Value::div, ast::BinaryOp::Div)
-}
-
-#[inline]
-pub fn rem(ctx: &mut Interpreter) -> RuntimeResult {
-    try_binary_op(ctx, Value::rem, ast::BinaryOp::Rem)
-}
-
-#[inline]
-pub fn equals_equals(ctx: &mut Interpreter) -> RuntimeResult {
-    binary_op(ctx, Value::equals_equals, ast::BinaryOp::EqualsEquals)
-}
-
-#[inline]
-pub fn not_equals(ctx: &mut Interpreter) -> RuntimeResult {
-    binary_op(ctx, Value::not_equals, ast::BinaryOp::NotEquals)
-}
-
-#[inline]
-pub fn greater_than(ctx: &mut Interpreter) -> RuntimeResult {
-    binary_op(ctx, Value::greater_than, ast::BinaryOp::GreaterThan)
-}
-
-#[inline]
-pub fn greater_than_equals(ctx: &mut Interpreter) -> RuntimeResult {
-    binary_op(ctx, Value::greater_than_equals, ast::BinaryOp::GreaterThanEquals)
-}
-
-#[inline]
-pub fn less_than(ctx: &mut Interpreter) -> RuntimeResult {
-    binary_op(ctx, Value::less_than, ast::BinaryOp::LessThan)
-}
-
-#[inline]
-pub fn less_than_equals(ctx: &mut Interpreter) -> RuntimeResult {
-    binary_op(ctx, Value::less_than_equals, ast::BinaryOp::LessThanEquals)
-}
-
-#[inline(always)]
-fn binary_op(
-    ctx: &mut Interpreter,
-    f: impl FnOnce(Value, Value) -> Option<Value>,
-    op: ast::BinaryOp,
-) -> RuntimeResult {
-    // Note that the values are on the stack in **reverse** order (rhs, then lhs)
-    let rhs = ctx.pop();
-    let lhs = ctx.pop();
-
-    let lhs_type = lhs.typ();
-    let rhs_type = rhs.typ();
-
-    let result = f(lhs, rhs)
-        .ok_or_else(|| RuntimeError::UnsupportedBinaryOp {op, lhs_type, rhs_type})?;
-    ctx.value_stack.push(result);
-
-    Ok(Status::Running)
-}
-
-#[inline(always)]
-fn try_binary_op(
-    ctx: &mut Interpreter,
-    f: impl FnOnce(Value, Value) -> Option<Result<Value, RuntimeError>>,
-    op: ast::BinaryOp,
-) -> RuntimeResult {
-    // Note that the values are on the stack in **reverse** order (rhs, then lhs)
-    let rhs = ctx.pop();
-    let lhs = ctx.pop();
-
-    let lhs_type = lhs.typ();
-    let rhs_type = rhs.typ();
-
-    let result = f(lhs, rhs)
-        .ok_or_else(|| RuntimeError::UnsupportedBinaryOp {op, lhs_type, rhs_type})??;
-    ctx.value_stack.push(result);
 
     Ok(Status::Running)
 }

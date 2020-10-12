@@ -297,8 +297,6 @@ impl<'a> FunctionCompiler<'a> {
             Or(expr) => self.walk_or(expr),
             And(expr) => self.walk_and(expr),
             Cond(cond) => self.walk_cond(cond),
-            UnaryOp(expr) => self.walk_unary_op(expr),
-            BinaryOp(expr) => self.walk_binary_op(expr),
             Assign(expr) => self.walk_assign(expr),
             Group(expr) => self.walk_group(expr),
             Call(call) => self.walk_call(call),
@@ -449,40 +447,6 @@ impl<'a> FunctionCompiler<'a> {
         for end_patch in end_patches {
             self.code.finish_jump_patch(end_patch);
         }
-    }
-
-    fn walk_unary_op(&mut self, expr: &cgenir::UnaryOpExpr) {
-        let cgenir::UnaryOpExpr {op, op_token, expr} = expr;
-
-        self.walk_expr(expr);
-
-        self.code.write_instr(match op {
-            cgenir::UnaryOp::Pos => OpCode::Pos,
-            cgenir::UnaryOp::Neg => OpCode::Neg,
-            cgenir::UnaryOp::Not => OpCode::Not,
-        }, op_token.span);
-    }
-
-    fn walk_binary_op(&mut self, expr: &cgenir::BinaryOpExpr) {
-        let cgenir::BinaryOpExpr {lhs, op, op_token, rhs} = expr;
-
-        self.walk_expr(lhs);
-        self.walk_expr(rhs);
-
-        self.code.write_instr(match op {
-            cgenir::BinaryOp::Add => OpCode::Add,
-            cgenir::BinaryOp::Sub => OpCode::Sub,
-            cgenir::BinaryOp::Mul => OpCode::Mul,
-            cgenir::BinaryOp::Div => OpCode::Div,
-            cgenir::BinaryOp::Rem => OpCode::Rem,
-
-            cgenir::BinaryOp::EqualsEquals => OpCode::EqualsEquals,
-            cgenir::BinaryOp::NotEquals => OpCode::NotEquals,
-            cgenir::BinaryOp::GreaterThan => OpCode::GreaterThan,
-            cgenir::BinaryOp::GreaterThanEquals => OpCode::GreaterThanEquals,
-            cgenir::BinaryOp::LessThan => OpCode::LessThan,
-            cgenir::BinaryOp::LessThanEquals => OpCode::LessThanEquals,
-        }, op_token.span);
     }
 
     fn walk_assign(&mut self, expr: &cgenir::AssignExpr) {
