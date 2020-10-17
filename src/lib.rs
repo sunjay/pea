@@ -2,6 +2,7 @@
 
 mod debug_log;
 
+pub mod fmt_ctx;
 pub mod diagnostics;
 pub mod source_files;
 pub mod ast;
