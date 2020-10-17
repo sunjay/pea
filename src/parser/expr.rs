@@ -374,7 +374,15 @@ impl<'a> Parser<'a> {
     /// through any operator precedence mechanisms
     fn atom(&mut self) -> ParseResult<ast::Expr> {
         match self.input.peek().kind {
-            TokenKind::Ident => self.ident().map(ast::Expr::Ident),
+            TokenKind::Ident => {
+                let name = self.ident()?;
+                if self.input.peek().kind == TokenKind::BraceOpen {
+                    self.struct_literal(name).map(ast::Expr::StructLiteral)
+
+                } else {
+                    Ok(ast::Expr::Ident(name))
+                }
+            },
 
             TokenKind::Literal(Literal::Integer) => self.integer_literal().map(ast::Expr::Integer),
 
@@ -387,6 +395,44 @@ impl<'a> Parser<'a> {
 
             _ => self.bstr_literal().map(ast::Expr::BStr),
         }
+    }
+
+    fn struct_literal(&mut self, name: ast::Ident) -> ParseResult<ast::StructLiteral> {
+        let brace_open_token = self.input.match_kind(TokenKind::BraceOpen)?.clone();
+
+        let mut fields = Vec::new();
+
+        while self.input.peek().kind != TokenKind::BraceClose {
+            let field = self.struct_literal_field()?;
+            fields.push(field);
+
+            if self.input.peek().kind != TokenKind::Comma {
+                break;
+            }
+
+            self.input.match_kind(TokenKind::Comma)?;
+        }
+
+        let brace_close_token = self.input.match_kind(TokenKind::BraceClose)?.clone();
+
+        Ok(ast::StructLiteral {name, brace_open_token, fields, brace_close_token})
+    }
+
+    fn struct_literal_field(&mut self) -> ParseResult<ast::StructLiteralField> {
+        let name = self.ident()?;
+
+        let value = match self.input.peek().kind {
+            TokenKind::Colon => {
+                let colon_token = self.input.match_kind(TokenKind::Colon)?.clone();
+                let expr = self.expr()?;
+
+                Some(ast::StructLiteralFieldValue {colon_token, expr})
+            },
+
+            _ => None,
+        };
+
+        Ok(ast::StructLiteralField {name, value})
     }
 
     fn integer_literal(&mut self) -> ParseResult<ast::IntegerLiteral> {

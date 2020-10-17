@@ -1,6 +1,10 @@
 module ::= decl*
 
-decl ::= func_decl
+decl ::= struct_decl | func_decl
+
+struct_decl ::= 'struct' ident '{' struct_fields '}'
+struct_fields ::= (struct_field ',')* struct_field?
+struct_field ::= ident ':' ty
 
 func_decl ::= 'fn' ident '(' func_params ')' return_ty? block
 func_params ::= (func_param ',')* func_param?
@@ -17,8 +21,9 @@ expr_stmt ::= expr ';'
 while_loop ::= 'while' expr block
 loop_loop ::= 'loop' block
 
-expr ::= expr bin_op expr | unary_op expr | assign | group | call | return | cond | 'break' | 'continue'
-         integer_literal | bool_literal | list_literal | bstr_literal | byte_literal | unit_literal | ident
+expr ::= expr bin_op expr | unary_op expr | assign | group | call | return | cond |
+         'break' | 'continue' | integer_literal | bool_literal | list_literal | bstr_literal |
+         byte_literal | unit_literal | ident | struct_literal
 
 cond ::= 'if' expr block ('else' 'if' expr block)* ('else' block)?
 
@@ -37,6 +42,9 @@ list_literal ::= '[' (list_items | list_repeat) ']'
 list_items ::= (expr ',')* expr?
 list_repeat ::= expr ';' expr
 unit_literal ::= '(' ')'
+struct_literal ::= ident '{' struct_literal_fields '}'
+struct_literal_fields ::= (struct_literal_field ',')* struct_literal_field?
+struct_literal_field ::= ident (':' expr)?
 
 ty ::= unit_ty | list_ty | func_ty | ident
 unit_ty ::= '(' ')'

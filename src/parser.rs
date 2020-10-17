@@ -142,7 +142,55 @@ impl<'a> Parser<'a> {
     }
 
     fn decl(&mut self) -> ParseResult<ast::Decl> {
-        self.func_decl().map(ast::Decl::Func)
+        match self.input.peek().kind {
+            TokenKind::Keyword(Keyword::Struct) => {
+                self.struct_decl().map(ast::Decl::Struct)
+            },
+
+            TokenKind::Keyword(Keyword::Fn) => {
+                self.func_decl().map(ast::Decl::Func)
+            },
+
+            _ => Err(ParseError::UnexpectedToken {
+                expected: vec![
+                    TokenKind::Keyword(Keyword::Struct),
+                    TokenKind::Keyword(Keyword::Fn),
+                ],
+                actual: self.input.advance().clone(),
+            })
+        }
+    }
+
+    fn struct_decl(&mut self) -> ParseResult<ast::StructDecl> {
+        let struct_token = self.input.match_kind(TokenKind::Keyword(Keyword::Struct))?.clone();
+        let name = self.ident()?;
+
+        let brace_open_token = self.input.match_kind(TokenKind::BraceOpen)?.clone();
+
+        let mut fields = Vec::new();
+
+        while self.input.peek().kind != TokenKind::BraceClose {
+            let field = self.struct_decl_field()?;
+            fields.push(field);
+
+            if self.input.peek().kind != TokenKind::Comma {
+                break;
+            }
+
+            self.input.match_kind(TokenKind::Comma)?;
+        }
+
+        let brace_close_token = self.input.match_kind(TokenKind::BraceClose)?.clone();
+
+        Ok(ast::StructDecl {struct_token, name, brace_open_token, fields, brace_close_token})
+    }
+
+    fn struct_decl_field(&mut self) -> ParseResult<ast::StructDeclField> {
+        let name = self.ident()?;
+        let colon_token = self.input.match_kind(TokenKind::Colon)?.clone();
+        let ty = self.ty()?;
+
+        Ok(ast::StructDeclField {name, colon_token, ty})
     }
 
     fn func_decl(&mut self) -> ParseResult<ast::FuncDecl> {

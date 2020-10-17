@@ -55,6 +55,8 @@ impl<'a> NameResolver<'a> {
         for decl in decls {
             use ast::Decl::*;
             match decl {
+                Struct(struct_decl) => todo!(),
+
                 Func(func) => {
                     self.declare_func(&func.name);
                 },
@@ -67,6 +69,8 @@ impl<'a> NameResolver<'a> {
     fn resolve_decl(&mut self, decl: &ast::Decl) -> nir::Decl {
         use ast::Decl::*;
         match decl {
+            Struct(struct_decl) => todo!(),
+
             Func(func) => nir::Decl::Func(self.resolve_func_decl(func)),
         }
     }
@@ -278,6 +282,7 @@ impl<'a> NameResolver<'a> {
             Break(value) => nir::Expr::Break(value.clone()),
             Continue(value) => nir::Expr::Continue(value.clone()),
             Ident(name) => nir::Expr::Def(self.lookup(name)),
+            StructLiteral(lit) => todo!(),
             Integer(value) => nir::Expr::Integer(value.clone()),
             Bool(value) => nir::Expr::Bool(value.clone()),
             List(list) => nir::Expr::List(self.resolve_list(list)),

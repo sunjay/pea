@@ -268,6 +268,7 @@ macro_rules! keywords {
 }
 
 keywords! {
+    Struct : "struct"
     Fn : "fn"
     Let : "let"
     Return : "return"

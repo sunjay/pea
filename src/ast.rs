@@ -11,7 +11,36 @@ pub struct Module {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Decl {
+    Struct(StructDecl),
     Func(FuncDecl),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct StructDecl {
+    pub struct_token: Token,
+    pub name: Ident,
+    pub brace_open_token: Token,
+    pub fields: Vec<StructDeclField>,
+    pub brace_close_token: Token,
+}
+
+impl StructDecl {
+    pub fn span(&self) -> Span {
+        self.name.span.to(self.brace_close_token.span)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct StructDeclField {
+    pub name: Ident,
+    pub colon_token: Token,
+    pub ty: Ty,
+}
+
+impl StructDeclField {
+    pub fn span(&self) -> Span {
+        self.name.span.to(self.ty.span())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -135,6 +164,7 @@ pub enum Expr {
     Break(BreakExpr),
     Continue(ContinueExpr),
     Ident(Ident),
+    StructLiteral(StructLiteral),
     Integer(IntegerLiteral),
     Bool(BoolLiteral),
     List(ListLiteral),
@@ -161,6 +191,7 @@ impl Expr {
             Break(expr) => expr.span(),
             Continue(expr) => expr.span(),
             Ident(expr) => expr.span,
+            StructLiteral(expr) => expr.span(),
             Integer(expr) => expr.span,
             Bool(expr) => expr.span,
             List(expr) => expr.span(),
@@ -457,6 +488,41 @@ pub struct BStrLiteral {
 pub struct ByteLiteral {
     pub value: u8,
     pub span: Span,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct StructLiteral {
+    pub name: Ident,
+    pub brace_open_token: Token,
+    pub fields: Vec<StructLiteralField>,
+    pub brace_close_token: Token,
+}
+
+impl StructLiteral {
+    pub fn span(&self) -> Span {
+        self.name.span.to(self.brace_close_token.span)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct StructLiteralField {
+    pub name: Ident,
+    pub value: Option<StructLiteralFieldValue>,
+}
+
+impl StructLiteralField {
+    pub fn span(&self) -> Span {
+        match &self.value {
+            Some(value) => self.name.span.to(value.expr.span()),
+            None => self.name.span,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct StructLiteralFieldValue {
+    pub colon_token: Token,
+    pub expr: Expr,
 }
 
 #[derive(Debug, Clone, PartialEq)]
