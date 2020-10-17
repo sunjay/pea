@@ -1,0 +1,4 @@
+[tests/ui/missing_field.pea:6:15-6:17] error: missing field `name` in initializer of `Cow`
+
+error: aborting due to 1 previous error
+

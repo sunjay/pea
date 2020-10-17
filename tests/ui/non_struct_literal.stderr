@@ -1,0 +1,8 @@
+[tests/ui/non_struct_literal.pea:2:19] error: cannot use initializer here since `foo` is not a struct or enum variant
+
+[tests/ui/non_struct_literal.pea:2:13-2:15] error: `foo` is not a struct or enum variant
+
+[tests/ui/non_struct_literal.pea:4:13-4:15] error: `foo` is not a struct or enum variant
+
+error: aborting due to 3 previous errors
+

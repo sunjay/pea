@@ -197,6 +197,7 @@ pub enum Expr {
     Break(BreakExpr),
     Continue(ContinueExpr),
     Def(DefSpan),
+    StructLiteral(StructLiteral),
     Integer(IntegerLiteral),
     Bool(BoolLiteral),
     List(ListLiteral),
@@ -223,6 +224,7 @@ impl Expr {
             Break(expr) => expr.span(),
             Continue(expr) => expr.span(),
             Def(expr) => expr.span,
+            StructLiteral(expr) => expr.span(),
             Integer(expr) => expr.span,
             Bool(expr) => expr.span,
             List(expr) => expr.span(),
@@ -527,6 +529,41 @@ impl ReturnTy {
 pub struct DefSpan {
     pub id: DefId,
     pub span: Span,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct StructLiteral {
+    pub name: DefSpan,
+    pub brace_open_token: Token,
+    pub fields: Vec<StructLiteralField>,
+    pub brace_close_token: Token,
+}
+
+impl StructLiteral {
+    pub fn span(&self) -> Span {
+        self.name.span.to(self.brace_close_token.span)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct StructLiteralField {
+    pub name: DefSpan,
+    pub value: Option<StructLiteralFieldValue>,
+}
+
+impl StructLiteralField {
+    pub fn span(&self) -> Span {
+        match &self.value {
+            Some(value) => self.name.span.to(value.expr.span()),
+            None => self.name.span,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct StructLiteralFieldValue {
+    pub colon_token: Token,
+    pub expr: Expr,
 }
 
 pub type UnaryOp = ast::UnaryOp;

@@ -1,6 +1,6 @@
 mod scope_stack;
 
-use std::sync::Arc;
+use std::{sync::Arc, collections::{HashMap, HashSet}};
 
 use crate::{ast, diagnostics::Diagnostics, nir, package, package::PkgId};
 
@@ -13,6 +13,8 @@ pub struct NameResolver<'a> {
     def_table: nir::DefTable,
     /// The stack of scopes, declarations are added to the top of the stack (last element)
     scope_stack: ScopeStack,
+    /// Map of type def id to scope containing field declarations
+    type_fields: HashMap<nir::DefId, nir::Scope>,
 }
 
 impl<'a> NameResolver<'a> {
@@ -27,11 +29,18 @@ impl<'a> NameResolver<'a> {
             diag,
             def_table: nir::DefTable::new(pkg_id),
             scope_stack: ScopeStack::default(),
+            type_fields: HashMap::default(),
         };
 
         let root_module = resolver.resolve_module(prog);
 
-        let Self {prelude: _, diag: _, def_table, scope_stack} = resolver;
+        let Self {
+            prelude: _,
+            diag: _,
+            def_table,
+            scope_stack,
+            type_fields: _,
+        } = resolver;
         assert!(scope_stack.is_empty(), "bug: scope stack should be empty after root module");
 
         let def_table = Arc::new(def_table);
@@ -56,7 +65,21 @@ impl<'a> NameResolver<'a> {
             use ast::Decl::*;
             match decl {
                 Struct(struct_decl) => {
-                    self.declare_type(&struct_decl.name);
+                    let def = self.declare_type(&struct_decl.name);
+
+                    // Create a new scope for the fields
+                    let stack_token = self.scope_stack.push();
+
+                    // Declare just the field names now (the field types will be resolved later)
+                    for field in &struct_decl.fields {
+                        self.declare_struct_decl_field(&field.name);
+                    }
+
+                    let scope = self.scope_stack.pop(stack_token);
+
+                    debug_assert!(!self.type_fields.contains_key(&def.id),
+                        "bug: fields for same type inserted twice");
+                    self.type_fields.insert(def.id, scope);
                 },
 
                 Func(func) => {
@@ -96,14 +119,13 @@ impl<'a> NameResolver<'a> {
             .expect("bug: all decls should have already been defined in this scope");
         let name = nir::DefSpan {id, span: name.span};
 
-        // Create a new scope for the fields
-        let stack_token = self.scope_stack.push();
-
         let fields = fields.iter()
-            .map(|field| self.resolve_struct_decl_field(field))
+            .map(|field| self.resolve_struct_decl_field(field, id))
             .collect();
 
-        let scope = self.scope_stack.pop(stack_token);
+        let scope = self.type_fields.get(&id)
+            .expect("bug: all decls should have already inserted their fields")
+            .clone();
 
         nir::StructDecl {
             struct_token,
@@ -115,16 +137,18 @@ impl<'a> NameResolver<'a> {
         }
     }
 
-    fn resolve_struct_decl_field(&mut self, field: &ast::StructDeclField) -> nir::StructDeclField {
+    fn resolve_struct_decl_field(
+        &mut self,
+        field: &ast::StructDeclField,
+        type_def_id: nir::DefId,
+    ) -> nir::StructDeclField {
         let ast::StructDeclField {name, colon_token, ty} = field;
         let colon_token = colon_token.clone();
 
-        // Note that we are careful to resolve the type before declaring the field name
-        // because otherwise we would allow `struct A {x: x};` to slip through
-        //TODO: This would not be an issue if there was a separate type namespace since these fields
-        //  would belong to the variable namespace
+        //TODO: Since types and variables share the same namespace, this code currently allows
+        // something like `struct A {x: x}` to slip through.
+        let name = self.lookup_field(type_def_id, name);
         let ty = self.resolve_ty(ty);
-        let name = self.declare(name);
 
         nir::StructDeclField {name, colon_token, ty}
     }
@@ -337,14 +361,14 @@ impl<'a> NameResolver<'a> {
             Break(value) => nir::Expr::Break(value.clone()),
             Continue(value) => nir::Expr::Continue(value.clone()),
             Ident(name) => nir::Expr::Def(self.lookup(name)),
-            StructLiteral(lit) => todo!(),
-            Integer(value) => nir::Expr::Integer(value.clone()),
-            Bool(value) => nir::Expr::Bool(value.clone()),
+            StructLiteral(lit) => nir::Expr::StructLiteral(self.resolve_struct_literal(lit)),
+            Integer(lit) => nir::Expr::Integer(lit.clone()),
+            Bool(lit) => nir::Expr::Bool(lit.clone()),
             List(list) => nir::Expr::List(self.resolve_list(list)),
             ListRepeat(list) => nir::Expr::ListRepeat(Box::new(self.resolve_list_repeat(list))),
-            BStr(value) => nir::Expr::BStr(value.clone()),
-            Byte(value) => nir::Expr::Byte(value.clone()),
-            Unit(value) => nir::Expr::Unit(value.clone()),
+            BStr(lit) => nir::Expr::BStr(lit.clone()),
+            Byte(lit) => nir::Expr::Byte(lit.clone()),
+            Unit(lit) => nir::Expr::Unit(lit.clone()),
         }
     }
 
@@ -501,6 +525,73 @@ impl<'a> NameResolver<'a> {
         nir::ReturnExpr {return_token, expr}
     }
 
+    fn resolve_struct_literal(&mut self, lit: &ast::StructLiteral) -> nir::StructLiteral {
+        let ast::StructLiteral {
+            name,
+            brace_open_token,
+            fields,
+            brace_close_token,
+        } = lit;
+
+        let name = self.lookup(name);
+        let brace_open_token = brace_open_token.clone();
+
+        let mut seen = HashSet::new();
+        let fields = fields.iter()
+            .map(|field| self.resolve_struct_literal_field(field, name.id, &mut seen))
+            .collect();
+
+        // Check to make sure all field names were included in the literal
+        //TODO: Support structs declared in other packages
+        match self.type_fields.get(&name.id) {
+            Some(field_names) => {
+                for (field_name, field_def_id) in field_names.iter() {
+                    if !seen.contains(&field_def_id) {
+                        let type_name = self.def_table.get(name.id);
+                        self.diag.span_error(name.span, format!("missing field `{}` in initializer of `{}`", field_name, type_name.value)).emit();
+                    }
+                }
+            },
+
+            None => {
+                self.diag.span_error(name.span, format!("`{}` is not a struct or enum variant", lit.name.value)).emit();
+            },
+        }
+
+        let brace_close_token = brace_close_token.clone();
+
+        nir::StructLiteral {
+            name,
+            brace_open_token,
+            fields,
+            brace_close_token,
+        }
+    }
+
+    fn resolve_struct_literal_field(
+        &mut self,
+        field: &ast::StructLiteralField,
+        type_def_id: nir::DefId,
+        seen: &mut HashSet<nir::DefId>,
+    ) -> nir::StructLiteralField {
+        let ast::StructLiteralField {name, value} = field;
+
+        let name = self.lookup_field(type_def_id, name);
+        let value = value.as_ref().map(|value| {
+            let ast::StructLiteralFieldValue {colon_token, expr} = value;
+            let colon_token = colon_token.clone();
+            let expr = self.resolve_expr(expr);
+            nir::StructLiteralFieldValue {colon_token, expr}
+        });
+
+        if seen.contains(&name.id) {
+            self.diag.span_error(field.span(), format!("field `{}` specified more than once", field.name.value)).emit();
+        }
+        seen.insert(name.id);
+
+        nir::StructLiteralField {name, value}
+    }
+
     fn resolve_list(&mut self, list: &ast::ListLiteral) -> nir::ListLiteral {
         let ast::ListLiteral {bracket_open_token, items, bracket_close_token} = list;
 
@@ -607,6 +698,21 @@ impl<'a> NameResolver<'a> {
         self.declare(name)
     }
 
+    fn declare_struct_decl_field(&mut self, name: &ast::Ident) -> nir::DefSpan {
+        // Duplicate struct field names are not allowed
+        if let Some(orig) = self.scope_stack.top().lookup(&name.value) {
+            let orig = self.def_table.get(orig);
+            self.diag.span_error(name.span, format!("field `{}` is already declared", name.value))
+                .span_info(orig.span, format!("previous declaration of field `{}`", name.value))
+                .span_error(name.span, format!("`{}` redefined here", name.value))
+                .emit();
+
+            // Error Recovery: continue past this point and allow the name to be redefined
+        }
+
+        self.declare(name)
+    }
+
     fn declare_func(&mut self, name: &ast::Ident) -> nir::DefSpan {
         // Functions are not allowed to shadow other names in the same scope
         if let Some(orig) = self.scope_stack.top().lookup(&name.value) {
@@ -634,6 +740,37 @@ impl<'a> NameResolver<'a> {
             id,
             span: name.span,
         }
+    }
+
+    /// Lookup a field name belonging to the type with the given `DefId`
+    ///
+    /// Emits an error if the name cannot be resolved and returns a placeholder `DefId`
+    ///
+    /// The returned `DefSpan` preserves the `Span` of the given `Ident`
+    fn lookup_field(&mut self, type_def_id: nir::DefId, name: &ast::Ident) -> nir::DefSpan {
+        //TODO: Support structs declared in other packages
+        match self.type_fields.get(&type_def_id) {
+            Some(field_names) => {
+                if let Some(id) = field_names.lookup(&name.value) {
+                    return nir::DefSpan {
+                        id,
+                        span: name.span,
+                    };
+                }
+
+                // Name not found
+                let type_name = self.def_table.get(type_def_id);
+                self.diag.span_error(name.span, format!("`{}` has no field named `{}`", type_name.value, name.value)).emit();
+            },
+
+            None => {
+                let type_name = self.def_table.get(type_def_id);
+                self.diag.span_error(name.span, format!("cannot use initializer here since `{}` is not a struct or enum variant", type_name.value)).emit();
+            },
+        }
+
+        // Error recovery: Insert this name and pretend it exists so we can continue past this
+        self.declare(name)
     }
 
     /// Lookup a name in the current scope or surrounding scopes

@@ -1,0 +1,6 @@
+[tests/ui/struct_literal_unknown_field.pea:6:23-6:26] error: `Cool` has no field named `pies`
+
+[tests/ui/struct_literal_unknown_field.pea:6:17-6:20] error: missing field `pie` in initializer of `Cool`
+
+error: aborting due to 2 previous errors
+

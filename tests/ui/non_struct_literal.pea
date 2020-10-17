@@ -1,0 +1,5 @@
+fn foo() {
+    let x = foo { y: 3 };
+    // Error should still be produced even if there are no field names
+    let x = foo {};
+}

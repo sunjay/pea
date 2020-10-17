@@ -1,0 +1,17 @@
+struct OhNo {
+    ahhh: [u8],
+    ahhh2: i64,
+    ahhh: u8,
+    ahhh: [i64],
+}
+
+struct Person {
+    age: i64,
+}
+
+fn main() {
+    let person = Person {
+        age: 32,
+        age: 32,
+    };
+}

@@ -17,4 +17,8 @@ impl Scope {
     pub fn lookup(&self, target: &str) -> Option<DefId> {
         self.names.iter().rev().find(|(name, _)| &**name == target).map(|&(_, id)| id)
     }
+
+    pub fn iter(&self) -> impl Iterator<Item=&(Arc<str>, DefId)> {
+        self.names.iter()
+    }
 }

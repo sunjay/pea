@@ -1,0 +1,12 @@
+[tests/ui/struct_duplicate_fields.pea:4:5-4:8] error: field `ahhh` is already declared
+[tests/ui/struct_duplicate_fields.pea:2:5-2:8] info: previous declaration of field `ahhh`
+[tests/ui/struct_duplicate_fields.pea:4:5-4:8] error: `ahhh` redefined here
+
+[tests/ui/struct_duplicate_fields.pea:5:5-5:8] error: field `ahhh` is already declared
+[tests/ui/struct_duplicate_fields.pea:4:5-4:8] info: previous declaration of field `ahhh`
+[tests/ui/struct_duplicate_fields.pea:5:5-5:8] error: `ahhh` redefined here
+
+[tests/ui/struct_duplicate_fields.pea:15:9-15:15] error: field `age` specified more than once
+
+error: aborting due to 3 previous errors
+

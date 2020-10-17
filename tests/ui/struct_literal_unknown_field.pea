@@ -1,0 +1,7 @@
+struct Cool {
+    pie: [i64],
+}
+
+fn main() {
+    let value = Cool {pies: [1, 3]};
+}

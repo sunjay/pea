@@ -1,0 +1,7 @@
+struct Cow {
+    name: [u8],
+}
+
+fn main() {
+    let cow = Cow {};
+}
