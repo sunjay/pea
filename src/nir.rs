@@ -50,11 +50,23 @@ pub struct FuncDecl {
     pub scope: Scope,
 }
 
+impl FuncDecl {
+    pub fn span(&self) -> Span {
+        self.fn_token.span.to(self.body.span())
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct FuncParam {
     pub name: DefSpan,
     pub colon_token: Token,
     pub ty: Ty,
+}
+
+impl FuncParam {
+    pub fn span(&self) -> Span {
+        self.name.span.to(self.ty.span())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

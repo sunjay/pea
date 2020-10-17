@@ -55,6 +55,12 @@ pub struct FuncDecl {
     pub body: Block,
 }
 
+impl FuncDecl {
+    pub fn span(&self) -> Span {
+        self.fn_token.span.to(self.body.span())
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct FuncParam {
     pub name: Ident,
