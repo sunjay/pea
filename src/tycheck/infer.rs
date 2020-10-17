@@ -233,10 +233,55 @@ fn infer_decls(ctx: &mut Context, decls: &[nir::Decl]) -> Vec<tyir::Decl> {
 fn infer_decl(ctx: &mut Context, decl: &nir::Decl) -> tyir::Decl {
     use nir::Decl::*;
     match decl {
-        Struct(struct_decl) => todo!(),
+        Struct(struct_decl) => tyir::Decl::Struct(infer_struct_decl(ctx, struct_decl)),
 
         Func(func) => tyir::Decl::Func(infer_func_decl(ctx, func)),
     }
+}
+
+fn infer_struct_decl(ctx: &mut Context, struct_decl: &nir::StructDecl) -> tyir::StructDecl {
+    let nir::StructDecl {
+        struct_token,
+        name,
+        brace_open_token,
+        fields,
+        brace_close_token,
+        scope,
+    } = struct_decl;
+
+    let struct_token = struct_token.clone();
+
+    let name = name.clone();
+
+    let brace_open_token = brace_open_token.clone();
+
+    let fields = fields.iter()
+        .map(|field| infer_struct_decl_field(ctx, field))
+        .collect();
+
+    let brace_close_token = brace_close_token.clone();
+
+    let scope = scope.clone();
+
+    tyir::StructDecl {
+        struct_token,
+        name,
+        brace_open_token,
+        fields,
+        brace_close_token,
+        scope,
+    }
+}
+
+fn infer_struct_decl_field(ctx: &mut Context, field: &nir::StructDeclField) -> tyir::StructDeclField {
+    let nir::StructDeclField {name, colon_token, ty} = field;
+
+    let name = *name;
+    let colon_token = colon_token.clone();
+    let ty_var = ctx.fresh_def_type_var(name.id);
+    ctx.ty_var_is_ty(ty_var, ty.into(), ty.span());
+
+    tyir::StructDeclField {name, colon_token, ty_var}
 }
 
 fn infer_func_decl(ctx: &mut Context, func: &nir::FuncDecl) -> tyir::FuncDecl {

@@ -133,6 +133,7 @@ impl ApplySubst for tyir::Decl {
     fn apply_subst(self, subst: &mut Subst) -> Self::Output {
         use tyir::Decl::*;
         match self {
+            Struct(struct_decl) => todo!(),
             Func(func) => cgenir::Decl::Func(func.apply_subst(subst)),
         }
     }
