@@ -344,7 +344,7 @@ impl<'a> Parser<'a> {
             match self.input.peek().kind {
                 TokenKind::Keyword(Keyword::If) => {
                     let if_token = self.input.match_kind(TokenKind::Keyword(Keyword::If))?.clone();
-                    let cond = self.expr()?;
+                    let cond = self.expr_without_struct_literals()?;
                     let body = self.block()?;
 
                     else_if_clauses.push(ast::ElseIfClause {else_token, if_token, cond, body});

@@ -16,6 +16,14 @@ fn main() {
     }
     println!(a);
 
+    // conditional statement with single variable conditions (ambiguity with struct literals)
+    let bb = true;
+    if !bb {
+        println!(b"bye bb");
+    } else if bb {
+        println!(b"hey bb");
+    }
+
     // conditional expression
     if a != 32 * 4 + 3 {
         println!(b"yes");
