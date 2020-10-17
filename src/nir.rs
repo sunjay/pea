@@ -34,7 +34,38 @@ pub struct Module {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Decl {
+    Struct(StructDecl),
     Func(FuncDecl),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct StructDecl {
+    pub struct_token: Token,
+    pub name: DefSpan,
+    pub brace_open_token: Token,
+    pub fields: Vec<StructDeclField>,
+    pub brace_close_token: Token,
+    /// The scope containing the field names
+    pub scope: Scope,
+}
+
+impl StructDecl {
+    pub fn span(&self) -> Span {
+        self.name.span.to(self.brace_close_token.span)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct StructDeclField {
+    pub name: DefSpan,
+    pub colon_token: Token,
+    pub ty: Ty,
+}
+
+impl StructDeclField {
+    pub fn span(&self) -> Span {
+        self.name.span.to(self.ty.span())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

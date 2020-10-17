@@ -55,7 +55,9 @@ impl<'a> NameResolver<'a> {
         for decl in decls {
             use ast::Decl::*;
             match decl {
-                Struct(struct_decl) => todo!(),
+                Struct(struct_decl) => {
+                    self.declare_type(&struct_decl.name);
+                },
 
                 Func(func) => {
                     self.declare_func(&func.name);
@@ -69,10 +71,62 @@ impl<'a> NameResolver<'a> {
     fn resolve_decl(&mut self, decl: &ast::Decl) -> nir::Decl {
         use ast::Decl::*;
         match decl {
-            Struct(struct_decl) => todo!(),
+            Struct(struct_decl) => nir::Decl::Struct(self.resolve_struct_decl(struct_decl)),
 
             Func(func) => nir::Decl::Func(self.resolve_func_decl(func)),
         }
+    }
+
+    fn resolve_struct_decl(&mut self, struct_decl: &ast::StructDecl) -> nir::StructDecl {
+        let ast::StructDecl {
+            struct_token,
+            name,
+            brace_open_token,
+            fields,
+            brace_close_token,
+        } = struct_decl;
+
+        let struct_token = struct_token.clone();
+        let brace_open_token = brace_open_token.clone();
+        let brace_close_token = brace_close_token.clone();
+
+        // Note that we are careful here to only look at the top scope instead of calling
+        // `self.lookup` because that is where we expect the name to be defined
+        let id = self.scope_stack.top().lookup(&name.value)
+            .expect("bug: all decls should have already been defined in this scope");
+        let name = nir::DefSpan {id, span: name.span};
+
+        // Create a new scope for the fields
+        let stack_token = self.scope_stack.push();
+
+        let fields = fields.iter()
+            .map(|field| self.resolve_struct_decl_field(field))
+            .collect();
+
+        let scope = self.scope_stack.pop(stack_token);
+
+        nir::StructDecl {
+            struct_token,
+            name,
+            brace_open_token,
+            fields,
+            brace_close_token,
+            scope,
+        }
+    }
+
+    fn resolve_struct_decl_field(&mut self, field: &ast::StructDeclField) -> nir::StructDeclField {
+        let ast::StructDeclField {name, colon_token, ty} = field;
+        let colon_token = colon_token.clone();
+
+        // Note that we are careful to resolve the type before declaring the field name
+        // because otherwise we would allow `struct A {x: x};` to slip through
+        //TODO: This would not be an issue if there was a separate type namespace since these fields
+        //  would belong to the variable namespace
+        let ty = self.resolve_ty(ty);
+        let name = self.declare(name);
+
+        nir::StructDeclField {name, colon_token, ty}
     }
 
     fn resolve_func_decl(&mut self, func: &ast::FuncDecl) -> nir::FuncDecl {
@@ -223,10 +277,11 @@ impl<'a> NameResolver<'a> {
         let semicolon_token = semicolon_token.clone();
 
         // Note that we are careful to resolve the expression before declaring the variable name
-        // because otherwise we would allow `let a = a;` to slip through.
+        // because otherwise we would allow `let a = a;` to slip through
         let expr = self.resolve_expr(expr);
-        let name = self.declare(name);
+        // Similarly, `let a: a = ...` would not be something we want to slip through
         let ty = ty.as_ref().map(|ty| self.resolve_var_decl_ty(ty));
+        let name = self.declare(name);
 
         nir::VarDeclStmt {let_token, name, ty, equals_token, expr, semicolon_token}
     }
@@ -533,6 +588,23 @@ impl<'a> NameResolver<'a> {
                 nir::Ty::I64(name.span)
             },
         }
+    }
+
+    fn declare_type(&mut self, name: &ast::Ident) -> nir::DefSpan {
+        // Types are not allowed to shadow other names in the same scope
+        //TODO: We could potentially have a separate namespace for types
+        if let Some(orig) = self.scope_stack.top().lookup(&name.value) {
+            let orig = self.def_table.get(orig);
+            self.diag.error(format!("the name `{}` is defined multiple times", name.value))
+                .span_info(orig.span, format!("previous definition of the type `{}` here", name.value))
+                .span_error(name.span, format!("`{}` redefined here", name.value))
+                .span_note(name.span, format!("`{}` must be defined only once in the type namespace of this module", name.value))
+                .emit();
+
+            // Error Recovery: continue past this point and allow the name to be redefined
+        }
+
+        self.declare(name)
     }
 
     fn declare_func(&mut self, name: &ast::Ident) -> nir::DefSpan {

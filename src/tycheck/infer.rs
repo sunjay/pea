@@ -205,6 +205,8 @@ fn infer_decls(ctx: &mut Context, decls: &[nir::Decl]) -> Vec<tyir::Decl> {
     for decl in decls {
         use nir::Decl::*;
         match decl {
+            Struct(struct_decl) => todo!(),
+
             Func(func) => {
                 let func_ty_var = ctx.fresh_def_type_var(func.name.id);
                 ctx.ty_var_is_ty(func_ty_var, func.into(), func.name.span);
@@ -218,6 +220,8 @@ fn infer_decls(ctx: &mut Context, decls: &[nir::Decl]) -> Vec<tyir::Decl> {
 fn infer_decl(ctx: &mut Context, decl: &nir::Decl) -> tyir::Decl {
     use nir::Decl::*;
     match decl {
+        Struct(struct_decl) => todo!(),
+
         Func(func) => tyir::Decl::Func(infer_func_decl(ctx, func)),
     }
 }
