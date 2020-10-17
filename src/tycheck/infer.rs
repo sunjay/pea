@@ -114,7 +114,7 @@ impl<'a> Context<'a> {
             Func(_) => None,
 
             //TODO: Lookup method for named type
-            Named(def_id) => todo!(),
+            Named(_def_id) => todo!(),
 
             //TODO: Not sure which case this can happen in, so leaving it until later
             TyVar(_) => unreachable!(),
@@ -216,7 +216,9 @@ fn infer_decls(ctx: &mut Context, decls: &[nir::Decl]) -> Vec<tyir::Decl> {
     for decl in decls {
         use nir::Decl::*;
         match decl {
-            Struct(struct_decl) => todo!(),
+            Struct(_struct_decl) => {
+                //TODO: Record struct fields
+            },
 
             Func(func) => {
                 let func_ty_var = ctx.fresh_def_type_var(func.name.id);
