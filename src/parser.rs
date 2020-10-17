@@ -37,7 +37,7 @@ pub fn collect_tokens(source: FileSource, diag: &Diagnostics) -> Vec<Token> {
 
 pub fn parse_module(mod_name: Arc<str>, input: &[Token], diag: &Diagnostics) -> ast::Module {
     let input = input.into();
-    let mut parser = Parser {input, diag};
+    let mut parser = Parser::new(input, diag);
     parser.parse_module(mod_name)
 }
 
@@ -122,9 +122,19 @@ type ParseResult<T> = Result<T, ParseError>;
 struct Parser<'a> {
     input: TokenStream<'a>,
     diag: &'a Diagnostics,
+    /// if `false`, the parser will not attempt to parse struct literals in expressions
+    allow_struct_literals: bool,
 }
 
 impl<'a> Parser<'a> {
+    fn new(input: TokenStream<'a>, diag: &'a Diagnostics) -> Self {
+        Self {
+            input,
+            diag,
+            allow_struct_literals: true,
+        }
+    }
+
     fn parse_module(&mut self, name: Arc<str>) -> ast::Module {
         let mut decls = Vec::new();
 
@@ -386,7 +396,11 @@ impl<'a> Parser<'a> {
 
     fn while_loop_stmt(&mut self) -> ParseResult<ast::WhileLoop> {
         let while_token = self.input.keyword(Keyword::While)?.clone();
-        let cond = self.expr()?;
+
+        // To avoid ambiguity, we disable struct literals inside conditions
+        // e.g. In `while x { }`, `x { }` is a valid struct literal
+        let cond = self.expr_without_struct_literals()?;
+
         let body = self.block()?;
 
         Ok(ast::WhileLoop {while_token, cond, body})

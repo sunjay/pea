@@ -115,10 +115,27 @@ fn extract_lvalue(expr: ast::Expr) -> ParseResult<ast::LValueExpr> {
 
 impl<'a> Parser<'a> {
     pub(in super) fn expr(&mut self) -> ParseResult<ast::Expr> {
-        // "bp" = "binding power"
-        self.expr_bp(0)
+        let prev_allow_struct_literals = self.allow_struct_literals;
+
+        // Default to allowing struct literals
+        self.allow_struct_literals = true;
+        let expr = self.expr_bp(0);
+        self.allow_struct_literals = prev_allow_struct_literals;
+
+        expr
     }
 
+    pub(in super) fn expr_without_struct_literals(&mut self) -> ParseResult<ast::Expr> {
+        let prev_allow_struct_literals = self.allow_struct_literals;
+
+        self.allow_struct_literals = false;
+        let expr = self.expr_bp(0);
+        self.allow_struct_literals = prev_allow_struct_literals;
+
+        expr
+    }
+
+    // "bp" = "binding power"
     fn expr_bp(&mut self, min_bp: u8) -> ParseResult<ast::Expr> {
         let mut lhs = match prefix_binding_power(self.input.peek().kind) {
             Err(TokenKind::ParenOpen) => {
@@ -129,7 +146,8 @@ impl<'a> Parser<'a> {
                     ast::Expr::Unit(ast::UnitLiteral {paren_open_token, paren_close_token})
 
                 } else {
-                    let expr = self.expr_bp(0)?;
+                    let expr = self.expr()?;
+
                     let paren_close_token = self.input.match_kind(TokenKind::ParenClose)?.clone();
 
                     ast::Expr::Group(Box::new(ast::GroupExpr {
@@ -311,7 +329,11 @@ impl<'a> Parser<'a> {
 
     pub(in super) fn cond(&mut self) -> ParseResult<ast::Cond> {
         let if_token = self.input.match_kind(TokenKind::Keyword(Keyword::If))?.clone();
-        let if_cond = self.expr()?;
+
+        // To avoid ambiguity, we disable struct literals inside conditions
+        // e.g. In `if x { }`, `x { }` is a valid struct literal
+        let if_cond = self.expr_without_struct_literals()?;
+
         let if_body = self.block()?;
 
         let mut else_if_clauses = Vec::new();
@@ -376,7 +398,7 @@ impl<'a> Parser<'a> {
         match self.input.peek().kind {
             TokenKind::Ident => {
                 let name = self.ident()?;
-                if self.input.peek().kind == TokenKind::BraceOpen {
+                if self.allow_struct_literals && self.input.peek().kind == TokenKind::BraceOpen {
                     self.struct_literal(name).map(ast::Expr::StructLiteral)
 
                 } else {
