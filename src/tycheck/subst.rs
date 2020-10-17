@@ -59,6 +59,7 @@ impl Subst {
             U8 => crate::ty::Ty::U8,
             List(ty) => crate::ty::Ty::List(Box::new(self.resolve_ty(*ty))),
             Func(ty) => crate::ty::Ty::Func(Box::new(self.resolve_func_ty(*ty))),
+            Named(ty) => todo!(),
             TyVar(ty_var) => self.get_resolved(ty_var),
         }
     }

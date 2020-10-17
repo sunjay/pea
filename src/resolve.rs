@@ -670,13 +670,16 @@ impl<'a> NameResolver<'a> {
     fn resolve_named_ty(&mut self, name: &ast::Ident) -> nir::Ty {
         match &*name.value {
             "bool" => nir::Ty::Bool(name.span),
+
             "i64" => nir::Ty::I64(name.span),
+
             "u8" => nir::Ty::U8(name.span),
+
             _ => {
-                //TODO: user-defined types
-                let _def = self.lookup(name);
-                //TODO: This is not the right error recovery, we should use `_def`
-                nir::Ty::I64(name.span)
+                //TODO: This currently allows non-types to be used as types. We need a separate type
+                // namespace to check this accurately.
+                let def = self.lookup(name);
+                nir::Ty::Named(def)
             },
         }
     }

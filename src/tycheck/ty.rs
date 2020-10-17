@@ -2,7 +2,7 @@ use std::fmt;
 
 use ena::unify::{NoError, UnifyValue};
 
-use crate::{nir, source_files::Span};
+use crate::{nir, source_files::Span, fmt_ctx::DisplayCtx, cwrite};
 
 use super::constraints::TyVar;
 
@@ -62,6 +62,8 @@ pub enum Ty {
     List(Box<Ty>),
     /// The `fn(...) -> ...` type
     Func(Box<FuncTy>),
+    /// A named type
+    Named(nir::DefId),
     /// A type variable
     TyVar(TyVar),
 }
@@ -75,6 +77,7 @@ impl From<&nir::Ty> for Ty {
             nir::Ty::U8(_) => Ty::U8,
             nir::Ty::List(ty) => Ty::List(Box::new((&ty.item_ty).into())),
             nir::Ty::Func(ty) => Ty::Func(Box::new((&**ty).into())),
+            nir::Ty::Named(def) => Ty::Named(def.id),
         }
     }
 }
@@ -163,17 +166,18 @@ impl Ty {
     }
 }
 
-impl fmt::Display for Ty {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl DisplayCtx<nir::DefTable> for Ty {
+    fn fmt_ctx(&self, f: &mut fmt::Formatter<'_>, ctx: &nir::DefTable) -> fmt::Result {
         use Ty::*;
         match self {
-            Unit => write!(f, "()"),
-            Bool => write!(f, "bool"),
-            I64 => write!(f, "i64"),
-            U8 => write!(f, "u8"),
-            List(item_ty) => write!(f, "[{}]", item_ty),
-            Func(func) => write!(f, "{}", func),
-            TyVar(_) => write!(f, "_"),
+            Unit => cwrite!(f, ctx, "()"),
+            Bool => cwrite!(f, ctx, "bool"),
+            I64 => cwrite!(f, ctx, "i64"),
+            U8 => cwrite!(f, ctx, "u8"),
+            List(item_ty) => cwrite!(f, ctx, "[{}]", item_ty),
+            Func(func) => cwrite!(f, ctx, "{}", func),
+            &Named(def_id) => cwrite!(f, ctx, "{}", ctx.get(def_id).value),
+            TyVar(_) => cwrite!(f, ctx, "_"),
         }
     }
 }
@@ -289,24 +293,24 @@ impl FuncTy {
     }
 }
 
-impl fmt::Display for FuncTy {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl DisplayCtx<nir::DefTable> for FuncTy {
+    fn fmt_ctx(&self, f: &mut fmt::Formatter<'_>, ctx: &nir::DefTable) -> fmt::Result {
         let Self {param_tys, return_ty} = self;
 
-        write!(f, "fn (")?;
+        cwrite!(f, ctx, "fn (")?;
 
         if let Some(param_ty) = param_tys.get(0) {
-            write!(f, "{}", param_ty)?;
+            cwrite!(f, ctx, "{}", param_ty)?;
 
             for param_ty in &param_tys[1..] {
-                write!(f, ", {}", param_ty)?;
+                cwrite!(f, ctx, ", {}", param_ty)?;
             }
         }
 
-        write!(f, ")")?;
+        cwrite!(f, ctx, ")")?;
 
         if *return_ty != Ty::Unit {
-            write!(f, " -> {}", return_ty)?;
+            cwrite!(f, ctx, " -> {}", return_ty)?;
         }
 
         Ok(())

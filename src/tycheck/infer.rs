@@ -3,6 +3,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use crate::{
+    cformat,
     diagnostics::Diagnostics,
     nir::{self, DefId},
     package::Package,
@@ -34,6 +35,7 @@ pub struct OperatorMethodNames {
 pub struct Context<'a> {
     prelude: &'a Package,
     prim_methods: &'a PrimMethods,
+    def_table: &'a nir::DefTable,
     diag: &'a Diagnostics,
     constraints: ConstraintSet,
     def_vars: HashMap<DefId, TyVar>,
@@ -44,10 +46,16 @@ pub struct Context<'a> {
 }
 
 impl<'a> Context<'a> {
-    pub fn new(prelude: &'a Package, prim_methods: &'a PrimMethods, diag: &'a Diagnostics) -> Self {
+    pub fn new(
+        prelude: &'a Package,
+        prim_methods: &'a PrimMethods,
+        def_table: &'a nir::DefTable,
+        diag: &'a Diagnostics,
+    ) -> Self {
         Self {
             prelude,
             prim_methods,
+            def_table,
             diag,
             constraints: Default::default(),
             def_vars: Default::default(),
@@ -105,12 +113,15 @@ impl<'a> Context<'a> {
             //TODO: Functions could support methods once we have polymorphism
             Func(_) => None,
 
+            //TODO: Lookup method for named type
+            Named(def_id) => todo!(),
+
             //TODO: Not sure which case this can happen in, so leaving it until later
             TyVar(_) => unreachable!(),
         };
 
         def_id.or_else(|| {
-            self.diag.span_error(span, format!("no method named `{}` found for type `{}` in the current scope", name, ty.ty)).emit();
+            self.diag.span_error(span, cformat!(self.def_table, "no method named `{}` found for type `{}` in the current scope", name, ty.ty)).emit();
 
             None
         })
@@ -165,7 +176,7 @@ impl<'a> Context<'a> {
                 let span = ty2.span.or(ty1.span)
                     .expect("bug: no span that can be used to emit error");
 
-                self.diag.span_error(span, format!("mismatched types: expected `{}`, found: `{}`", ty2.ty, ty1.ty)).emit();
+                self.diag.span_error(span, cformat!(self.def_table, "mismatched types: expected `{}`, found: `{}`", ty2.ty, ty1.ty)).emit();
             },
             ArityMismatch {ty1, ty1_arity, ty2, ty2_arity} => {
                 let call_span = ty2.span.or(ty1.span)
@@ -174,7 +185,7 @@ impl<'a> Context<'a> {
                     .expect("bug: no span that can be used to emit error");
 
                 self.diag.span_error(call_span, format!("wrong number of arguments: expected {}, found {}", ty1_arity, ty2_arity))
-                    .span_note(func_span, format!("function being called has signature `{}`", ty1.ty))
+                    .span_note(func_span, cformat!(self.def_table, "function being called has signature `{}`", ty1.ty))
                     .emit();
             },
         }

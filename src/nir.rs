@@ -465,6 +465,7 @@ pub enum Ty {
     U8(Span),
     List(Box<ListTy>),
     Func(Box<FuncTy>),
+    Named(DefSpan),
 }
 
 impl Ty {
@@ -477,6 +478,7 @@ impl Ty {
             &U8(span) => span,
             List(ty) => ty.span(),
             Func(ty) => ty.span(),
+            Named(ty) => ty.span,
         }
     }
 }
