@@ -147,6 +147,7 @@ pub enum Expr {
     Break(BreakExpr),
     Continue(ContinueExpr),
     Def(DefSpan),
+    StructLiteral(StructLiteral),
     Integer(IntegerLiteral),
     Bool(BoolLiteral),
     List(ListLiteral),
@@ -244,6 +245,26 @@ pub struct ListRepeatLiteral {
     pub semicolon_token: Token,
     pub len: Expr,
     pub bracket_close_token: Token,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct StructLiteral {
+    pub name: DefSpan,
+    pub brace_open_token: Token,
+    pub fields: Vec<StructLiteralField>,
+    pub brace_close_token: Token,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct StructLiteralField {
+    pub name: DefSpan,
+    pub value: Option<StructLiteralFieldValue>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct StructLiteralFieldValue {
+    pub colon_token: Token,
+    pub expr: Expr,
 }
 
 pub type BreakExpr = nir::BreakExpr;

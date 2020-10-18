@@ -304,6 +304,7 @@ impl<'a> FunctionCompiler<'a> {
             Break(expr) => self.walk_break(expr),
             Continue(expr) => self.walk_continue(expr),
             Def(def_id) => self.walk_def(def_id),
+            StructLiteral(lit) => todo!(),
             Integer(lit) => self.walk_integer_literal(lit),
             Bool(lit) => self.walk_bool_literal(lit),
             List(list) => self.walk_list(list),

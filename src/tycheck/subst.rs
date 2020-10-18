@@ -347,13 +347,14 @@ impl ApplySubst for tyir::Expr {
             Break(value) => cgenir::Expr::Break(value),
             Continue(value) => cgenir::Expr::Continue(value),
             Def(name) => cgenir::Expr::Def(name),
-            Integer(value) => cgenir::Expr::Integer(value),
-            Bool(value) => cgenir::Expr::Bool(value),
+            StructLiteral(lit) => cgenir::Expr::StructLiteral(lit.apply_subst(subst)),
+            Integer(lit) => cgenir::Expr::Integer(lit),
+            Bool(lit) => cgenir::Expr::Bool(lit),
             List(list) => cgenir::Expr::List(list.apply_subst(subst)),
             ListRepeat(list) => cgenir::Expr::ListRepeat(Box::new(list.apply_subst(subst))),
-            BStr(value) => cgenir::Expr::BStr(value),
-            Byte(value) => cgenir::Expr::Byte(value),
-            Unit(value) => cgenir::Expr::Unit(value),
+            BStr(lit) => cgenir::Expr::BStr(lit),
+            Byte(lit) => cgenir::Expr::Byte(lit),
+            Unit(lit) => cgenir::Expr::Unit(lit),
         }
     }
 }
@@ -494,6 +495,42 @@ impl ApplySubst for tyir::ReturnExpr {
         let expr = expr.apply_subst(subst);
 
         cgenir::ReturnExpr {return_token, expr}
+    }
+}
+
+impl ApplySubst for tyir::StructLiteral {
+    type Output = cgenir::StructLiteral;
+
+    fn apply_subst(self, subst: &mut Subst) -> Self::Output {
+        let tyir::StructLiteral {name, brace_open_token, fields, brace_close_token} = self;
+
+        let fields = fields.apply_subst(subst);
+
+        cgenir::StructLiteral {name, brace_open_token, fields, brace_close_token}
+    }
+}
+
+impl ApplySubst for tyir::StructLiteralField {
+    type Output = cgenir::StructLiteralField;
+
+    fn apply_subst(self, subst: &mut Subst) -> Self::Output {
+        let tyir::StructLiteralField {name, value} = self;
+
+        let value = value.apply_subst(subst);
+
+        cgenir::StructLiteralField {name, value}
+    }
+}
+
+impl ApplySubst for tyir::StructLiteralFieldValue {
+    type Output = cgenir::StructLiteralFieldValue;
+
+    fn apply_subst(self, subst: &mut Subst) -> Self::Output {
+        let tyir::StructLiteralFieldValue {colon_token, expr} = self;
+
+        let expr = expr.apply_subst(subst);
+
+        cgenir::StructLiteralFieldValue {colon_token, expr}
     }
 }
 

@@ -583,10 +583,10 @@ fn infer_expr(ctx: &mut Context, expr: &nir::Expr, return_ty_var: TyVar) -> tyir
         Group(expr) => tyir::Expr::Group(Box::new(infer_group(ctx, expr, return_ty_var))),
         Call(call) => tyir::Expr::Call(Box::new(infer_call(ctx, call, return_ty_var))),
         Return(ret) => tyir::Expr::Return(Box::new(infer_return(ctx, ret, return_ty_var))),
-        Break(lit) => tyir::Expr::Break(infer_break(ctx, lit, return_ty_var)),
-        Continue(lit) => tyir::Expr::Continue(infer_continue(ctx, lit, return_ty_var)),
+        Break(expr) => tyir::Expr::Break(infer_break(ctx, expr, return_ty_var)),
+        Continue(expr) => tyir::Expr::Continue(infer_continue(ctx, expr, return_ty_var)),
         Def(name) => tyir::Expr::Def(infer_def(ctx, name, return_ty_var)),
-        StructLiteral(lit) => todo!(),
+        StructLiteral(lit) => tyir::Expr::StructLiteral(infer_struct_literal(ctx, lit, return_ty_var)),
         Integer(lit) => tyir::Expr::Integer(infer_integer(ctx, lit, return_ty_var)),
         Bool(lit) => tyir::Expr::Bool(infer_bool(ctx, lit, return_ty_var)),
         List(list) => tyir::Expr::List(infer_list(ctx, list, return_ty_var)),
@@ -922,6 +922,32 @@ fn infer_def(ctx: &mut Context, def: &nir::DefSpan, return_ty_var: TyVar) -> tyi
     }
 
     *def
+}
+
+fn infer_struct_literal(ctx: &mut Context, lit: &nir::StructLiteral, return_ty_var: TyVar) -> tyir::StructLiteral {
+    let nir::StructLiteral {name, brace_open_token, fields, brace_close_token} = lit;
+
+    let name = *name;
+    let brace_open_token = brace_open_token.clone();
+    let fields = fields.iter()
+        .map(|field| infer_struct_literal_field(ctx, field))
+        .collect();
+    let brace_close_token = brace_close_token.clone();
+
+    // The type of a struct literal is the struct type itself
+    ctx.ty_var_is_ty(return_ty_var, Ty::Named(name.id), lit.span());
+
+    tyir::StructLiteral {name, brace_open_token, fields, brace_close_token}
+}
+
+fn infer_struct_literal_field(ctx: &mut Context, field: &nir::StructLiteralField) -> tyir::StructLiteralField {
+    // let nir::StructLiteralField {name, value} = field;
+
+    // let value = value.as_ref()
+    //     .map(|value| infer_struct_literal_field_value(ctx, value, field_ty_var));
+
+    // tyir::StructLiteralField {name, value}
+    todo!()
 }
 
 fn infer_integer(ctx: &mut Context, expr: &nir::IntegerLiteral, return_ty_var: TyVar) -> tyir::IntegerLiteral {
