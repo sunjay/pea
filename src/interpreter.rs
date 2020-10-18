@@ -153,6 +153,15 @@ impl Interpreter {
         }
     }
 
+    /// Trigger garbage collection by first recursively marking/tracing all roots and then calling
+    /// `gc::sweep()`
+    pub fn collect_garbage(&self) {
+        gc_debug!("--- GC BEGIN ---");
+        self.trace();
+        gc::sweep();
+        gc_debug!("--- GC END ---");
+    }
+
     /// Executes the next bytecode instruction
     ///
     /// Returns the status of the interpreter after running the instruction. This method should no
@@ -208,14 +217,5 @@ impl Interpreter {
     /// Peek at the value n slots back in the value stack
     fn peek(&self, n: usize) -> &Value {
         &self.value_stack[self.value_stack.len() - n - 1]
-    }
-
-    /// Trigger garbage collection by first recursively marking/tracing all roots and then calling
-    /// `gc::sweep()`
-    fn collect_garbage(&self) {
-        gc_debug!("--- GC BEGIN ---");
-        self.trace();
-        gc::sweep();
-        gc_debug!("--- GC END ---");
     }
 }

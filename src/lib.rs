@@ -114,6 +114,9 @@ pub fn compile(
     call_main(&mut interpreter, &program, &def_consts, &diag);
     check_errors!(diag);
 
+    // Clean up memory from compilation that will no longer be used after this function ends
+    interpreter.collect_garbage();
+
     Ok(interpreter)
 }
 
