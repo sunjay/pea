@@ -58,6 +58,18 @@ impl Trace for str {
     fn trace(&self) {}
 }
 
+impl<T: Trace> Trace for parking_lot::Mutex<T> {
+    fn trace(&self) {
+        self.lock().trace();
+    }
+}
+
+impl<T: Trace> Trace for parking_lot::RwLock<T> {
+    fn trace(&self) {
+        self.read().trace();
+    }
+}
+
 macro_rules! impl_trace_tuples {
     ($first:ident $(, $rest:ident)* $(,)?) => {
         impl_trace_tuples!($($rest),*);
