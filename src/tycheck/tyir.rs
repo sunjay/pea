@@ -16,7 +16,7 @@ pub struct Module {
     pub name: Gc<str>,
     pub decls: Vec<Decl>,
     /// The root scope of the module
-    pub scope: Scope,
+    pub scope: Gc<Scope>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -33,7 +33,7 @@ pub struct StructDecl {
     pub fields: Vec<StructDeclField>,
     pub brace_close_token: Token,
     /// The scope containing the field names
-    pub scope: Scope,
+    pub scope: Gc<Scope>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -54,7 +54,7 @@ pub struct FuncDecl {
     pub return_ty_var: TyVar,
     pub body: Block,
     /// The scope containing the function parameters
-    pub scope: Scope,
+    pub scope: Gc<Scope>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -71,7 +71,7 @@ pub struct Block {
     pub ret_expr: Option<Expr>,
     pub brace_close_token: Token,
     /// The variables declared in this scope
-    pub scope: Scope,
+    pub scope: Gc<Scope>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

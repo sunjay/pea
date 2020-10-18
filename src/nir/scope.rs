@@ -1,4 +1,4 @@
-use crate::gc::Gc;
+use crate::gc::{self, Gc};
 
 use super::DefId;
 
@@ -7,6 +7,16 @@ use super::DefId;
 pub struct Scope {
     /// The names defined in this scope, in the order that they were defined
     names: Vec<(Gc<str>, DefId)>,
+}
+
+impl gc::Trace for Scope {
+    fn trace(&self) {
+        let Self {names} = self;
+
+        for (name, _) in names {
+            name.trace();
+        }
+    }
 }
 
 impl Scope {

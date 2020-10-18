@@ -54,7 +54,7 @@ impl<'a> NameResolver<'a> {
 
         let stack_token = self.scope_stack.push();
         let decls = self.resolve_decls(decls);
-        let scope = self.scope_stack.pop(stack_token);
+        let scope = Gc::new(self.scope_stack.pop(stack_token));
 
         nir::Module {name, decls, scope}
     }
@@ -123,9 +123,9 @@ impl<'a> NameResolver<'a> {
             .map(|field| self.resolve_struct_decl_field(field, id))
             .collect();
 
-        let scope = self.type_fields.get(&id)
+        let scope = Gc::new(self.type_fields.get(&id)
             .expect("bug: all decls should have already inserted their fields")
-            .clone();
+            .clone());
 
         nir::StructDecl {
             struct_token,
@@ -185,7 +185,7 @@ impl<'a> NameResolver<'a> {
 
         let body = self.resolve_block(body);
 
-        let scope = self.scope_stack.pop(stack_token);
+        let scope = Gc::new(self.scope_stack.pop(stack_token));
 
         nir::FuncDecl {
             fn_token,
@@ -222,7 +222,7 @@ impl<'a> NameResolver<'a> {
             .collect();
         let ret_expr = ret_expr.as_ref().map(|expr| self.resolve_expr(expr));
 
-        let scope = self.scope_stack.pop(stack_token);
+        let scope = Gc::new(self.scope_stack.pop(stack_token));
 
         nir::Block {brace_open_token, stmts, ret_expr, brace_close_token, scope}
     }
