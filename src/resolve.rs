@@ -1,8 +1,8 @@
 mod scope_stack;
 
-use std::{sync::Arc, collections::{HashMap, HashSet}};
+use std::collections::{HashMap, HashSet};
 
-use crate::{ast, diagnostics::Diagnostics, nir, package, package::PkgId};
+use crate::{ast, diagnostics::Diagnostics, nir, package, package::PkgId, gc::Gc};
 
 use scope_stack::ScopeStack;
 
@@ -43,7 +43,7 @@ impl<'a> NameResolver<'a> {
         } = resolver;
         assert!(scope_stack.is_empty(), "bug: scope stack should be empty after root module");
 
-        let def_table = Arc::new(def_table);
+        let def_table = Gc::new(def_table);
 
         nir::Program {root_module, def_table}
     }

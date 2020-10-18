@@ -2,7 +2,6 @@
 
 use std::process;
 use std::path::PathBuf;
-use std::sync::Arc;
 use std::str::FromStr;
 
 use parking_lot::RwLock;
@@ -10,7 +9,7 @@ use termcolor::ColorChoice;
 use structopt::StructOpt;
 
 use pea::{
-    gc,
+    gc::{self, Gc},
     diagnostics::Diagnostics,
     source_files::SourceFiles,
     interpreter::Status,
@@ -84,12 +83,11 @@ fn main() {
         print_annotated_bytecode,
     } = Options::from_args();
 
-    let source_files = Arc::new(RwLock::new(SourceFiles::default()));
+    let source_files = Gc::new(RwLock::new(SourceFiles::default()));
     let diag = Diagnostics::new(source_files.clone(), color.into());
 
     let mut interpreter = pea::compile_path(program_path, source_files, &diag)
         .unwrap_or_else(|err| quit!(&diag, "{}", err));
-
 
     if print_annotated_bytecode {
         interpreter.print_constants();

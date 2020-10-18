@@ -8,9 +8,7 @@ pub use def_consts::*;
 pub use def_names::*;
 pub use decls::*;
 
-use std::sync::Arc;
-
-use crate::{ty::Ty, bytecode::ConstId, nir::DefId};
+use crate::{bytecode::ConstId, nir::DefId, gc::Gc, ty::Ty};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct PkgId(usize);
@@ -42,7 +40,7 @@ pub struct Package {
 }
 
 impl Package {
-    pub fn new(id: PkgId, name: impl Into<Arc<str>>) -> Self {
+    pub fn new(id: PkgId, name: impl Into<Gc<str>>) -> Self {
         Self {
             id,
             root_module: Module::new(name.into()),
@@ -55,7 +53,7 @@ impl Package {
     /// Associates the given name with the given constant ID and returns the generated `DefId`.
     ///
     /// For the value to be usable, it must then be inserted into a module using the same name.
-    pub fn insert(&mut self, name: Arc<str>, ty: Ty, const_id: ConstId) -> DefId {
+    pub fn insert(&mut self, name: Gc<str>, ty: Ty, const_id: ConstId) -> DefId {
         let def_id = self.def_names.insert(name);
         self.def_tys.insert(def_id, ty);
         self.def_consts.insert(def_id, const_id);
@@ -65,14 +63,14 @@ impl Package {
 
 #[derive(Debug)]
 pub struct Module {
-    pub name: Arc<str>,
+    pub name: Gc<str>,
     //TODO: There could be a `submodules` field here with type `Vec<Module>`
     /// Provides a mapping from name to `DefId`
     pub decls: Decls,
 }
 
 impl Module {
-    pub fn new(name: Arc<str>) -> Self {
+    pub fn new(name: Gc<str>) -> Self {
         Self {
             name: name.into(),
             decls: Default::default(),

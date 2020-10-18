@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{ast, package::PkgId};
+use crate::{ast, gc, package::PkgId};
 
 use super::{DefId, DefIdGen};
 
@@ -13,6 +13,16 @@ use super::{DefId, DefIdGen};
 pub struct DefTable {
     def_ids: DefIdGen,
     defs: HashMap<DefId, ast::Ident>,
+}
+
+impl gc::Trace for DefTable {
+    fn trace(&self) {
+        let Self {def_ids: _, defs} = self;
+
+        for (_, ident) in defs {
+            ident.value.trace();
+        }
+    }
 }
 
 impl DefTable {

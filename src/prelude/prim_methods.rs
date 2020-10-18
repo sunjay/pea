@@ -1,6 +1,6 @@
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
 
-use crate::nir;
+use crate::{gc::Gc, nir};
 
 #[derive(Debug, Default)]
 pub struct PrimMethods {
@@ -13,11 +13,11 @@ pub struct PrimMethods {
 
 #[derive(Debug, Default)]
 pub struct Methods {
-    methods: HashMap<Arc<str>, nir::DefId>,
+    methods: HashMap<Gc<str>, nir::DefId>,
 }
 
 impl Methods {
-    pub fn insert(&mut self, name: Arc<str>, id: nir::DefId) {
+    pub fn insert(&mut self, name: Gc<str>, id: nir::DefId) {
         debug_assert!(!self.methods.contains_key(&name),
             "bug: inserted same method twice");
         self.methods.insert(name, id);

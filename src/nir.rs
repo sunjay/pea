@@ -14,19 +14,17 @@ pub use def_id::*;
 pub use def_table::*;
 pub use scope::*;
 
-use std::sync::Arc;
-
-use crate::{ast, parser::Token, source_files::Span};
+use crate::{ast, parser::Token, source_files::Span, gc::Gc};
 
 #[derive(Debug)]
 pub struct Program {
     pub root_module: Module,
-    pub def_table: Arc<DefTable>,
+    pub def_table: Gc<DefTable>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Module {
-    pub name: Arc<str>,
+    pub name: Gc<str>,
     pub decls: Vec<Decl>,
     /// The root scope of the module
     pub scope: Scope,

@@ -80,7 +80,7 @@ impl<'a> Compiler<'a> {
         // Define and insert an empty function for now (it will be replaced later during compilation)
         let arity = func.params.len().try_into()
             .expect("bug: should have validated that functions cannot have more than 255 parameters");
-        let func = Gc::new(prim::Func::new((&name.value).into(), arity));
+        let func = Gc::new(prim::Func::new(name.value.clone(), arity));
 
         let const_id = self.consts.push(Value::Func(func));
         self.def_consts.insert(def_id, const_id);
@@ -119,7 +119,7 @@ impl<'a> Compiler<'a> {
             .expect("bug: should have validated that functions cannot have more than 255 parameters");
 
         // Replace the defined constant for this function with a version that has the compiled code
-        let func = Gc::new(prim::Func::with_code((&name.value).into(), arity, func_code));
+        let func = Gc::new(prim::Func::with_code(name.value.clone(), arity, func_code));
         self.consts.replace(const_id, Value::Func(func));
     }
 }

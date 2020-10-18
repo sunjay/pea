@@ -23,15 +23,13 @@ pub mod package;
 pub mod prelude;
 
 use std::fmt;
-use std::sync::Arc;
 use std::path::Path;
 
-use parking_lot::RwLock;
 use thiserror::Error;
 
 use crate::{
     diagnostics::Diagnostics,
-    source_files::{FileHandle, SourceFiles},
+    source_files::{FileHandle, SharedSourceFiles},
     interpreter::Interpreter,
 };
 
@@ -63,7 +61,7 @@ macro_rules! check_errors {
 /// Compiles the file at the given path and returns an interpreter that can be used to run it
 pub fn compile_path<P: AsRef<Path>>(
     path: P,
-    source_files: Arc<RwLock<SourceFiles>>,
+    source_files: SharedSourceFiles,
     diag: &Diagnostics,
 ) -> Result<Interpreter, ErrorsEmitted> {
     let path = path.as_ref();
@@ -84,7 +82,7 @@ pub fn compile_path<P: AsRef<Path>>(
 /// Compiles the given file and returns an interpreter that can be used to run it
 pub fn compile(
     root_file: FileHandle,
-    source_files: Arc<RwLock<SourceFiles>>,
+    source_files: SharedSourceFiles,
     diag: &Diagnostics,
 ) -> Result<Interpreter, ErrorsEmitted> {
     let mut packages = package::Packages::default();

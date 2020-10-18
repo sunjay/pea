@@ -2,13 +2,12 @@
 
 use std::ffi::OsStr;
 use std::path::Path;
-use std::sync::Arc;
 
 use termcolor::ColorChoice;
 use parking_lot::RwLock;
 
 use pea::{
-    gc,
+    gc::{self, Gc},
     source_files::SourceFiles,
     diagnostics::Diagnostics,
     interpreter::Status,
@@ -29,7 +28,7 @@ fn run_pass_miri() {
 
         println!("[run-pass] Running {}", entry_path.display());
 
-        let source_files = Arc::new(RwLock::new(SourceFiles::default()));
+        let source_files = Gc::new(RwLock::new(SourceFiles::default()));
         let diag = Diagnostics::new(source_files.clone(), ColorChoice::Never);
 
         let mut interpreter = match pea::compile_path(&entry_path, source_files, &diag) {

@@ -1,8 +1,7 @@
 use std::fmt;
-use std::sync::Arc;
 use std::cmp::Ordering;
 
-use crate::source_files::Span;
+use crate::{gc::Gc, source_files::Span};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Literal {
@@ -165,10 +164,10 @@ impl fmt::Display for TokenKind {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TokenValue {
-    Ident(Arc<str>),
+    Ident(Gc<str>),
     Integer(i128),
     /// The unescaped characters of the byte string (without the surrounding double quotes)
-    BStr(Arc<[u8]>),
+    BStr(Gc<[u8]>),
     /// The unescaped byte value of a byte literal
     Byte(u8),
 }
@@ -179,14 +178,14 @@ impl From<i128> for TokenValue {
     }
 }
 
-impl From<Arc<str>> for TokenValue {
-    fn from(value: Arc<str>) -> Self {
+impl From<Gc<str>> for TokenValue {
+    fn from(value: Gc<str>) -> Self {
         TokenValue::Ident(value)
     }
 }
 
-impl From<Arc<[u8]>> for TokenValue {
-    fn from(value: Arc<[u8]>) -> Self {
+impl From<Gc<[u8]>> for TokenValue {
+    fn from(value: Gc<[u8]>) -> Self {
         TokenValue::BStr(value)
     }
 }
@@ -200,7 +199,7 @@ pub struct Token {
 
 impl Token {
     /// Returns the data as an identifier or panics
-    pub fn unwrap_ident(&self) -> &Arc<str> {
+    pub fn unwrap_ident(&self) -> &Gc<str> {
         match &self.value {
             Some(TokenValue::Ident(ident)) => ident,
             _ => panic!("bug: expected an identifier"),
@@ -216,7 +215,7 @@ impl Token {
     }
 
     /// Returns the data as a byte string or panics
-    pub fn unwrap_bstr(&self) -> &Arc<[u8]> {
+    pub fn unwrap_bstr(&self) -> &Gc<[u8]> {
         match &self.value {
             Some(TokenValue::BStr(value)) => value,
             _ => panic!("bug: expected a byte string"),

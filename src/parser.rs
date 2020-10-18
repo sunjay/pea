@@ -6,10 +6,11 @@ mod expr;
 
 pub use token::*;
 
-use std::{fmt::Write, sync::Arc};
+use std::fmt::Write;
 
 use crate::{
     ast,
+    gc::Gc,
     source_files::{FileSource, Span},
     diagnostics::Diagnostics,
 };
@@ -35,7 +36,7 @@ pub fn collect_tokens(source: FileSource, diag: &Diagnostics) -> Vec<Token> {
     tokens
 }
 
-pub fn parse_module(mod_name: Arc<str>, input: &[Token], diag: &Diagnostics) -> ast::Module {
+pub fn parse_module(mod_name: Gc<str>, input: &[Token], diag: &Diagnostics) -> ast::Module {
     let input = input.into();
     let mut parser = Parser::new(input, diag);
     parser.parse_module(mod_name)
@@ -135,7 +136,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_module(&mut self, name: Arc<str>) -> ast::Module {
+    fn parse_module(&mut self, name: Gc<str>) -> ast::Module {
         let mut decls = Vec::new();
 
         while !self.input.check(TokenKind::Eof) {

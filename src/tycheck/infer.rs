@@ -1,9 +1,10 @@
 //! Type inference algorithm
 
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
 
 use crate::{
     cformat,
+    gc::Gc,
     diagnostics::Diagnostics,
     nir::{self, DefId},
     package::Package,
@@ -14,22 +15,22 @@ use crate::{
 use super::{constraints::{ConstraintSet, TyVar, UnifyErrorSpan}, ty::{FuncTy, Ty, TySpan}, tyir};
 
 pub struct OperatorMethodNames {
-    pub pos: Arc<str>,
-    pub neg: Arc<str>,
-    pub not: Arc<str>,
+    pub pos: Gc<str>,
+    pub neg: Gc<str>,
+    pub not: Gc<str>,
 
-    pub add: Arc<str>,
-    pub sub: Arc<str>,
-    pub mul: Arc<str>,
-    pub div: Arc<str>,
-    pub rem: Arc<str>,
+    pub add: Gc<str>,
+    pub sub: Gc<str>,
+    pub mul: Gc<str>,
+    pub div: Gc<str>,
+    pub rem: Gc<str>,
 
-    pub eq: Arc<str>,
-    pub ne: Arc<str>,
-    pub gt: Arc<str>,
-    pub ge: Arc<str>,
-    pub lt: Arc<str>,
-    pub le: Arc<str>,
+    pub eq: Gc<str>,
+    pub ne: Gc<str>,
+    pub gt: Gc<str>,
+    pub ge: Gc<str>,
+    pub lt: Gc<str>,
+    pub le: Gc<str>,
 }
 
 pub struct Context<'a> {

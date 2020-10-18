@@ -4,17 +4,14 @@ mod call_stack;
 
 pub use call_stack::*;
 
-use std::sync::Arc;
-
 use thiserror::Error;
-use parking_lot::RwLock;
 
 use crate::{
     gc_debug,
     ast,
     bytecode::{ConstId, Constants, OpCode},
     gc::{self, Trace, Gc},
-    source_files::SourceFiles,
+    source_files::SharedSourceFiles,
     value::{self, Value},
 };
 
@@ -79,20 +76,21 @@ pub struct Interpreter {
     consts: Constants,
     call_stack: CallStack,
     value_stack: Vec<Value>,
-    source_files: Arc<RwLock<SourceFiles>>,
+    source_files: SharedSourceFiles,
 }
 
 impl Trace for Interpreter {
     fn trace(&self) {
-        let Self {consts, call_stack, value_stack, source_files: _} = self;
+        let Self {consts, call_stack, value_stack, source_files} = self;
         consts.trace();
         call_stack.trace();
         value_stack.trace();
+        source_files.trace();
     }
 }
 
 impl Interpreter {
-    pub fn new(consts: Constants, source_files: Arc<RwLock<SourceFiles>>) -> Self {
+    pub fn new(consts: Constants, source_files: SharedSourceFiles) -> Self {
         Self {
             consts,
             call_stack: CallStack::new(64),

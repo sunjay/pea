@@ -1,13 +1,13 @@
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
 
-use crate::nir::{DefId, DefIdGen};
+use crate::{gc::Gc, nir::{DefId, DefIdGen}};
 
 use super::PkgId;
 
 #[derive(Debug)]
 pub struct DefNames {
     def_ids: DefIdGen,
-    names: HashMap<DefId, Arc<str>>,
+    names: HashMap<DefId, Gc<str>>,
 }
 
 impl DefNames {
@@ -18,13 +18,13 @@ impl DefNames {
         }
     }
 
-    pub fn insert(&mut self, name: Arc<str>) -> DefId {
+    pub fn insert(&mut self, name: Gc<str>) -> DefId {
         let id = self.def_ids.next_id();
         self.names.insert(id, name.into());
         id
     }
 
-    pub fn get(&self, id: DefId) -> Option<&Arc<str>> {
+    pub fn get(&self, id: DefId) -> Option<&Gc<str>> {
         self.names.get(&id)
     }
 }

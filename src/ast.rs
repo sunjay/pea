@@ -1,11 +1,10 @@
 use std::fmt;
-use std::sync::Arc;
 
-use crate::{source_files::Span, parser::Token};
+use crate::{source_files::Span, parser::Token, gc::Gc};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Module {
-    pub name: Arc<str>,
+    pub name: Gc<str>,
     pub decls: Vec<Decl>,
 }
 
@@ -480,13 +479,13 @@ impl ContinueExpr {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Ident {
-    pub value: Arc<str>,
+    pub value: Gc<str>,
     pub span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct BStrLiteral {
-    pub value: Arc<[u8]>,
+    pub value: Gc<[u8]>,
     pub span: Span,
 }
 

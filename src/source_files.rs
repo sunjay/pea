@@ -7,8 +7,11 @@ pub use file_source::*;
 
 use std::fs;
 use std::io::{self, Read};
-use std::sync::Arc;
 use std::path::{Path, PathBuf};
+
+use parking_lot::RwLock;
+
+use crate::gc::{self, Gc};
 
 use line_numbers::LineNumbers;
 
@@ -24,13 +27,27 @@ pub struct FileHandle {
 struct File {
     path: PathBuf,
     /// The module name based on the stem of this path
-    mod_name: Arc<str>,
+    mod_name: Gc<str>,
     /// The index into `SourceFiles::source` that represents the start of this file
     start_offset: usize,
     /// An index of the line numbers for all offsets in the file
     line_numbers: LineNumbers,
     /// The handle to this file
     handle: FileHandle,
+}
+
+impl gc::Trace for File {
+    fn trace(&self) {
+        let Self {
+            path: _,
+            mod_name,
+            start_offset: _,
+            line_numbers: _,
+            handle: _,
+        } = self;
+
+        mod_name.trace();
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -49,6 +66,8 @@ pub struct FileLine<'a> {
     pub bytes: &'a [u8],
 }
 
+pub type SharedSourceFiles = Gc<RwLock<SourceFiles>>;
+
 #[derive(Debug, Default)]
 pub struct SourceFiles {
     /// The source code of all files concatenated together.
@@ -59,6 +78,16 @@ pub struct SourceFiles {
     ///
     /// Sorted by the offset
     files: Vec<File>,
+}
+
+impl gc::Trace for SourceFiles {
+    fn trace(&self) {
+        let Self {source: _, files} = self;
+
+        for file in files {
+            file.trace();
+        }
+    }
 }
 
 impl SourceFiles {
@@ -93,7 +122,7 @@ impl SourceFiles {
         let line_numbers = LineNumbers::new(source);
 
         let path = path.to_path_buf();
-        let mod_name: Arc<str> = path.file_stem().and_then(|p| p.to_str())
+        let mod_name: Gc<str> = path.file_stem().and_then(|p| p.to_str())
             .expect("module path was not valid unicode").replace('-', "_").into();
         //TODO: This check can be done better (it currently panics on the empty string)
         if mod_name.chars().next().unwrap().is_numeric() || mod_name.chars().any(|ch| !ch.is_alphanumeric() && ch != '_') {
@@ -142,7 +171,7 @@ impl SourceFiles {
     }
 
     /// Returns the name of the (root) module this file represents, based on its path
-    pub fn mod_name(&self, handle: FileHandle) -> &Arc<str> {
+    pub fn mod_name(&self, handle: FileHandle) -> &Gc<str> {
         &self.file(handle.start).mod_name
     }
 

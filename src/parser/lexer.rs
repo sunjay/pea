@@ -1,7 +1,6 @@
-use std::sync::Arc;
 use std::collections::HashSet;
 
-use crate::diagnostics::Diagnostics;
+use crate::{diagnostics::Diagnostics, gc::Gc};
 
 use super::{
     scanner::Scanner,
@@ -13,7 +12,7 @@ use TokenKind::*;
 pub struct Lexer<'a> {
     scanner: Scanner<'a>,
     diag: &'a Diagnostics,
-    interned_strings: HashSet<Arc<str>>,
+    interned_strings: HashSet<Gc<str>>,
 }
 
 impl<'a> Lexer<'a> {
@@ -341,7 +340,7 @@ impl<'a> Lexer<'a> {
         }
 
         // Note that the token span contains the quotes but the value does not
-        let value: Arc<[u8]> = value.into();
+        let value: Gc<[u8]> = value.into();
         self.token_to_current(start, TokenKind::Literal(token::Literal::BStr), TokenValue::BStr(value))
     }
 
@@ -554,11 +553,11 @@ impl<'a> Lexer<'a> {
         Token {kind, span, value}
     }
 
-    fn intern_str(&mut self, value: &str) -> Arc<str> {
+    fn intern_str(&mut self, value: &str) -> Gc<str> {
         match self.interned_strings.get(value) {
             Some(interned) => interned.clone(),
             None => {
-                let interned: Arc<str> = value.into();
+                let interned: Gc<str> = value.into();
                 self.interned_strings.insert(interned.clone());
                 interned
             },
@@ -623,7 +622,7 @@ mod tests {
 
     macro_rules! expect_token {
         ($source:literal, $expected:expr) => {
-            let source_files = Arc::new(RwLock::new(SourceFiles::default()));
+            let source_files = Gc::new(RwLock::new(SourceFiles::default()));
             let root_file = source_files.write().add_source("test.rs", $source);
             let diag = Diagnostics::new(source_files.clone(), termcolor::ColorChoice::Auto);
             let files = source_files.read();
@@ -639,7 +638,7 @@ mod tests {
 
     macro_rules! expect_tokens {
         ($source:literal, $expected:expr) => {
-            let source_files = Arc::new(RwLock::new(SourceFiles::default()));
+            let source_files = Gc::new(RwLock::new(SourceFiles::default()));
             let root_file = source_files.write().add_source("test.rs", $source);
             let diag = Diagnostics::new(source_files.clone(), termcolor::ColorChoice::Auto);
             let files = source_files.read();

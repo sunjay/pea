@@ -1,21 +1,19 @@
 //! An intermediate representation used during type checking to decorate the program with type
 //! variables.
 
-use std::sync::Arc;
-
-use crate::{nir::{self, DefTable, Scope}, parser::Token};
+use crate::{nir::{self, DefTable, Scope}, parser::Token, gc::Gc};
 
 use super::constraints::TyVar;
 
 #[derive(Debug)]
 pub struct Program {
     pub root_module: Module,
-    pub def_table: Arc<DefTable>,
+    pub def_table: Gc<DefTable>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Module {
-    pub name: Arc<str>,
+    pub name: Gc<str>,
     pub decls: Vec<Decl>,
     /// The root scope of the module
     pub scope: Scope,

@@ -2,7 +2,7 @@ mod prim_methods;
 
 pub use prim_methods::*;
 
-use std::{sync::Arc, time::{SystemTime, UNIX_EPOCH}};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::{
     bytecode,
@@ -28,11 +28,11 @@ pub fn populate(pkg_id: PkgId, consts: &mut bytecode::Constants) -> (Package, Pr
 fn insert_native_func_into_root_module<A>(
     package: &mut Package,
     consts: &mut bytecode::Constants,
-    name: impl Into<Arc<str>>,
+    name: impl Into<Gc<str>>,
     f: impl IntoNativeFunc<A>,
 ) {
     let name = name.into();
-    let func = f.into_native_func(&name);
+    let func = f.into_native_func(name.clone());
     let ty = Ty::Func(Box::new(func.ty.clone()));
     insert_into_root_module(package, consts, name, ty, func)
 }
@@ -40,7 +40,7 @@ fn insert_native_func_into_root_module<A>(
 fn insert_into_root_module(
     package: &mut Package,
     consts: &mut bytecode::Constants,
-    name: impl Into<Arc<str>>,
+    name: impl Into<Gc<str>>,
     ty: Ty,
     value: impl Into<Value>,
 ) {
@@ -177,12 +177,12 @@ fn insert_method<A>(
     package: &mut Package,
     consts: &mut bytecode::Constants,
     methods: &mut Methods,
-    name: impl Into<Arc<str>>,
+    name: impl Into<Gc<str>>,
     f: impl IntoNativeFunc<A>,
 ) {
     let name = name.into();
 
-    let func = f.into_native_func(&name);
+    let func = f.into_native_func(name.clone());
     assert!(func.arity > 0, "bug: all methods must at least have a receiver `self` argument");
     let ty = Ty::Func(Box::new(func.ty.clone()));
     let const_id = consts.push(func.into());

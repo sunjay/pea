@@ -4,13 +4,12 @@ mod diagnostic;
 pub use diagnostic::*;
 
 use std::borrow::Cow;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use parking_lot::{Mutex, RwLock, MutexGuard};
+use parking_lot::{Mutex, MutexGuard};
 use termcolor::ColorChoice;
 
-use crate::source_files::{Span, SourceFiles};
+use crate::source_files::{Span, SharedSourceFiles};
 
 #[cfg(not(test))]
 pub type OutputStream = termcolor::StandardStream;
@@ -18,7 +17,7 @@ pub type OutputStream = termcolor::StandardStream;
 pub type OutputStream = writer::NullWriter;
 
 pub struct Diagnostics {
-    source_files: Arc<RwLock<SourceFiles>>,
+    source_files: SharedSourceFiles,
     /// The stream where diagnostics will be written to
     out: Mutex<OutputStream>,
     /// The number of errors that have been emitted
@@ -26,7 +25,7 @@ pub struct Diagnostics {
 }
 
 impl Diagnostics {
-    pub fn new(source_files: Arc<RwLock<SourceFiles>>, color_choice: ColorChoice) -> Self {
+    pub fn new(source_files: SharedSourceFiles, color_choice: ColorChoice) -> Self {
         Self {
             source_files,
             #[cfg(not(test))]
@@ -37,7 +36,7 @@ impl Diagnostics {
         }
     }
 
-    pub fn source_files(&self) -> &Arc<RwLock<SourceFiles>> {
+    pub fn source_files(&self) -> &SharedSourceFiles {
         &self.source_files
     }
 
