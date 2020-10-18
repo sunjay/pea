@@ -289,6 +289,8 @@ pub fn sweep() {
     // Keep the GC state locked so no allocations can be registered while this takes place
     let mut gc_state = GC_STATE.lock();
 
+    gc_debug!("sweep start: {} bytes allocated", gc_state.allocated);
+
     // Register ASAP that we are currently collecting so no other thread starts a `sweep`
     NEEDS_COLLECT.store(false, Ordering::SeqCst);
 
@@ -333,6 +335,8 @@ pub fn sweep() {
             None => gc_state.alloc_list = next,
         }
     }
+
+    gc_debug!("sweep end: {} bytes allocated", gc_state.allocated);
 
     // Adjust the threshold based on how much is still allocated
     //
