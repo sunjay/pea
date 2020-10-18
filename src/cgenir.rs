@@ -236,12 +236,7 @@ pub struct StructLiteral {
 #[derive(Debug, Clone, PartialEq)]
 pub struct StructLiteralField {
     pub name: DefSpan,
-    pub value: Option<StructLiteralFieldValue>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct StructLiteralFieldValue {
-    pub colon_token: Token,
+    pub colon_token: Option<Token>,
     pub expr: Expr,
 }
 

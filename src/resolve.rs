@@ -574,22 +574,19 @@ impl<'a> NameResolver<'a> {
         type_def_id: nir::DefId,
         seen: &mut HashSet<nir::DefId>,
     ) -> nir::StructLiteralField {
-        let ast::StructLiteralField {name, value} = field;
+        let ast::StructLiteralField {name, colon_token, expr} = field;
 
         let name = self.lookup_field(type_def_id, name);
-        let value = value.as_ref().map(|value| {
-            let ast::StructLiteralFieldValue {colon_token, expr} = value;
-            let colon_token = colon_token.clone();
-            let expr = self.resolve_expr(expr);
-            nir::StructLiteralFieldValue {colon_token, expr}
-        });
-
         if seen.contains(&name.id) {
             self.diag.span_error(field.span(), format!("field `{}` specified more than once", field.name.value)).emit();
         }
         seen.insert(name.id);
 
-        nir::StructLiteralField {name, value}
+        let colon_token = colon_token.clone();
+
+        let expr = self.resolve_expr(expr);
+
+        nir::StructLiteralField {name, colon_token, expr}
     }
 
     fn resolve_list(&mut self, list: &ast::ListLiteral) -> nir::ListLiteral {

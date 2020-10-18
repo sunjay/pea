@@ -514,23 +514,11 @@ impl ApplySubst for tyir::StructLiteralField {
     type Output = cgenir::StructLiteralField;
 
     fn apply_subst(self, subst: &mut Subst) -> Self::Output {
-        let tyir::StructLiteralField {name, value} = self;
-
-        let value = value.apply_subst(subst);
-
-        cgenir::StructLiteralField {name, value}
-    }
-}
-
-impl ApplySubst for tyir::StructLiteralFieldValue {
-    type Output = cgenir::StructLiteralFieldValue;
-
-    fn apply_subst(self, subst: &mut Subst) -> Self::Output {
-        let tyir::StructLiteralFieldValue {colon_token, expr} = self;
+        let tyir::StructLiteralField {name, colon_token, expr} = self;
 
         let expr = expr.apply_subst(subst);
 
-        cgenir::StructLiteralFieldValue {colon_token, expr}
+        cgenir::StructLiteralField {name, colon_token, expr}
     }
 }
 

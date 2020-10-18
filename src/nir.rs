@@ -548,22 +548,14 @@ impl StructLiteral {
 #[derive(Debug, Clone, PartialEq)]
 pub struct StructLiteralField {
     pub name: DefSpan,
-    pub value: Option<StructLiteralFieldValue>,
+    pub colon_token: Option<Token>,
+    pub expr: Expr,
 }
 
 impl StructLiteralField {
     pub fn span(&self) -> Span {
-        match &self.value {
-            Some(value) => self.name.span.to(value.expr.span()),
-            None => self.name.span,
-        }
+        self.name.span.to(self.expr.span())
     }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct StructLiteralFieldValue {
-    pub colon_token: Token,
-    pub expr: Expr,
 }
 
 pub type UnaryOp = ast::UnaryOp;

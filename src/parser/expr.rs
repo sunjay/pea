@@ -443,18 +443,19 @@ impl<'a> Parser<'a> {
     fn struct_literal_field(&mut self) -> ParseResult<ast::StructLiteralField> {
         let name = self.ident()?;
 
-        let value = match self.input.peek().kind {
+        let (colon_token, expr) = match self.input.peek().kind {
             TokenKind::Colon => {
                 let colon_token = self.input.match_kind(TokenKind::Colon)?.clone();
                 let expr = self.expr()?;
 
-                Some(ast::StructLiteralFieldValue {colon_token, expr})
+                (Some(colon_token), expr)
             },
 
-            _ => None,
+            // Field-shorthand syntax: `Foo {a}` desugars to `Foo {a: a}`
+            _ => (None, ast::Expr::Ident(name.clone())),
         };
 
-        Ok(ast::StructLiteralField {name, value})
+        Ok(ast::StructLiteralField {name, colon_token, expr})
     }
 
     fn integer_literal(&mut self) -> ParseResult<ast::IntegerLiteral> {
