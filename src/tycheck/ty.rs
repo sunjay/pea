@@ -115,6 +115,8 @@ impl UnifyValue for Ty {
             (List(ty1), List(ty2)) => List(Box::new(Ty::unify_values(ty1, ty2)?)),
             (Func(ty1), Func(ty2)) => Func(Box::new(FuncTy::unify_values(ty1, ty2)?)),
 
+            (&Named(def1), &Named(def2)) if def1 == def2 => Named(def1),
+
             // Could return either one
             (&TyVar(ty_var), TyVar(_)) => {
                 TyVar(ty_var)
@@ -146,6 +148,8 @@ impl Ty {
 
             (List(ty1), List(ty2)) => List(Box::new(ty1.unify(*ty2, constraints)?)),
             (Func(ty1), Func(ty2)) => Func(Box::new(ty1.unify(*ty2, constraints)?)),
+
+            (Named(def1), Named(def2)) if def1 == def2 => Named(def1),
 
             (TyVar(ty_var1), TyVar(ty_var2)) => {
                 constraints.push(Constraint::TyVarsUnify {ty_var1, ty_var2});
