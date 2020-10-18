@@ -941,13 +941,16 @@ fn infer_struct_literal(ctx: &mut Context, lit: &nir::StructLiteral, return_ty_v
 }
 
 fn infer_struct_literal_field(ctx: &mut Context, field: &nir::StructLiteralField) -> tyir::StructLiteralField {
-    // let nir::StructLiteralField {name, value} = field;
+    let nir::StructLiteralField {name, colon_token, expr} = field;
 
-    // let value = value.as_ref()
-    //     .map(|value| infer_struct_literal_field_value(ctx, value, field_ty_var));
+    let name = *name;
+    let colon_token = colon_token.clone();
 
-    // tyir::StructLiteralField {name, value}
-    todo!()
+    let field_ty_var = ctx.def_type_var(name.id)
+        .expect("bug: all fields should have a type variable already inserted");
+    let expr = infer_expr(ctx, expr, field_ty_var);
+
+    tyir::StructLiteralField {name, colon_token, expr}
 }
 
 fn infer_integer(ctx: &mut Context, expr: &nir::IntegerLiteral, return_ty_var: TyVar) -> tyir::IntegerLiteral {
